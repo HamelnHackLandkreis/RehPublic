@@ -2,8 +2,9 @@
 
 import base64
 import logging
+import math
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from uuid import UUID
 
 import httpx
@@ -156,6 +157,86 @@ class ImageService:
         )
 
         return detections
+
+    @staticmethod
+    def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+        """Calculate the great circle distance between two points on Earth in kilometers.
+        
+        Args:
+            lat1: Latitude of first point
+            lon1: Longitude of first point
+            lat2: Latitude of second point
+            lon2: Longitude of second point
+            
+        Returns:
+            Distance in kilometers
+        """
+        # Earth radius in kilometers
+        R = 6371.0
+        
+        # Convert to radians
+        lat1_rad = math.radians(lat1)
+        lon1_rad = math.radians(lon1)
+        lat2_rad = math.radians(lat2)
+        lon2_rad = math.radians(lon2)
+        
+        # Haversine formula
+        dlat = lat2_rad - lat1_rad
+        dlon = lon2_rad - lon1_rad
+        
+        a = math.sin(dlat / 2)**2 + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2)**2
+        c = 2 * math.asin(math.sqrt(a))
+        
+        return R * c
+
+    @staticmethod
+    def get_images_in_range(
+        db: Session,
+        latitude: float,
+        longitude: float,
+        distance_range: float,
+        time_start: Optional[datetime] = None,
+        time_end: Optional[datetime] = None
+    ) -> List[Image]:
+        """Get all images within a distance range from a location and optional time range.
+        
+        Args:
+            db: Database session
+            latitude: Center latitude in decimal degrees
+            longitude: Center longitude in decimal degrees
+            distance_range: Maximum distance in kilometers (km) from center location
+            time_start: Optional start timestamp in ISO 8601 format (inclusive)
+            time_end: Optional end timestamp in ISO 8601 format (inclusive)
+            
+        Returns:
+            List of Image objects within the specified range
+        """
+        # Get all locations
+        all_locations = db.query(Location).all()
+        
+        # Filter locations within distance range
+        locations_in_range = []
+        for location in all_locations:
+            distance = ImageService.haversine_distance(
+                latitude, longitude,
+                location.latitude, location.longitude
+            )
+            if distance <= distance_range:
+                locations_in_range.append(location.id)
+        
+        if not locations_in_range:
+            return []
+        
+        # Query images from locations in range
+        query = db.query(Image).filter(Image.location_id.in_(locations_in_range))
+        
+        # Apply time range filters if provided
+        if time_start is not None:
+            query = query.filter(Image.upload_timestamp >= time_start)
+        if time_end is not None:
+            query = query.filter(Image.upload_timestamp <= time_end)
+        
+        return query.order_by(Image.upload_timestamp.desc()).all()
 
 
 class SpottingService:
