@@ -261,7 +261,7 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
 
     // Handle completion
     xhr.addEventListener('load', () => {
-      if (xhr.status === 200) {
+      if (xhr.status <= 300) {
         try {
           const response = JSON.parse(xhr.responseText)
           uploadFile.progress = 100
