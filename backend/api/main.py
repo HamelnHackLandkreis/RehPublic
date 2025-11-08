@@ -80,9 +80,19 @@ def create_location(
         return location
     except Exception as e:
         logger.error(f"Failed to create location: {e}")
+        error_msg = str(e)
+        
+        # Handle duplicate location name
+        if "UNIQUE constraint failed: locations.name" in error_msg or "duplicate" in error_msg.lower():
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Location with name '{location_data.name}' already exists"
+            )
+        
+        # Generic error for other cases
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"Failed to create location: {str(e)}"
+            detail="Failed to create location. Please check your input data."
         )
 
 

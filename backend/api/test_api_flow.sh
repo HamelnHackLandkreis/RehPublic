@@ -16,28 +16,50 @@ echo "=========================================="
 echo ""
 
 # Step 1: Create a location called "camera1"
-echo "Step 1: Creating location 'camera1'..."
-LOCATION_RESPONSE=$(curl -s -X POST "${API_BASE}/locations" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "camera1",
-    "longitude": 10.5,
-    "latitude": 52.3,
-    "description": "Test camera location"
-  }')
+echo "Step 1: Checking for location 'camera1'..."
 
-echo "Response: $LOCATION_RESPONSE"
-echo ""
+# First, try to get existing camera1 location
+EXISTING_LOCATIONS=$(curl -s -X GET "${API_BASE}/locations")
 
-# Extract location_id from response
-LOCATION_ID=$(echo $LOCATION_RESPONSE | grep -o '"id":"[^"]*' | cut -d'"' -f4)
-
-if [ -z "$LOCATION_ID" ]; then
-  echo "Error: Failed to create location or extract location ID"
-  exit 1
+# Try to extract location ID for camera1 (works with or without jq)
+if command -v jq &> /dev/null; then
+  LOCATION_ID=$(echo "$EXISTING_LOCATIONS" | jq -r '.[] | select(.name=="camera1") | .id' | head -1)
+else
+  # Fallback without jq - look for camera1 and extract its id
+  LOCATION_ID=$(echo "$EXISTING_LOCATIONS" | grep -o '"name":"camera1"[^}]*' | grep -o '"id":"[^"]*' | head -1 | cut -d'"' -f4)
 fi
 
-echo "✓ Location created with ID: $LOCATION_ID"
+if [ -n "$LOCATION_ID" ] && [ "$LOCATION_ID" != "null" ]; then
+  echo "✓ Location 'camera1' already exists with ID: $LOCATION_ID"
+  echo "  Using existing location..."
+else
+  # Create new location
+  echo "  Creating new location 'camera1'..."
+  LOCATION_RESPONSE=$(curl -s -X POST "${API_BASE}/locations" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "name": "camera1",
+      "longitude": 10.5,
+      "latitude": 52.3,
+      "description": "Test camera location"
+    }')
+  
+  # Extract location_id from response
+  if command -v jq &> /dev/null; then
+    LOCATION_ID=$(echo "$LOCATION_RESPONSE" | jq -r '.id')
+  else
+    LOCATION_ID=$(echo "$LOCATION_RESPONSE" | grep -o '"id":"[^"]*' | cut -d'"' -f4)
+  fi
+
+  if [ -z "$LOCATION_ID" ] || [ "$LOCATION_ID" = "null" ]; then
+    echo "Error: Failed to create location"
+    echo "Response: $LOCATION_RESPONSE"
+    exit 1
+  fi
+  
+  echo "✓ Location created with ID: $LOCATION_ID"
+fi
+
 echo ""
 
 # Step 2: Upload an image to this location
