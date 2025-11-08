@@ -580,6 +580,12 @@ def get_spottings(
     for location_id, location_images in images_by_location.items():
         if location_id in location_map:
             location = location_map[location_id]
+            # Count images that contain animals (have at least one detection)
+            images_with_animals = sum(
+                1
+                for image_response in location_images
+                if len(image_response.detections) > 0
+            )
             locations_response.append(
                 LocationWithImagesResponse(
                     id=UUID(location.id),
@@ -588,6 +594,7 @@ def get_spottings(
                     latitude=location.latitude,
                     description=location.description,
                     images=location_images,
+                    total_images_with_animals=images_with_animals,
                 )
             )
             # Count spottings and collect unique species
