@@ -1,0 +1,36 @@
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDEs and editors
+.idea/
+.vscode/
+
+# Local data and test files
+bilder/
+test_bilder/
+sample_data/
+wildlife_camera.db
+enhanced_bilder_results.json
+test_european_results.json
+
+# Documentation and test scripts
+CURL_EXAMPLES.md
+IMPLEMENTATION_SUMMARY.md
+test_*.py
+test_*.sh
+
+# Virtual environment
+.venv
+venv
+env
