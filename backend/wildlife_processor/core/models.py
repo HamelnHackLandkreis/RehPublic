@@ -95,6 +95,8 @@ class ModelManager:
                 # Path from backend/wildlife_processor/core/models.py to project root
                 v4_model_path = (
                     Path(__file__).parent.parent.parent.parent
+                    / "backend"
+                    / "models"
                     / "deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt"
                 )
 
