@@ -4,7 +4,7 @@
 
 <template>
   <div class="min-h-screen pb-20">
-    <main class="p-5">
+    <main class="p-2" >
       <NuxtPage />
     </main>
     <Sidebar />
