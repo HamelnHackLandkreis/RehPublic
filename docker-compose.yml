@@ -24,9 +24,9 @@ services:
       POSTGRES_PASSWORD: hamelnhack2025
       POSTGRES_DB: rehpublic
       POSTGRES_USER: rehpublic
-    ports:
+   ports:
       - "5432:5432"
-    volumes:
+   volumes:
       - postgres_data:/var/lib/postgresql/data
 
 volumes:
