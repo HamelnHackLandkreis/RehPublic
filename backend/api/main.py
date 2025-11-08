@@ -1,10 +1,11 @@
 """FastAPI application for wildlife camera API."""
 
 import logging
-from typing import List
+from datetime import datetime
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -16,7 +17,6 @@ from api.schemas import (
     ImageUploadResponse,
     LocationCreate,
     LocationResponse,
-    SpottingLocationResponse,
 )
 from api.models import Spotting
 from api.services import ImageService, LocationService, SpottingService
@@ -262,32 +262,83 @@ def get_image(
         detections=detections
     )
 
+@app.get("/spottings", response_model=List[ImageDetailResponse], status_code=status.HTTP_200_OK)
+def get_spottings(
+    latitude: float = Query(..., description="Center latitude for location search (decimal degrees, e.g., 50.123)"),
+    longitude: float = Query(..., description="Center longitude for location search (decimal degrees, e.g., 10.456)"),
+    distance_range: float = Query(..., description="Maximum distance from center location in kilometers (km). Example: 5.0 for 5 km radius", gt=0),
+    time_start: Optional[datetime] = Query(None, description="Start timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-01-01T00:00:00"),
+    time_end: Optional[datetime] = Query(None, description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59"),
+    db: Session = Depends(get_db)
+):
+    """Get all images within a location and time range.
 
-@app.get("/spottings", response_model=List[SpottingLocationResponse], status_code=status.HTTP_200_OK)
-def get_spottings(db: Session = Depends(get_db)):
-    """Get aggregated spotting data for map view.
+    Returns all images that are:
+    - Within the specified distance range from the center location (distance_range in kilometers)
+    - Within the optional time range (if provided, using ISO 8601 datetime format)
 
-    Returns spotting data grouped by location, including:
-    - Location coordinates (longitude, latitude)
-    - List of unique animal species detected at that location
-    - Timestamp of most recent spotting
-    - Timestamp of most recent image
-    - ID of most recent image
+    Each image includes:
+    - Image ID and location ID
+    - Base64-encoded image data
+    - Upload timestamp
+    - All detections (species, confidence, bounding boxes)
+
+    Query Parameters:
+        latitude: Center latitude in decimal degrees (e.g., 50.123)
+        longitude: Center longitude in decimal degrees (e.g., 10.456)
+        distance_range: Maximum distance in kilometers (km) from center location. Must be > 0.
+        time_start: Optional start timestamp in ISO 8601 format (inclusive). 
+                   Examples: "2024-01-01T00:00:00", "2024-01-01"
+        time_end: Optional end timestamp in ISO 8601 format (inclusive).
+                 Examples: "2024-12-31T23:59:59", "2024-12-31"
 
     Returns:
-        List of aggregated spotting data per location
+        List of images with detections within the specified range
+
+    Example:
+        GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59
     """
-    spottings = spotting_service.get_aggregated_spottings(db)
+    # Get images within range
+    images = image_service.get_images_in_range(
+        db=db,
+        latitude=latitude,
+        longitude=longitude,
+        distance_range=distance_range,
+        time_start=time_start,
+        time_end=time_end
+    )
     
-    # Convert to response models
+    # Convert to response models with detections
     response = []
-    for spotting in spottings:
-        response.append(SpottingLocationResponse(
-            pos=spotting['pos'],
-            animals=spotting['animals'],
-            ts_last_spotting=spotting['ts_last_spotting'],
-            ts_last_image=spotting['ts_last_image'],
-            image_id=UUID(spotting['image_id']) if spotting['image_id'] else None
+    for image in images:
+        # Get all spottings for this image
+        spottings = db.query(Spotting).filter(
+            Spotting.image_id == str(image.id)
+        ).all()
+        
+        # Convert spottings to detection responses
+        detections = []
+        for spotting in spottings:
+            detection = DetectionResponse(
+                species=spotting.species,
+                confidence=spotting.confidence,
+                bounding_box=BoundingBoxResponse(
+                    x=spotting.bbox_x,
+                    y=spotting.bbox_y,
+                    width=spotting.bbox_width,
+                    height=spotting.bbox_height
+                ),
+                classification_model=spotting.classification_model,
+                is_uncertain=spotting.is_uncertain
+            )
+            detections.append(detection)
+        
+        response.append(ImageDetailResponse(
+            image_id=UUID(image.id),
+            location_id=UUID(image.location_id),
+            raw=image.base64_data,
+            upload_timestamp=image.upload_timestamp,
+            detections=detections
         ))
     
     return response
