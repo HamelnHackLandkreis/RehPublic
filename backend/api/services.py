@@ -3,7 +3,8 @@
 import base64
 import logging
 import math
-from datetime import datetime
+from collections import defaultdict
+from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 from uuid import UUID
@@ -427,6 +428,98 @@ class SpottingService:
             aggregated_spottings.append(spotting_data)
 
         return aggregated_spottings
+
+    @staticmethod
+    def get_statistics(
+        db: Session, period: str = "day"
+    ) -> List[Dict]:
+        """Get statistics for spottings grouped by time period.
+
+        Args:
+            db: Database session
+            period: Time period to group by - "day" (hourly), "week" (daily), or "month" (daily)
+
+        Returns:
+            List of statistics dictionaries with time periods and species counts
+        """
+
+        # Calculate time range based on period
+        now = datetime.utcnow()
+        if period == "day":
+            start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = now
+            # Group by hour
+            time_format = "%Y-%m-%d %H:00:00"
+            time_delta = timedelta(hours=1)
+        elif period == "week":
+            start_time = now - timedelta(days=7)
+            start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = now
+            # Group by day
+            time_format = "%Y-%m-%d 00:00:00"
+            time_delta = timedelta(days=1)
+        elif period == "month":
+            start_time = now - timedelta(days=30)
+            start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = now
+            # Group by day
+            time_format = "%Y-%m-%d 00:00:00"
+            time_delta = timedelta(days=1)
+        else:
+            raise ValueError(f"Invalid period: {period}. Must be 'day', 'week', or 'month'")
+
+        # Query spottings in the time range
+        spottings = (
+            db.query(Spotting.species, Spotting.detection_timestamp)
+            .filter(
+                Spotting.detection_timestamp >= start_time,
+                Spotting.detection_timestamp <= end_time,
+            )
+            .all()
+        )
+
+        # Group by time period and species
+        period_data = defaultdict(lambda: defaultdict(int))
+
+        for spotting in spottings:
+            # Truncate timestamp to the appropriate interval
+            if period == "day":
+                # Group by hour
+                period_start = spotting.detection_timestamp.replace(
+                    minute=0, second=0, microsecond=0
+                )
+            else:
+                # Group by day
+                period_start = spotting.detection_timestamp.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                )
+
+            period_key = period_start.isoformat() + "Z"
+            period_data[period_key][spotting.species] += 1
+
+        # Convert to response format
+        statistics = []
+        for period_start_str in sorted(period_data.keys()):
+            period_start = datetime.fromisoformat(period_start_str.replace("Z", "+00:00"))
+            period_end = period_start + time_delta - timedelta(seconds=1)
+
+            species_counts = period_data[period_start_str]
+            species_list = [
+                {"name": species, "count": count}
+                for species, count in sorted(species_counts.items())
+            ]
+            total_spottings = sum(species_counts.values())
+
+            statistics.append(
+                {
+                    "start_time": period_start,
+                    "end_time": period_end,
+                    "species": species_list,
+                    "total_spottings": total_spottings,
+                }
+            )
+
+        return statistics
 
 
 class WikipediaService:

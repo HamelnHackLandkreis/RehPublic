@@ -30,8 +30,11 @@ from api.schemas import (
     LocationResponse,
     LocationsResponse,
     LocationWithImagesResponse,
+    SpeciesCountResponse,
     SpottingImageResponse,
     SpottingsResponse,
+    StatisticsResponse,
+    TimePeriodStatisticsResponse,
     WikipediaArticleResponse,
     WikipediaArticlesRequest,
 )
@@ -93,6 +96,10 @@ app = FastAPI(
         {
             "name": "wikipedia",
             "description": "Fetch Wikipedia articles for animal species.",
+        },
+        {
+            "name": "statistics",
+            "description": "Get statistics for animal spottings grouped by time periods.",
         },
     ],
 )
@@ -658,6 +665,76 @@ async def get_wikipedia_articles(request: WikipediaArticlesRequest):
         )
 
 
+@app.get(
+    "/statistics",
+    response_model=StatisticsResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["statistics"],
+)
+def get_statistics(
+    period: str = Query(
+        "day",
+        description="Time period for statistics: 'day' (hourly), 'week' (daily), or 'month' (daily)",
+        regex="^(day|week|month)$",
+    ),
+    db: Session = Depends(get_db),
+):
+    """Get statistics for animal spottings grouped by time period.
+
+    Returns statistics grouped by time intervals:
+    - "day": Groups by hour for the current day (00:00 to now)
+    - "week": Groups by day for the last 7 days
+    - "month": Groups by day for the last 30 days
+
+    Each time period includes:
+    - start_time and end_time (ISO 8601 format)
+    - species array with name and count
+    - total_spottings count
+
+    Query Parameters:
+        period: Time period type - "day", "week", or "month" (default: "day")
+
+    Returns:
+        Statistics response with list of time periods and their species counts
+
+    Example:
+        GET /statistics?period=day
+        GET /statistics?period=week
+        GET /statistics?period=month
+    """
+    try:
+        stats_data = spotting_service.get_statistics(db, period=period)
+
+        # Convert to response models
+        statistics = []
+        for stat in stats_data:
+            species_list = [
+                SpeciesCountResponse(name=species["name"], count=species["count"])
+                for species in stat["species"]
+            ]
+            statistics.append(
+                TimePeriodStatisticsResponse(
+                    start_time=stat["start_time"],
+                    end_time=stat["end_time"],
+                    species=species_list,
+                    total_spottings=stat["total_spottings"],
+                )
+            )
+
+        return StatisticsResponse(statistics=statistics)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Failed to get statistics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get statistics: {str(e)}",
+        )
+
+
 @app.get("/", status_code=status.HTTP_200_OK)
 def root():
     """Root endpoint with API information."""
@@ -670,6 +747,7 @@ def root():
             "get_image": "/images/{image_id}",
             "get_image_base64": "/images/{image_id}/base64",
             "spottings": "/spottings",
+            "statistics": "/statistics",
             "wikipedia_articles": "/wikipedia/articles",
         },
     }

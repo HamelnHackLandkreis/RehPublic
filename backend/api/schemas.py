@@ -138,3 +138,26 @@ class WikipediaArticlesRequest(BaseModel):
     """Schema for Wikipedia articles request."""
 
     titles: List[str]  # List of article titles to fetch
+
+
+# Statistics schemas
+class SpeciesCountResponse(BaseModel):
+    """Schema for species count in statistics."""
+
+    name: str
+    count: int
+
+
+class TimePeriodStatisticsResponse(BaseModel):
+    """Schema for statistics for a time period."""
+
+    start_time: datetime
+    end_time: datetime
+    species: List[SpeciesCountResponse]
+    total_spottings: int
+
+
+class StatisticsResponse(BaseModel):
+    """Schema for statistics endpoint response."""
+
+    statistics: List[TimePeriodStatisticsResponse]
