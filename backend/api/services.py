@@ -436,42 +436,61 @@ class SpottingService:
 
     @staticmethod
     def get_statistics(
-        db: Session, period: str = "day"
+        db: Session, period: str = "day", granularity: Optional[str] = None
     ) -> List[Dict]:
         """Get statistics for spottings grouped by time period.
 
         Args:
             db: Database session
-            period: Time period to group by - "day" (hourly), "week" (daily), or "month" (daily)
+            period: Time period range - "day", "week", or "month"
+            granularity: Grouping granularity - "hourly", "daily", or "weekly".
+                         If None, defaults based on period (day=hourly, week/month=daily)
 
         Returns:
             List of statistics dictionaries with time periods and species counts
         """
-
         # Calculate time range based on period
         now = datetime.utcnow()
         if period == "day":
             start_time = now.replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = now
-            # Group by hour
-            time_format = "%Y-%m-%d %H:00:00"
-            time_delta = timedelta(hours=1)
         elif period == "week":
             start_time = now - timedelta(days=7)
             start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = now
-            # Group by day
-            time_format = "%Y-%m-%d 00:00:00"
-            time_delta = timedelta(days=1)
         elif period == "month":
             start_time = now - timedelta(days=30)
             start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = now
-            # Group by day
-            time_format = "%Y-%m-%d 00:00:00"
-            time_delta = timedelta(days=1)
         else:
-            raise ValueError(f"Invalid period: {period}. Must be 'day', 'week', or 'month'")
+            raise ValueError(
+                f"Invalid period: {period}. Must be 'day', 'week', or 'month'"
+            )
+
+        # Determine granularity (default if not provided)
+        if granularity is None:
+            if period == "day":
+                granularity = "hourly"
+            else:
+                granularity = "daily"
+
+        # Validate granularity
+        if granularity not in ["hourly", "daily", "weekly"]:
+            raise ValueError(
+                f"Invalid granularity: {granularity}. Must be 'hourly', 'daily', or 'weekly'"
+            )
+
+        # Validate granularity compatibility with period
+        if period == "day" and granularity == "weekly":
+            raise ValueError("Cannot use 'weekly' granularity with 'day' period")
+
+        # Set time delta and grouping logic based on granularity
+        if granularity == "hourly":
+            time_delta = timedelta(hours=1)
+        elif granularity == "daily":
+            time_delta = timedelta(days=1)
+        elif granularity == "weekly":
+            time_delta = timedelta(weeks=1)
 
         # Query spottings in the time range
         spottings = (
@@ -487,17 +506,21 @@ class SpottingService:
         period_data = defaultdict(lambda: defaultdict(int))
 
         for spotting in spottings:
-            # Truncate timestamp to the appropriate interval
-            if period == "day":
-                # Group by hour
+            # Truncate timestamp to the appropriate interval based on granularity
+            if granularity == "hourly":
                 period_start = spotting.detection_timestamp.replace(
                     minute=0, second=0, microsecond=0
                 )
-            else:
-                # Group by day
+            elif granularity == "daily":
                 period_start = spotting.detection_timestamp.replace(
                     hour=0, minute=0, second=0, microsecond=0
                 )
+            elif granularity == "weekly":
+                # Group by week (Monday as start of week)
+                days_since_monday = spotting.detection_timestamp.weekday()
+                period_start = spotting.detection_timestamp.replace(
+                    hour=0, minute=0, second=0, microsecond=0
+                ) - timedelta(days=days_since_monday)
 
             period_key = period_start.isoformat() + "Z"
             period_data[period_key][spotting.species] += 1
@@ -505,7 +528,9 @@ class SpottingService:
         # Convert to response format
         statistics = []
         for period_start_str in sorted(period_data.keys()):
-            period_start = datetime.fromisoformat(period_start_str.replace("Z", "+00:00"))
+            period_start = datetime.fromisoformat(
+                period_start_str.replace("Z", "+00:00")
+            )
             period_end = period_start + time_delta - timedelta(seconds=1)
 
             species_counts = period_data[period_start_str]

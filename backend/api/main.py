@@ -892,17 +892,27 @@ async def get_wikipedia_articles(request: WikipediaArticlesRequest):
 def get_statistics(
     period: str = Query(
         "day",
-        description="Time period for statistics: 'day' (hourly), 'week' (daily), or 'month' (daily)",
+        description="Time period range: 'day' (current day), 'week' (last 7 days), or 'month' (last 30 days)",
         regex="^(day|week|month)$",
+    ),
+    granularity: Optional[str] = Query(
+        None,
+        description="Grouping granularity: 'hourly', 'daily', or 'weekly'. If not provided, defaults based on period (day=hourly, week/month=daily)",
+        regex="^(hourly|daily|weekly)$",
     ),
     db: Session = Depends(get_db),
 ):
     """Get statistics for animal spottings grouped by time period.
 
     Returns statistics grouped by time intervals:
-    - "day": Groups by hour for the current day (00:00 to now)
-    - "week": Groups by day for the last 7 days
-    - "month": Groups by day for the last 30 days
+    - period="day": Current day (00:00 to now)
+    - period="week": Last 7 days
+    - period="month": Last 30 days
+
+    Granularity options:
+    - "hourly": Group by hour
+    - "daily": Group by day
+    - "weekly": Group by week
 
     Each time period includes:
     - start_time and end_time (ISO 8601 format)
@@ -910,18 +920,21 @@ def get_statistics(
     - total_spottings count
 
     Query Parameters:
-        period: Time period type - "day", "week", or "month" (default: "day")
+        period: Time period range - "day", "week", or "month" (default: "day")
+        granularity: Grouping granularity - "hourly", "daily", or "weekly" (optional, auto-selected if not provided)
 
     Returns:
         Statistics response with list of time periods and their species counts
 
     Example:
-        GET /statistics?period=day
-        GET /statistics?period=week
-        GET /statistics?period=month
+        GET /statistics?period=day&granularity=hourly
+        GET /statistics?period=week&granularity=daily
+        GET /statistics?period=month&granularity=weekly
     """
     try:
-        stats_data = spotting_service.get_statistics(db, period=period)
+        stats_data = spotting_service.get_statistics(
+            db, period=period, granularity=granularity
+        )
 
         # Convert to response models
         statistics = []
