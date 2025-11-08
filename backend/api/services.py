@@ -196,9 +196,11 @@ class ImageService:
         longitude: float,
         distance_range: float,
         time_start: Optional[datetime] = None,
-        time_end: Optional[datetime] = None
+        time_end: Optional[datetime] = None,
+        limit_per_location: int = 3
     ) -> List[Image]:
-        """Get all images within a distance range from a location and optional time range.
+        """Get images within a distance range from a location and optional time range.
+        Limits to the most recent N images per location.
         
         Args:
             db: Database session
@@ -207,9 +209,10 @@ class ImageService:
             distance_range: Maximum distance in kilometers (km) from center location
             time_start: Optional start timestamp in ISO 8601 format (inclusive)
             time_end: Optional end timestamp in ISO 8601 format (inclusive)
+            limit_per_location: Maximum number of images to return per location (default: 3)
             
         Returns:
-            List of Image objects within the specified range
+            List of Image objects within the specified range (max limit_per_location per location)
         """
         # Get all locations
         all_locations = db.query(Location).all()
@@ -227,16 +230,26 @@ class ImageService:
         if not locations_in_range:
             return []
         
-        # Query images from locations in range
-        query = db.query(Image).filter(Image.location_id.in_(locations_in_range))
+        # Get top N images per location
+        all_images = []
+        for location_id in locations_in_range:
+            # Query images for this location
+            query = db.query(Image).filter(Image.location_id == location_id)
+            
+            # Apply time range filters if provided
+            if time_start is not None:
+                query = query.filter(Image.upload_timestamp >= time_start)
+            if time_end is not None:
+                query = query.filter(Image.upload_timestamp <= time_end)
+            
+            # Get most recent N images for this location
+            location_images = query.order_by(Image.upload_timestamp.desc()).limit(limit_per_location).all()
+            all_images.extend(location_images)
         
-        # Apply time range filters if provided
-        if time_start is not None:
-            query = query.filter(Image.upload_timestamp >= time_start)
-        if time_end is not None:
-            query = query.filter(Image.upload_timestamp <= time_end)
+        # Sort all images by upload timestamp descending
+        all_images.sort(key=lambda img: img.upload_timestamp, reverse=True)
         
-        return query.order_by(Image.upload_timestamp.desc()).all()
+        return all_images
 
 
 class SpottingService:
