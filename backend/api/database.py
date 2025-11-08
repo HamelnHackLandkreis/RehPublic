@@ -2,7 +2,7 @@
 
 import os
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker
 
 from api.models import Base
 
@@ -10,7 +10,7 @@ from api.models import Base
 # Format: postgresql://user:password@host:port/database
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://rehpublic:hamelnhack2025@135.181.78.114:5432/rehpublic"
+    "postgresql://rehpublic:hamelnhack2025@135.181.78.114:5432/rehpublic",
 )
 
 # Create engine

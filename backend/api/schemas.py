@@ -17,39 +17,7 @@ class LocationCreate(BaseModel):
     description: Optional[str] = None
 
 
-class LocationResponse(BaseModel):
-    """Schema for location response."""
-
-    id: UUID
-    name: str
-    longitude: float
-    latitude: float
-    description: Optional[str]
-    total_unique_species: int
-    total_spottings: int
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class LocationsResponse(BaseModel):
-    """Schema for locations list response with totals."""
-
-    locations: List[LocationResponse]
-    total_unique_species: int
-    total_spottings: int
-
-
-# Image schemas
-class ImageUploadResponse(BaseModel):
-    """Schema for image upload response."""
-
-    image_id: UUID
-    location_id: UUID
-    upload_timestamp: datetime
-    detections_count: int
-    detected_species: List[str]
-
-
+# Image schemas (defined before LocationResponse to avoid forward reference)
 class BoundingBoxResponse(BaseModel):
     """Schema for bounding box coordinates."""
 
@@ -69,6 +37,15 @@ class DetectionResponse(BaseModel):
     is_uncertain: bool
 
 
+class SpottingImageResponse(BaseModel):
+    """Schema for spotting image response without base64 data."""
+
+    image_id: UUID
+    location_id: UUID
+    upload_timestamp: datetime
+    detections: List[DetectionResponse]
+
+
 class ImageDetailResponse(BaseModel):
     """Schema for detailed image response with detections."""
 
@@ -79,13 +56,14 @@ class ImageDetailResponse(BaseModel):
     detections: List[DetectionResponse]
 
 
-class SpottingImageResponse(BaseModel):
-    """Schema for spotting image response without base64 data."""
+class ImageUploadResponse(BaseModel):
+    """Schema for image upload response."""
 
     image_id: UUID
     location_id: UUID
     upload_timestamp: datetime
-    detections: List[DetectionResponse]
+    detections_count: int
+    detected_species: List[str]
 
 
 class ImageBase64Response(BaseModel):
@@ -93,6 +71,30 @@ class ImageBase64Response(BaseModel):
 
     image_id: UUID
     base64_data: str
+
+
+class LocationResponse(BaseModel):
+    """Schema for location response."""
+
+    id: UUID
+    name: str
+    longitude: float
+    latitude: float
+    description: Optional[str]
+    total_unique_species: int
+    total_spottings: int
+    images: List[SpottingImageResponse]
+    total_images_with_animals: int
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class LocationsResponse(BaseModel):
+    """Schema for locations list response with totals."""
+
+    locations: List[LocationResponse]
+    total_unique_species: int
+    total_spottings: int
 
 
 # Spotting schemas
@@ -122,6 +124,8 @@ class SpottingsResponse(BaseModel):
     """Schema for spottings endpoint response grouped by location."""
 
     locations: List[LocationWithImagesResponse]
+    total_unique_species: int
+    total_spottings: int
 
 
 # Wikipedia schemas
