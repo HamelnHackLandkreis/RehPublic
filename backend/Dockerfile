@@ -5,18 +5,43 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install uv
-RUN pip install uv
+# Install system dependencies required for PyTorch and PyTorch Wildlife
+# This layer is cached unless system dependencies change
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv (cached unless uv version changes)
+RUN pip install --no-cache-dir uv
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the entire project context
-COPY . .
+# Copy dependency files and minimal project structure for installation
+# These files change less frequently than application code
+COPY pyproject.toml uv.lock* README.md ./
+COPY wildlife_processor/__init__.py wildlife_processor/
+COPY api/__init__.py api/
 
-# Install the project and its dependencies
-# The '.' installs the project defined in pyproject.toml in the current directory
-RUN uv pip install --system .
+# Install dependencies and project
+# This layer is cached unless dependency files or package structure changes
+RUN uv pip install --system --no-cache .
+
+# Verify pytorchwildlife is installed (fail build if not available)
+RUN python -c "import PytorchWildlife; print('PyTorch Wildlife installed successfully')" || \
+    (echo "ERROR: PyTorch Wildlife installation failed!" && exit 1)
+
+# Copy the rest of the application code
+# This is done last so code changes don't invalidate the dependency cache
+# Use .dockerignore to exclude unnecessary files (node_modules, __pycache__, etc.)
+COPY . .
 
 # Expose the port the app runs on
 EXPOSE 8000
