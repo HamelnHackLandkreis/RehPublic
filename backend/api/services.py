@@ -4,6 +4,7 @@ import base64
 import logging
 import math
 from datetime import datetime
+from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 from uuid import UUID
 
@@ -353,8 +354,38 @@ class WikipediaService:
     WIKIPEDIA_API_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/"
     WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki/"
 
+    def __init__(self):
+        """Initialize Wikipedia service with LRU cache."""
+        self._cache = {}  # Manual cache for async function
+
+    @lru_cache(maxsize=128)
+    def _get_cached_article(self, title: str) -> Optional[Dict]:
+        """Internal cache lookup method.
+        
+        This method serves as a cache key storage. The actual data
+        is stored in self._cache to work with async operations.
+        
+        Args:
+            title: Article title
+            
+        Returns:
+            Cached article data or None
+        """
+        return self._cache.get(title)
+
+    def _set_cached_article(self, title: str, data: Optional[Dict]) -> None:
+        """Store article data in cache.
+        
+        Args:
+            title: Article title
+            data: Article data to cache
+        """
+        self._cache[title] = data
+        # Trigger the lru_cache to register this key
+        self._get_cached_article(title)
+
     async def fetch_article(self, title: str) -> Optional[Dict]:
-        """Fetch a single Wikipedia article summary.
+        """Fetch a single Wikipedia article summary with caching.
 
         Args:
             title: Article title
@@ -362,6 +393,12 @@ class WikipediaService:
         Returns:
             Dictionary with article data or None if not found
         """
+        # Check cache first
+        cached_data = self._cache.get(title)
+        if cached_data is not None:
+            logger.info(f"Wikipedia article retrieved from cache: {title}")
+            return cached_data
+        
         try:
             # Wikipedia requires a User-Agent header to prevent abuse
             headers = {
@@ -377,6 +414,8 @@ class WikipediaService:
                 
                 if response.status_code == 404:
                     logger.warning(f"Wikipedia article not found: {title}")
+                    # Cache the None result to avoid repeated failed lookups
+                    self._set_cached_article(title, None)
                     return None
                 
                 response.raise_for_status()
@@ -389,6 +428,10 @@ class WikipediaService:
                     "image_url": data.get("thumbnail", {}).get("source") if "thumbnail" in data else None,
                     "article_url": data.get("content_urls", {}).get("desktop", {}).get("page", f"{self.WIKIPEDIA_BASE_URL}{encoded_title}")
                 }
+                
+                # Cache the successful result
+                self._set_cached_article(title, article_data)
+                logger.info(f"Wikipedia article fetched and cached: {title}")
                 
                 return article_data
                 
