@@ -3,7 +3,7 @@
     <!-- Full Size Image - Border to Border -->
     <div class="w-full h-[60vh] overflow-hidden mb-2 relative">
       <img 
-        src="/fallback.JPG" 
+        :src="mainImageSrc" 
         alt="Main Wildlife Image" 
         class="w-full h-full object-cover"
       />
@@ -15,7 +15,7 @@
     <!-- Loading/Error States -->
     <div v-if="loading" class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      <p class="mt-4 text-gray-600">Loading animals...</p>
+      <p class="mt-4 text-gray-600">Loading image data...</p>
     </div>
 
     <div v-else-if="error" class="text-center py-12 text-red-600">
@@ -102,9 +102,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 
 const apiUrl = useApiUrl()
+const route = useRoute()
 
 // Types
 interface WikipediaArticle {
@@ -114,36 +115,100 @@ interface WikipediaArticle {
   article_url: string
 }
 
+interface BoundingBox {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+interface Detection {
+  species: string
+  confidence: number
+  bounding_box: BoundingBox
+  classification_model: string
+  is_uncertain: boolean
+}
+
+interface ImageData {
+  image_id: string
+  location_id: string
+  raw: string // base64 encoded image
+  upload_timestamp: string
+  detections: Detection[]
+}
+
+// Get image ID from route parameter or use default
+const imageId = computed(() => {
+  return (route.params.id as string) || '0812161d-dfc7-4f53-b3bd-1da415e5bbb6'
+})
+
 // State
 const currentSlide = ref(0)
 const animals = ref<WikipediaArticle[]>([])
+const imageData = ref<ImageData | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const dragOffset = ref({ x: 0, y: 0 })
 
-// Animals to fetch (you can customize this list based on your detection model)
-const animalList = [
-  'Red deer',
-  'Wild boar',
-  'European badger',
-  'Red fox',
-  'Roe deer',
-  'European rabbit'
-]
+// Computed property for main image source
+const mainImageSrc = computed(() => {
+  if (imageData.value?.raw) {
+    return `data:image/jpeg;base64,${imageData.value.raw}`
+  }
+  return '/fallback.JPG'
+})
+
+// Fetch image data from backend
+const fetchImageData = async () => {
+  try {
+    const response = await fetch(`${apiUrl}/images/${imageId.value}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    imageData.value = data
+    
+    // Extract unique species from detections for candidates
+    const detectedSpecies = [...new Set(data.detections.map((d: Detection) => d.species))] as string[]
+    
+    // Fetch Wikipedia articles for detected species
+    if (detectedSpecies.length > 0) {
+      await fetchAnimals(detectedSpecies)
+    } else {
+      // Fallback to default list if no detections
+      await fetchAnimals([
+        'Red deer',
+        'Wild boar',
+        'European badger',
+        'Red fox',
+        'Roe deer',
+        'European rabbit'
+      ])
+    }
+  } catch (e) {
+    console.error('Failed to fetch image data:', e)
+    error.value = 'Failed to load image data. Please try again later.'
+  }
+}
 
 // Fetch animals from backend
-const fetchAnimals = async () => {
+const fetchAnimals = async (speciesList: string[]) => {
   try {
-    loading.value = true
-    error.value = null
-    
     const response = await fetch(`${apiUrl}/wikipedia/articles`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        titles: animalList
+        titles: speciesList
       })
     })
 
@@ -193,7 +258,7 @@ const submitMatch = (animal: WikipediaArticle) => {
 
 // Fetch on mount
 onMounted(() => {
-  fetchAnimals()
+  fetchImageData()
 })
 
 // Touch/Swipe handling for carousel
