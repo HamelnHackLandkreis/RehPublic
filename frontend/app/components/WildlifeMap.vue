@@ -15,7 +15,6 @@
       :height="height"
       :width="width"
       :markers="markers"
-      @marker-click="handleMarkerClick"
     />
   </div>
 </template>
@@ -23,13 +22,24 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 
+interface ImageDetection {
+  image_id: string
+  location_id: string
+  upload_timestamp: string
+  detections: any[]
+}
+
 interface Location {
   id: string
   name: string
   longitude: number
   latitude: number
   description: string
-  image?: string
+  images?: ImageDetection[]
+}
+
+interface LocationsResponse {
+  locations: Location[]
 }
 
 interface Props {
@@ -38,19 +48,21 @@ interface Props {
   width?: string
   autoCenter?: boolean
   defaultZoom?: number
+  defaultLatitude?: number
+  defaultLongitude?: number
+  defaultDistanceRange?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  apiUrl: 'http://localhost:8000/locations',
-  height: '600px',
+  apiUrl: 'http://localhost:8000',
+  defaultLatitude: 52.10181392588904,
+  defaultLongitude: 9.37544441225413,
+  defaultDistanceRange: 100,
+  height: '.5vh',
   width: '100%',
   autoCenter: true,
   defaultZoom: 10
 })
-
-const emit = defineEmits<{
-  markerClick: [location: Location]
-}>()
 
 const locations = ref<Location[]>([])
 const loading = ref(true)
@@ -73,11 +85,6 @@ const createCustomIcon = async (name: string, imageUrl?: string) => {
           class="avatar-image"
           onerror="this.src='/fallback.JPG'"
         />
-        <div class="camera-badge">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white">
-            <path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/>
-          </svg>
-        </div>
       </div>
       <div class="marker-label">${name}</div>
     </div>
@@ -99,29 +106,35 @@ const updateMarkers = async () => {
   }
 
   const newMarkers = await Promise.all(
-    locations.value.map(async (location) => ({
-      position: [location.latitude, location.longitude] as [number, number],
-      popup: `
-        <div class="marker-popup">
-          <h3><strong>${location.name}</strong></h3>
-          <p>${location.description}</p>
-          <small>Lat: ${location.latitude}, Lon: ${location.longitude}</small>
-        </div>
-      `,
-      icon: await createCustomIcon(location.name, location.image),
-      id: location.id,
-      data: location
-    }))
+    locations.value.map(async (location) => {
+      // Get the first image if available
+      const imageUrl = location.images && location.images.length > 0 && location.images[0]
+        ? `${props.apiUrl}/images/${location.images[0].image_id}/base64   `
+        : undefined
+      
+      const imageCount = location.images?.length || 0
+      
+      return {
+        position: [location.latitude, location.longitude] as [number, number],
+        popup: `
+          <div class="marker-popup">
+            <h3><strong>${location.name}</strong></h3>
+            <p>${location.description}</p>
+            <small>Lat: ${location.latitude}, Lon: ${location.longitude}</small>
+            <div class="popup-stats">
+              <span>📷 ${imageCount} image${imageCount !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        `,
+        icon: await createCustomIcon(location.name, imageUrl)
+      }
+    })
   )
   
   markersWithIcons.value = newMarkers
 }
 
 const markers = computed(() => markersWithIcons.value)
-
-const handleMarkerClick = (locationData: Location) => {
-  emit('markerClick', locationData)
-}
 
 // Watch for location changes and create custom icons
 watch(() => locations.value, () => {
@@ -148,14 +161,15 @@ const fetchLocations = async () => {
   error.value = null
   
   try {
-    const response = await fetch(props.apiUrl)
+    const spottingsUrl = `${props.apiUrl}/spottings?latitude=${props.defaultLatitude}&longitude=${props.defaultLongitude}&distance_range=${props.defaultDistanceRange}`
+    const response = await fetch(spottingsUrl)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     
-    const data = await response.json()
-    locations.value = data
+    const data: LocationsResponse = await response.json()
+    locations.value = data.locations
     
     // Auto-adjust zoom based on number of locations
     if (props.autoCenter && locations.value.length > 1) {
@@ -197,17 +211,10 @@ onMounted(() => {
   fetchLocations()
 })
 
-const zoomToLocation = (lat: number, lon: number, zoomLevel: number = 15) => {
-  if (mapRef.value?.setCenter) {
-    mapRef.value.setCenter([lat, lon], zoomLevel)
-  }
-}
-
 // Expose methods for parent components
 defineExpose({
   refresh: fetchLocations,
-  getLocations: () => locations.value,
-  zoomToLocation
+  getLocations: () => locations.value
 })
 </script>
 
@@ -282,6 +289,19 @@ defineExpose({
 :deep(.marker-popup small) {
   font-size: 12px;
   color: #6b7280;
+}
+
+:deep(.popup-stats) {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+:deep(.popup-stats span) {
+  display: inline-block;
+  padding: 2px 0;
 }
 
 /* Custom marker styles */
