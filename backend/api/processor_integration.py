@@ -38,7 +38,7 @@ class ProcessorClient:
         self,
         image_bytes: bytes,
         location_name: str,
-        timestamp: Optional[datetime] = None
+        timestamp: Optional[datetime] = None,
     ) -> List[Dict]:
         """Process image bytes and return detection results.
 
@@ -58,8 +58,8 @@ class ProcessorClient:
             image_pil = Image.open(io.BytesIO(image_bytes))
 
             # Convert to RGB if necessary
-            if image_pil.mode != 'RGB':
-                image_pil = image_pil.convert('RGB')
+            if image_pil.mode != "RGB":
+                image_pil = image_pil.convert("RGB")
 
             # Convert to numpy array
             image_array = np.array(image_pil)
@@ -72,8 +72,7 @@ class ProcessorClient:
 
             # Process image
             detections, processing_time = self.model_manager.process_image(
-                processed_image,
-                timestamp_str
+                processed_image, timestamp_str
             )
 
             logger.info(
@@ -85,16 +84,16 @@ class ProcessorClient:
             detection_dicts = []
             for detection in detections:
                 detection_dict = {
-                    'species': detection.species,
-                    'confidence': detection.confidence,
-                    'bounding_box': {
-                        'x': detection.bounding_box.x,
-                        'y': detection.bounding_box.y,
-                        'width': detection.bounding_box.width,
-                        'height': detection.bounding_box.height
+                    "species": detection.species,
+                    "confidence": detection.confidence,
+                    "bounding_box": {
+                        "x": detection.bounding_box.x,
+                        "y": detection.bounding_box.y,
+                        "width": detection.bounding_box.width,
+                        "height": detection.bounding_box.height,
                     },
-                    'classification_model': detection.classification_model,
-                    'is_uncertain': detection.is_uncertain
+                    "classification_model": detection.classification_model,
+                    "is_uncertain": detection.is_uncertain,
                 }
                 detection_dicts.append(detection_dict)
 

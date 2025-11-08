@@ -1,10 +1,16 @@
-.PHONY: backend-sync backend-run frontend-prep frontend-run run
+.PHONY: backend-sync backend-run backend-test backend-download-models frontend-prep frontend-run run
 
 backend-sync:
 	cd backend && uv sync
 
 backend-run:
 	cd backend && uv run uvicorn api.main:app --reload --port 8000
+
+backend-test:
+	cd backend && uv run pytest tests/ -v
+
+backend-download-models:
+	cd backend && uv run python download_deepfaune_model.py
 
 frontend-prep:
 	cd frontend && npm install
