@@ -1,12 +1,13 @@
 """FastAPI application for wildlife camera API."""
 
+import base64
 import logging
 from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, UploadFile, status
+from fastapi import Depends, FastAPI, File, HTTPException, Query, Response, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -337,25 +338,24 @@ def get_image(image_id: UUID, db: Session = Depends(get_db)):
 
 @app.get(
     "/images/{image_id}/base64",
-    response_model=ImageBase64Response,
     status_code=status.HTTP_200_OK,
     tags=["images"],
 )
 def get_image_base64(image_id: UUID, db: Session = Depends(get_db)):
-    """Get base64-encoded image data by image ID.
+    """Get image directly by image ID for use in img src tags.
 
-    Returns only the base64-encoded image data for the specified image ID.
-    This endpoint is useful when you have an image ID from the /spottings endpoint
-    and need to fetch the actual image data.
+    Returns the image as raw bytes with proper content-type headers.
+    This endpoint can be used directly in HTML img src tags:
+    <img src="/images/{image_id}/base64" />
 
     Args:
         image_id: UUID of the image
 
     Returns:
-        Image base64 data response with image_id and base64_data
+        Raw image bytes with appropriate image content-type (image/jpeg, image/png, etc.)
 
     Raises:
-        HTTPException: 404 if image not found
+        HTTPException: 404 if image not found, 500 if image decoding fails
     """
     image = image_service.get_image_by_id(db, image_id)
     if not image:
@@ -364,7 +364,37 @@ def get_image_base64(image_id: UUID, db: Session = Depends(get_db)):
             detail=f"Image with id {image_id} not found",
         )
 
-    return ImageBase64Response(image_id=UUID(image.id), base64_data=image.base64_data)
+    # Decode base64 to bytes
+    try:
+        image_bytes = base64.b64decode(image.base64_data)
+    except Exception as e:
+        logger.error(f"Failed to decode base64 image {image_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to decode image data",
+        )
+
+    # Detect image type from magic bytes (first few bytes)
+    content_type = "image/jpeg"  # Default to JPEG
+    if len(image_bytes) >= 4:
+        # Check for PNG
+        if image_bytes[:4] == b"\x89PNG":
+            content_type = "image/png"
+        # Check for GIF
+        elif image_bytes[:3] == b"GIF":
+            content_type = "image/gif"
+        # Check for WebP
+        elif len(image_bytes) >= 12 and image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+            content_type = "image/webp"
+        # JPEG is default (starts with FF D8)
+
+    return Response(
+        content=image_bytes,
+        media_type=content_type,
+        headers={
+            "Cache-Control": "public, max-age=3600"  # Cache for 1 hour
+        },
+    )
 
 
 @app.get(
