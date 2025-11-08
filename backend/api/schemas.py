@@ -121,6 +121,29 @@ class LocationWithImagesResponse(BaseModel):
     total_spottings: int
 
 
+class AnimalSpottingResponse(BaseModel):
+    """Schema for animal spotting with image and location info."""
+
+    spotting_id: UUID
+    image_id: UUID
+    location_id: UUID
+    location_name: str
+    species: str
+    confidence: float
+    bounding_box: BoundingBoxResponse
+    classification_model: str
+    is_uncertain: bool
+    detection_timestamp: datetime
+    upload_timestamp: datetime
+
+
+class AnimalSpottingsResponse(BaseModel):
+    """Schema for animal spottings endpoint response."""
+
+    spottings: List[AnimalSpottingResponse]
+    total_count: int
+
+
 class SpottingsResponse(BaseModel):
     """Schema for spottings endpoint response grouped by location."""
 

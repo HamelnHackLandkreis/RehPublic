@@ -23,6 +23,8 @@ from sqlalchemy.orm import Session, selectinload
 from api.database import get_db, init_db
 from api.locations_controller import router as locations_router
 from api.schemas import (
+    AnimalSpottingResponse,
+    AnimalSpottingsResponse,
     BoundingBoxResponse,
     DetectionResponse,
     ImageDetailResponse,
@@ -1130,6 +1132,95 @@ def get_user_detection_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user detection stats: {str(e)}",
+@app.get(
+    "/spottings/animal",
+    response_model=AnimalSpottingsResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["spottings"],
+)
+def get_animal_spottings(
+    limit: Optional[int] = Query(
+        None,
+        description="Maximum number of spottings to return. If not provided, returns all.",
+        gt=0,
+    ),
+    offset: Optional[int] = Query(
+        0,
+        description="Number of spottings to skip for pagination.",
+        ge=0,
+    ),
+    db: Session = Depends(get_db),
+):
+    """Get all spottings with species "animal".
+
+    Returns all animal detections that were classified as generic "animal" species.
+    This is useful for finding detections that need further classification or review.
+
+    Query Parameters:
+        limit: Maximum number of spottings to return (optional, for pagination)
+        offset: Number of spottings to skip (optional, for pagination)
+
+    Returns:
+        AnimalSpottingsResponse containing:
+        - spottings: List of animal spottings with image and location information
+        - total_count: Total number of animal spottings found
+
+    Example:
+        GET /spottings/animal
+        GET /spottings/animal?limit=100&offset=0
+    """
+    try:
+        # Query all spottings with species "animal"
+        query = (
+            db.query(Spotting, Image, Location)
+            .join(Image, Spotting.image_id == Image.id)
+            .join(Location, Image.location_id == Location.id)
+            .filter(Spotting.species == "animal")
+            .order_by(Spotting.detection_timestamp.desc())
+        )
+
+        # Get total count before pagination
+        total_count = query.count()
+
+        # Apply pagination if provided
+        if offset:
+            query = query.offset(offset)
+        if limit:
+            query = query.limit(limit)
+
+        # Execute query
+        results = query.all()
+
+        # Build response
+        spottings = []
+        for spotting, image, location in results:
+            spottings.append(
+                AnimalSpottingResponse(
+                    spotting_id=UUID(spotting.id),
+                    image_id=UUID(image.id),
+                    location_id=UUID(location.id),
+                    location_name=location.name,
+                    species=spotting.species,
+                    confidence=spotting.confidence,
+                    bounding_box=BoundingBoxResponse(
+                        x=spotting.bbox_x,
+                        y=spotting.bbox_y,
+                        width=spotting.bbox_width,
+                        height=spotting.bbox_height,
+                    ),
+                    classification_model=spotting.classification_model,
+                    is_uncertain=spotting.is_uncertain,
+                    detection_timestamp=spotting.detection_timestamp,
+                    upload_timestamp=image.upload_timestamp,
+                )
+            )
+
+        return AnimalSpottingsResponse(spottings=spottings, total_count=total_count)
+    except Exception as e:
+        logger.error(f"Failed to get animal spottings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get animal spottings: {str(e)}",
         )
 
 
@@ -1145,6 +1236,7 @@ def root():
             "get_image": "/images/{image_id}",
             "get_image_base64": "/images/{image_id}/base64",
             "spottings": "/spottings",
+            "animal_spottings": "/spottings/animal",
             "statistics": "/statistics",
             "create_user_detection": "/user-detections",
             "get_user_detection_stats": "/user-detections/{image_id}",

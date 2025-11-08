@@ -70,7 +70,7 @@ class ProcessorClient:
             # Convert timestamp to string if provided
             timestamp_str = timestamp.isoformat() if timestamp else None
 
-            # Process image
+            # # Process image
             detections, processing_time = self.model_manager.process_image(
                 processed_image, timestamp_str
             )
