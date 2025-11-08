@@ -24,106 +24,117 @@ except ImportError:
     PYTORCH_WILDLIFE_AVAILABLE = False
 
 
-class DeepfauneV4Classifier(TIMM_BaseClassifierInference):
-    """DeepFaune v4 classifier with 38 classes support.
+# Only define the class if PytorchWildlife is available
+if PYTORCH_WILDLIFE_AVAILABLE:
+    class DeepfauneV4Classifier(TIMM_BaseClassifierInference):
+        """DeepFaune v4 classifier with 38 classes support.
 
-    This is a custom classifier for DeepFaune v4 model which has 38 classes
-    instead of the 34 classes in the standard v3 model.
-    """
-
-    BACKBONE = "vit_large_patch14_dinov2.lvd142m"
-    MODEL_NAME = "deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt"
-    IMAGE_SIZE = 182
-    # v4 has 38 classes - same 34 classes as v3 plus 4 additional classes
-    # The additional classes are: human, vehicle, empty, unknown
-    CLASS_NAMES = {
-        "en": [
-            "bison",
-            "badger",
-            "ibex",
-            "beaver",
-            "red deer",
-            "golden jackal",
-            "chamois",
-            "cat",
-            "goat",
-            "roe deer",
-            "dog",
-            "raccoon dog",
-            "fallow deer",
-            "squirrel",
-            "moose",
-            "equid",
-            "genet",
-            "wolverine",
-            "hedgehog",
-            "lagomorph",
-            "wolf",
-            "otter",
-            "lynx",
-            "marmot",
-            "micromammal",
-            "mouflon",
-            "sheep",
-            "mustelid",
-            "bird",
-            "bear",
-            "porcupine",
-            "nutria",
-            "muskrat",
-            "raccoon",
-            "fox",
-            "reindeer",
-            "wild boar",
-            "cow",
-        ],
-    }
-
-    def __init__(
-        self,
-        weights: Optional[str] = None,
-        device: str = "cpu",
-        transform: Optional[Any] = None,
-        class_name_lang: str = "en",
-    ) -> None:
-        """Initialize DeepFaune v4 classifier.
-
-        Args:
-            weights: Path to model weights file (required for v4)
-            device: Device for inference
-            transform: Optional transform
-            class_name_lang: Language for class names
+        This is a custom classifier for DeepFaune v4 model which has 38 classes
+        instead of the 34 classes in the standard v3 model.
         """
-        if not PYTORCH_WILDLIFE_AVAILABLE:
+
+        BACKBONE = "vit_large_patch14_dinov2.lvd142m"
+        MODEL_NAME = "deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt"
+        IMAGE_SIZE = 182
+        # v4 has 38 classes - same 34 classes as v3 plus 4 additional classes
+        # The additional classes are: human, vehicle, empty, unknown
+        CLASS_NAMES = {
+            "en": [
+                "bison",
+                "badger",
+                "ibex",
+                "beaver",
+                "red deer",
+                "golden jackal",
+                "chamois",
+                "cat",
+                "goat",
+                "roe deer",
+                "dog",
+                "raccoon dog",
+                "fallow deer",
+                "squirrel",
+                "moose",
+                "equid",
+                "genet",
+                "wolverine",
+                "hedgehog",
+                "lagomorph",
+                "wolf",
+                "otter",
+                "lynx",
+                "marmot",
+                "micromammal",
+                "mouflon",
+                "sheep",
+                "mustelid",
+                "bird",
+                "bear",
+                "porcupine",
+                "nutria",
+                "muskrat",
+                "raccoon",
+                "fox",
+                "reindeer",
+                "wild boar",
+                "cow",
+            ],
+        }
+
+        def __init__(
+            self,
+            weights: Optional[str] = None,
+            device: str = "cpu",
+            transform: Optional[Any] = None,
+            class_name_lang: str = "en",
+        ) -> None:
+            """Initialize DeepFaune v4 classifier.
+
+            Args:
+                weights: Path to model weights file (required for v4)
+                device: Device for inference
+                transform: Optional transform
+                class_name_lang: Language for class names
+            """
+            if not PYTORCH_WILDLIFE_AVAILABLE:
+                raise RuntimeError(
+                    "PyTorch Wildlife is not installed. Install with: uv add PytorchWildlife"
+                )
+
+            # Convert class names to dict format BEFORE calling super().__init__()
+            # The base class uses len(self.CLASS_NAMES) to determine num_classes
+            class_names_list = self.CLASS_NAMES[class_name_lang]
+            self.CLASS_NAMES = {i: c for i, c in enumerate(class_names_list)}
+
+            # Verify we have 38 classes
+            if len(self.CLASS_NAMES) != 38:
+                raise ValueError(
+                    f"Expected 38 classes for DeepFaune v4, got {len(self.CLASS_NAMES)}"
+                )
+
+            if transform is None:
+                transform = pw_trans.Classification_Inference_Transform(
+                    target_size=self.IMAGE_SIZE,
+                    interpolation=InterpolationMode.BICUBIC,
+                    max_size=None,
+                    antialias=None,
+                )
+
+            # Don't pass URL - only use weights to prevent download
+            super().__init__(
+                weights=weights,
+                device=device,
+                url=None,  # No URL to prevent download
+                transform=transform,
+                weights_key="state_dict",
+                weights_prefix="base_model.",
+            )
+else:
+    # Dummy class when PytorchWildlife is not available
+    class DeepfauneV4Classifier:
+        """Dummy DeepFaune v4 classifier when PytorchWildlife is not available."""
+        
+        def __init__(self, *args, **kwargs):
             raise RuntimeError(
                 "PyTorch Wildlife is not installed. Install with: uv add PytorchWildlife"
             )
-
-        # Convert class names to dict format BEFORE calling super().__init__()
-        # The base class uses len(self.CLASS_NAMES) to determine num_classes
-        class_names_list = self.CLASS_NAMES[class_name_lang]
-        self.CLASS_NAMES = {i: c for i, c in enumerate(class_names_list)}
-
-        # Verify we have 38 classes
-        if len(self.CLASS_NAMES) != 38:
-            raise ValueError(
-                f"Expected 38 classes for DeepFaune v4, got {len(self.CLASS_NAMES)}"
-            )
-
-        if transform is None:
-            transform = pw_trans.Classification_Inference_Transform(
-                target_size=self.IMAGE_SIZE,
-                interpolation=InterpolationMode.BICUBIC,
-                max_size=None,
-                antialias=None,
-            )
-
-        # Don't pass URL - only use weights to prevent download
-        super().__init__(
-            weights=weights,
-            device=device,
-            url=None,  # No URL to prevent download
-            transform=transform,
-            weights_key="state_dict",
-            weights_prefix="base_model.",
-        )
