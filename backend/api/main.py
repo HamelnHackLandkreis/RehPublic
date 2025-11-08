@@ -721,6 +721,10 @@ def get_spottings(
         description="Maximum distance from center location in kilometers (km). Example: 5.0 for 5 km radius",
         gt=0,
     ),
+    species: Optional[str] = Query(
+        None,
+        description="Filter by species name (case-insensitive). If provided, only returns spottings of this species.",
+    ),
     time_start: Optional[datetime] = Query(
         None,
         description="Start timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-01-01T00:00:00",
@@ -736,6 +740,7 @@ def get_spottings(
     Returns up to 3 most recent images per location that are:
     - Within the specified distance range from the center location (distance_range in kilometers)
     - Within the optional time range (if provided, using ISO 8601 datetime format)
+    - Matching the optional species filter (if provided)
 
     Response is grouped by location, where each location contains:
     - Location data (id, name, coordinates, description)
@@ -750,6 +755,7 @@ def get_spottings(
         latitude: Center latitude in decimal degrees (e.g., 50.123)
         longitude: Center longitude in decimal degrees (e.g., 10.456)
         distance_range: Maximum distance in kilometers (km) from center location. Must be > 0.
+        species: Optional species name filter (case-insensitive). If provided, only returns spottings of this species.
         time_start: Optional start timestamp in ISO 8601 format (inclusive).
                    Examples: "2024-01-01T00:00:00", "2024-01-01"
         time_end: Optional end timestamp in ISO 8601 format (inclusive).
@@ -760,7 +766,8 @@ def get_spottings(
         plus total_unique_species and total_spottings counts
 
     Example:
-        GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59
+        GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&species=Red%20deer
+        GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59&species=Wild%20boar
     """
     # Get images within range (limited to 3 per location)
     images = image_service.get_images_in_range(
@@ -788,7 +795,15 @@ def get_spottings(
 
         # Get all spottings for this image
         # Explicitly query spottings to ensure they're loaded
-        spottings = db.query(Spotting).filter(Spotting.image_id == image.id).all()
+        spottings_query = db.query(Spotting).filter(Spotting.image_id == image.id)
+
+        # Apply species filter if provided
+        if species:
+            spottings_query = spottings_query.filter(
+                Spotting.species.ilike(f"%{species}%")
+            )
+
+        spottings = spottings_query.all()
 
         # Convert spottings to detection responses
         detections = []
@@ -807,15 +822,16 @@ def get_spottings(
             )
             detections.append(detection)
 
-        # Add image to location group
-        images_by_location[location_id].append(
-            SpottingImageResponse(
-                image_id=UUID(image.id),
-                location_id=UUID(image.location_id),
-                upload_timestamp=image.upload_timestamp,
-                detections=detections,
+        # Only add image if it has detections (or if no species filter is applied)
+        if detections or not species:
+            images_by_location[location_id].append(
+                SpottingImageResponse(
+                    image_id=UUID(image.id),
+                    location_id=UUID(image.location_id),
+                    upload_timestamp=image.upload_timestamp,
+                    detections=detections,
+                )
             )
-        )
 
     # Build response with locations and their images
     locations_response = []
@@ -833,6 +849,12 @@ def get_spottings(
                 .join(Image, Spotting.image_id == Image.id)
                 .filter(Image.location_id == location_id)
             )
+
+            # Apply species filter if provided
+            if species:
+                spottings_query = spottings_query.filter(
+                    Spotting.species.ilike(f"%{species}%")
+                )
 
             # Apply time range filters if provided
             if time_start is not None:
@@ -1132,6 +1154,9 @@ def get_user_detection_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user detection stats: {str(e)}",
+        )
+
+
 @app.get(
     "/spottings/animal",
     response_model=AnimalSpottingsResponse,
