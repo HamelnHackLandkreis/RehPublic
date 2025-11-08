@@ -16,5 +16,5 @@ run: backend-sync frontend-prep
 	@echo "Starting backend and frontend..."
 	@echo "Backend: http://127.0.0.1:8000"
 	@echo "Frontend: Check terminal output for URL"
-	@cd backend && uvicorn api.main:app --reload --port 8000 & \
+	@cd backend && uv run uvicorn api.main:app --reload --port 8000 & \
 	cd frontend && npm run dev
