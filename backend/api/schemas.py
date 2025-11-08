@@ -165,3 +165,31 @@ class StatisticsResponse(BaseModel):
     """Schema for statistics endpoint response."""
 
     statistics: List[TimePeriodStatisticsResponse]
+
+
+# User Detection schemas
+class UserDetectionCreate(BaseModel):
+    """Schema for creating a user detection (manual identification)."""
+
+    image_id: UUID
+    species: str
+    user_session_id: Optional[str] = None
+
+
+class UserDetectionResponse(BaseModel):
+    """Schema for user detection response."""
+
+    id: UUID
+    image_id: UUID
+    species: str
+    user_session_id: Optional[str]
+    detection_timestamp: datetime
+
+
+class UserDetectionStatsResponse(BaseModel):
+    """Schema for user detection statistics for an image."""
+
+    image_id: UUID
+    user_detections: List[SpeciesCountResponse]
+    total_user_detections: int
+    automated_detections: List[str]  # List of species detected by AI
