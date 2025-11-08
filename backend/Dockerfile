@@ -4,6 +4,7 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV MODEL_PATH=/app/models/deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt
 
 # Install system dependencies required for PyTorch and PyTorch Wildlife
 # This layer is cached unless system dependencies change
