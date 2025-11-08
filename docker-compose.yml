@@ -16,3 +16,18 @@ services:
       - "9002:8000"
     restart: always
     container_name: rehpublic-backend
+
+  db:
+   image: postgres:15-alpine
+   restart: always
+   environment:
+      POSTGRES_PASSWORD: hamelnhack2025
+      POSTGRES_DB: rehpublic
+      POSTGRES_USER: rehpublic
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
