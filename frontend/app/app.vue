@@ -3,10 +3,10 @@
 </script>
 
 <template>
-  <div class="flex min-h-screen">
-    <Sidebar />
-    <main class="flex-1 p-5">
+  <div class="min-h-screen pb-20">
+    <main class="p-5">
       <NuxtPage />
     </main>
+    <Sidebar />
   </div>
 </template>
