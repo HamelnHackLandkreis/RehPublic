@@ -5,24 +5,9 @@
       :center="[51.9244, 9.4305]" 
       :zoom="13"
       height="600px"
-      :markers="sampleMarkers"
     />
   </div>
 </template>
-
-<script setup lang="ts">
-// Sample markers for demonstration
-const sampleMarkers = ref([
-  {
-    position: [51.9244, 9.4305],
-    popup: 'Hameln City Center'
-  },
-  {
-    position: [51.9344, 9.4405],
-    popup: 'Wildlife Sighting 1'
-  }
-])
-</script>
 
 <style scoped>
 .map-page {
