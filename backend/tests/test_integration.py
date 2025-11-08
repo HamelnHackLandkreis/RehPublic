@@ -76,7 +76,7 @@ def test_upload_image_to_location(client, sample_image_bytes):
     assert "upload_timestamp" in upload_response
     assert "detections_count" in upload_response
     assert upload_response["detections_count"] >= 0  # May be 0 if no animals detected
-    assert "roe deer" in upload_response
+    assert "roe deer" in upload_response["detected_species"]
 
 
 def test_upload_image_invalid_location(client, sample_image_bytes):
