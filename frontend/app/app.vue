@@ -1,25 +1,12 @@
+<script setup>
+// Main app layout
+</script>
+
 <template>
-  <div class="app-container">
+  <div class="flex min-h-screen">
     <Sidebar />
-    <main class="main-content">
+    <main class="flex-1 p-5">
       <NuxtPage />
     </main>
   </div>
 </template>
-
-<style>
-.app-container {
-  display: flex;
-  min-height: 100vh;
-}
-
-.main-content {
-  flex: 1;
-  padding: 20px;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
-</style>
