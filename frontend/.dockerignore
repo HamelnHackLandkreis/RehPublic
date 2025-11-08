@@ -1,0 +1,17 @@
+# Ignore Node modules and build artifacts from the host system
+node_modules
+.nuxt
+.output
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Source control
+.git
+.gitignore
+
+# Logs and misc
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
