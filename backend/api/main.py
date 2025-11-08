@@ -1,6 +1,7 @@
 """FastAPI application for wildlife camera API."""
 
 import logging
+from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
@@ -18,8 +19,10 @@ from api.schemas import (
     ImageUploadResponse,
     LocationCreate,
     LocationResponse,
+    LocationWithImagesResponse,
     SpottingImageResponse,
     SpottingLocationResponse,
+    SpottingsResponse,
     WikipediaArticleResponse,
     WikipediaArticlesRequest,
 )
@@ -346,7 +349,7 @@ def get_image_base64(
     )
 
 
-@app.get("/spottings", response_model=List[SpottingImageResponse], status_code=status.HTTP_200_OK, tags=["spottings"])
+@app.get("/spottings", response_model=SpottingsResponse, status_code=status.HTTP_200_OK, tags=["spottings"])
 def get_spottings(
     latitude: float = Query(..., description="Center latitude for location search (decimal degrees, e.g., 50.123)"),
     longitude: float = Query(..., description="Center longitude for location search (decimal degrees, e.g., 10.456)"),
@@ -355,16 +358,15 @@ def get_spottings(
     time_end: Optional[datetime] = Query(None, description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59"),
     db: Session = Depends(get_db)
 ):
-    """Get images within a location and time range.
+    """Get images within a location and time range, grouped by location.
 
     Returns up to 3 most recent images per location that are:
     - Within the specified distance range from the center location (distance_range in kilometers)
     - Within the optional time range (if provided, using ISO 8601 datetime format)
 
-    Each image includes:
-    - Image ID and location ID
-    - Upload timestamp
-    - All detections (species, confidence, bounding boxes)
+    Response is grouped by location, where each location contains:
+    - Location data (id, name, coordinates, description)
+    - List of images with detections (species, confidence, bounding boxes)
     - Note: Base64 image data is NOT included. Use /images/{image_id}/base64 to fetch it.
 
     Query Parameters:
@@ -377,7 +379,7 @@ def get_spottings(
                  Examples: "2024-12-31T23:59:59", "2024-12-31"
 
     Returns:
-        List of images with detections within the specified range (max 3 per location)
+        Response with locations array, each containing location data and images (max 3 per location)
 
     Example:
         GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59
@@ -393,9 +395,19 @@ def get_spottings(
         limit_per_location=3
     )
     
-    # Convert to response models with detections (without base64)
-    response = []
+    # Group images by location
+    images_by_location = defaultdict(list)
+    location_map = {}
+    
     for image in images:
+        location_id = image.location_id
+        
+        # Fetch location if not already cached
+        if location_id not in location_map:
+            location = location_service.get_location_by_id(db, UUID(location_id))
+            if location:
+                location_map[location_id] = location
+        
         # Get all spottings for this image
         spottings = db.query(Spotting).filter(
             Spotting.image_id == str(image.id)
@@ -418,14 +430,29 @@ def get_spottings(
             )
             detections.append(detection)
         
-        response.append(SpottingImageResponse(
+        # Add image to location group
+        images_by_location[location_id].append(SpottingImageResponse(
             image_id=UUID(image.id),
             location_id=UUID(image.location_id),
             upload_timestamp=image.upload_timestamp,
             detections=detections
         ))
     
-    return response
+    # Build response with locations and their images
+    locations_response = []
+    for location_id, location_images in images_by_location.items():
+        if location_id in location_map:
+            location = location_map[location_id]
+            locations_response.append(LocationWithImagesResponse(
+                id=UUID(location.id),
+                name=location.name,
+                longitude=location.longitude,
+                latitude=location.latitude,
+                description=location.description,
+                images=location_images
+            ))
+    
+    return SpottingsResponse(locations=locations_response)
 
 
 @app.post("/wikipedia/articles", response_model=List[WikipediaArticleResponse], status_code=status.HTTP_200_OK, tags=["wikipedia"])

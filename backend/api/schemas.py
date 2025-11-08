@@ -86,6 +86,21 @@ class SpottingLocationResponse(BaseModel):
     image_id: UUID
 
 
+class LocationWithImagesResponse(BaseModel):
+    """Schema for location with its images."""
+    id: UUID
+    name: str
+    longitude: float
+    latitude: float
+    description: Optional[str]
+    images: List[SpottingImageResponse]
+
+
+class SpottingsResponse(BaseModel):
+    """Schema for spottings endpoint response grouped by location."""
+    locations: List[LocationWithImagesResponse]
+
+
 # Wikipedia schemas
 class WikipediaArticleResponse(BaseModel):
     """Schema for Wikipedia article response."""
