@@ -9,7 +9,6 @@
         <div class="map-container">
           <WildlifeMap 
             ref="mapRef"
-            api-url="http://localhost:8000/locations"
             height="100%"
             :auto-center="!selectedLocation"
             :default-zoom="20"
