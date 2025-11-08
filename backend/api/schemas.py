@@ -62,6 +62,20 @@ class ImageDetailResponse(BaseModel):
     detections: List[DetectionResponse]
 
 
+class SpottingImageResponse(BaseModel):
+    """Schema for spotting image response without base64 data."""
+    image_id: UUID
+    location_id: UUID
+    upload_timestamp: datetime
+    detections: List[DetectionResponse]
+
+
+class ImageBase64Response(BaseModel):
+    """Schema for image base64 data response."""
+    image_id: UUID
+    base64_data: str
+
+
 # Spotting schemas
 class SpottingLocationResponse(BaseModel):
     """Schema for aggregated spotting data by location."""

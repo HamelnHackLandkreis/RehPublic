@@ -13,10 +13,12 @@ from api.database import get_db, init_db
 from api.schemas import (
     BoundingBoxResponse,
     DetectionResponse,
+    ImageBase64Response,
     ImageDetailResponse,
     ImageUploadResponse,
     LocationCreate,
     LocationResponse,
+    SpottingImageResponse,
     SpottingLocationResponse,
     WikipediaArticleResponse,
     WikipediaArticlesRequest,
@@ -266,7 +268,41 @@ def get_image(
         detections=detections
     )
 
-@app.get("/spottings", response_model=List[ImageDetailResponse], status_code=status.HTTP_200_OK)
+
+@app.get("/images/{image_id}/base64", response_model=ImageBase64Response, status_code=status.HTTP_200_OK)
+def get_image_base64(
+    image_id: UUID,
+    db: Session = Depends(get_db)
+):
+    """Get base64-encoded image data by image ID.
+
+    Returns only the base64-encoded image data for the specified image ID.
+    This endpoint is useful when you have an image ID from the /spottings endpoint
+    and need to fetch the actual image data.
+
+    Args:
+        image_id: UUID of the image
+
+    Returns:
+        Image base64 data response with image_id and base64_data
+
+    Raises:
+        HTTPException: 404 if image not found
+    """
+    image = image_service.get_image_by_id(db, image_id)
+    if not image:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Image with id {image_id} not found"
+        )
+
+    return ImageBase64Response(
+        image_id=UUID(image.id),
+        base64_data=image.base64_data
+    )
+
+
+@app.get("/spottings", response_model=List[SpottingImageResponse], status_code=status.HTTP_200_OK)
 def get_spottings(
     latitude: float = Query(..., description="Center latitude for location search (decimal degrees, e.g., 50.123)"),
     longitude: float = Query(..., description="Center longitude for location search (decimal degrees, e.g., 10.456)"),
@@ -275,17 +311,17 @@ def get_spottings(
     time_end: Optional[datetime] = Query(None, description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59"),
     db: Session = Depends(get_db)
 ):
-    """Get all images within a location and time range.
+    """Get images within a location and time range.
 
-    Returns all images that are:
+    Returns up to 3 most recent images per location that are:
     - Within the specified distance range from the center location (distance_range in kilometers)
     - Within the optional time range (if provided, using ISO 8601 datetime format)
 
     Each image includes:
     - Image ID and location ID
-    - Base64-encoded image data
     - Upload timestamp
     - All detections (species, confidence, bounding boxes)
+    - Note: Base64 image data is NOT included. Use /images/{image_id}/base64 to fetch it.
 
     Query Parameters:
         latitude: Center latitude in decimal degrees (e.g., 50.123)
@@ -297,22 +333,23 @@ def get_spottings(
                  Examples: "2024-12-31T23:59:59", "2024-12-31"
 
     Returns:
-        List of images with detections within the specified range
+        List of images with detections within the specified range (max 3 per location)
 
     Example:
         GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59
     """
-    # Get images within range
+    # Get images within range (limited to 3 per location)
     images = image_service.get_images_in_range(
         db=db,
         latitude=latitude,
         longitude=longitude,
         distance_range=distance_range,
         time_start=time_start,
-        time_end=time_end
+        time_end=time_end,
+        limit_per_location=3
     )
     
-    # Convert to response models with detections
+    # Convert to response models with detections (without base64)
     response = []
     for image in images:
         # Get all spottings for this image
@@ -337,10 +374,9 @@ def get_spottings(
             )
             detections.append(detection)
         
-        response.append(ImageDetailResponse(
+        response.append(SpottingImageResponse(
             image_id=UUID(image.id),
             location_id=UUID(image.location_id),
-            raw=image.base64_data,
             upload_timestamp=image.upload_timestamp,
             detections=detections
         ))
@@ -392,6 +428,7 @@ def root():
             "locations": "/locations",
             "upload_image": "/locations/{location_id}/image",
             "get_image": "/images/{image_id}",
+            "get_image_base64": "/images/{image_id}/base64",
             "spottings": "/spottings",
             "wikipedia_articles": "/wikipedia/articles"
         }
