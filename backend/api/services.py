@@ -1,15 +1,19 @@
 """Service layer for business logic."""
 
 import base64
+import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 from uuid import UUID
 
+import httpx
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from api.models import Image, Location, Spotting
 from api.processor_integration import ProcessorClient
+
+logger = logging.getLogger(__name__)
 
 
 class LocationService:
@@ -260,3 +264,77 @@ class SpottingService:
             aggregated_spottings.append(spotting_data)
 
         return aggregated_spottings
+
+
+class WikipediaService:
+    """Service for fetching Wikipedia article data."""
+
+    WIKIPEDIA_API_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/"
+    WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki/"
+
+    async def fetch_article(self, title: str) -> Optional[Dict]:
+        """Fetch a single Wikipedia article summary.
+
+        Args:
+            title: Article title
+
+        Returns:
+            Dictionary with article data or None if not found
+        """
+        try:
+            # Wikipedia requires a User-Agent header to prevent abuse
+            headers = {
+                "User-Agent": "WildlifeCameraAPI/0.1 (Educational project; contact: your-email@example.com)"
+            }
+            
+            async with httpx.AsyncClient(headers=headers) as client:
+                # Encode title for URL
+                encoded_title = title.replace(" ", "_")
+                url = f"{self.WIKIPEDIA_API_URL}{encoded_title}"
+                
+                response = await client.get(url, timeout=10.0)
+                
+                if response.status_code == 404:
+                    logger.warning(f"Wikipedia article not found: {title}")
+                    return None
+                
+                response.raise_for_status()
+                data = response.json()
+                
+                # Extract relevant fields - use extract for longer text content
+                article_data = {
+                    "title": data.get("title", title),
+                    "description": data.get("extract"),  # This contains the full paragraph(s)
+                    "image_url": data.get("thumbnail", {}).get("source") if "thumbnail" in data else None,
+                    "article_url": data.get("content_urls", {}).get("desktop", {}).get("page", f"{self.WIKIPEDIA_BASE_URL}{encoded_title}")
+                }
+                
+                return article_data
+                
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error fetching Wikipedia article '{title}': {e}")
+            return None
+        except httpx.RequestError as e:
+            logger.error(f"Request error fetching Wikipedia article '{title}': {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error fetching Wikipedia article '{title}': {e}")
+            return None
+
+    async def fetch_articles(self, titles: List[str]) -> List[Dict]:
+        """Fetch multiple Wikipedia articles.
+
+        Args:
+            titles: List of article titles
+
+        Returns:
+            List of article data dictionaries (excluding failed fetches)
+        """
+        results = []
+        
+        for title in titles:
+            article_data = await self.fetch_article(title)
+            if article_data:
+                results.append(article_data)
+        
+        return results

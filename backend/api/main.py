@@ -17,9 +17,11 @@ from api.schemas import (
     LocationCreate,
     LocationResponse,
     SpottingLocationResponse,
+    WikipediaArticleResponse,
+    WikipediaArticlesRequest,
 )
 from api.models import Spotting
-from api.services import ImageService, LocationService, SpottingService
+from api.services import ImageService, LocationService, SpottingService, WikipediaService
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -45,6 +47,7 @@ app.add_middleware(
 location_service = LocationService()
 image_service = ImageService()
 spotting_service = SpottingService()
+wikipedia_service = WikipediaService()
 
 
 @app.on_event("startup")
@@ -293,6 +296,40 @@ def get_spottings(db: Session = Depends(get_db)):
     return response
 
 
+@app.post("/wikipedia/articles", response_model=List[WikipediaArticleResponse], status_code=status.HTTP_200_OK)
+async def get_wikipedia_articles(request: WikipediaArticlesRequest):
+    """Fetch Wikipedia articles with main image, description, and link.
+
+    This endpoint fetches data from the Wikipedia API for the provided article titles.
+    For each article, it returns:
+    - title: The article title
+    - description: A short description or extract from the article
+    - image_url: URL to the main/thumbnail image (if available)
+    - article_url: Direct link to the Wikipedia article
+
+    Args:
+        request: List of Wikipedia article titles to fetch
+
+    Returns:
+        List of Wikipedia article data (articles not found will be omitted)
+    
+    Example:
+        POST /wikipedia/articles
+        {
+            "titles": ["Red deer", "Wild boar", "European badger"]
+        }
+    """
+    try:
+        articles = await wikipedia_service.fetch_articles(request.titles)
+        return articles
+    except Exception as e:
+        logger.error(f"Failed to fetch Wikipedia articles: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch Wikipedia articles: {str(e)}"
+        )
+
+
 @app.get("/", status_code=status.HTTP_200_OK)
 def root():
     """Root endpoint with API information."""
@@ -303,6 +340,7 @@ def root():
             "locations": "/locations",
             "upload_image": "/locations/{location_id}/image",
             "get_image": "/images/{image_id}",
-            "spottings": "/spottings"
+            "spottings": "/spottings",
+            "wikipedia_articles": "/wikipedia/articles"
         }
     }
