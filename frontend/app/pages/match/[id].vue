@@ -185,12 +185,7 @@ const fetchImageData = async () => {
     } else {
       // Fallback to default list if no detections
       await fetchAnimals([
-        'Red deer',
-        'Wild boar',
-        'European badger',
-        'Red fox',
-        'Roe deer',
-        'European rabbit'
+        'Roe deer'
       ])
     }
   } catch (e) {
