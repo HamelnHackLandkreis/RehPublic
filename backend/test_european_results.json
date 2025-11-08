@@ -1,0 +1,154 @@
+{
+  "processing_metadata": {
+    "total_images": 3,
+    "successful_detections": 3,
+    "failed_images": [],
+    "processing_duration": 17.458788871765137,
+    "model_info": {
+      "detection_model": "MegaDetectorV6-yolov9c",
+      "classification_model": "AI4GAmazonRainforest",
+      "region": "europe",
+      "model_versions": {
+        "detection": "MegaDetectorV6-yolov9c",
+        "classification": "AI4GAmazonRainforest"
+      }
+    },
+    "generated_at": "2025-11-08T13:13:35.556074",
+    "format_version": "1.0"
+  },
+  "results_by_camera": {
+    "BYWP9": [
+      {
+        "image_path": "test_bilder/Aufnahme_250612_0001_BYWP9.jpg",
+        "camera_reference": "BYWP9",
+        "timestamp": "2025-06-12T00:01:00",
+        "detections": [
+          {
+            "species": "roe_deer",
+            "confidence": 0.5386377811431885,
+            "bounding_box": {
+              "x": 241,
+              "y": 379,
+              "width": 169,
+              "height": 91
+            },
+            "classification_model": "enhanced_european_mapping",
+            "is_uncertain": false,
+            "alternative_species": [
+              "european_hare",
+              "european_rabbit"
+            ],
+            "enhancement_metadata": {
+              "original_classification": "Bos",
+              "size_category": "small",
+              "enhancement_factors": {
+                "size_analysis": "small",
+                "habitat_context": "mixed",
+                "temporal_context": "nocturnal"
+              },
+              "confidence_multiplier": 0.7706830040326604
+            }
+          }
+        ],
+        "processing_time": 0.9634170532226562,
+        "model_version": "MegaDetectorV6-yolov9c"
+      },
+      {
+        "image_path": "test_bilder/Aufnahme_250603_0253_BYWP9.jpg",
+        "camera_reference": "BYWP9",
+        "timestamp": "2025-06-03T02:53:00",
+        "detections": [
+          {
+            "species": "roe_deer",
+            "confidence": 0.5316643714904785,
+            "bounding_box": {
+              "x": 692,
+              "y": 372,
+              "width": 141,
+              "height": 99
+            },
+            "classification_model": "enhanced_european_mapping",
+            "is_uncertain": false,
+            "alternative_species": [
+              "european_hare",
+              "european_rabbit"
+            ],
+            "enhancement_metadata": {
+              "original_classification": "Bos",
+              "size_category": "small",
+              "enhancement_factors": {
+                "size_analysis": "small",
+                "habitat_context": "mixed",
+                "temporal_context": "nocturnal"
+              },
+              "confidence_multiplier": 0.696830951008434
+            }
+          }
+        ],
+        "processing_time": 0.9532079696655273,
+        "model_version": "MegaDetectorV6-yolov9c"
+      },
+      {
+        "image_path": "test_bilder/Aufnahme_250605_2029_BYWP9.jpg",
+        "camera_reference": "BYWP9",
+        "timestamp": "2025-06-05T20:29:00",
+        "detections": [
+          {
+            "species": "roe_deer",
+            "confidence": 0.634721851348877,
+            "bounding_box": {
+              "x": 345,
+              "y": 472,
+              "width": 185,
+              "height": 137
+            },
+            "classification_model": "enhanced_european_mapping",
+            "is_uncertain": false,
+            "alternative_species": [
+              "european_hare",
+              "european_rabbit"
+            ],
+            "enhancement_metadata": {
+              "original_classification": "Bos",
+              "size_category": "small",
+              "enhancement_factors": {
+                "size_analysis": "small",
+                "habitat_context": "mixed",
+                "temporal_context": "crepuscular"
+              },
+              "confidence_multiplier": 0.6900955809671713
+            }
+          },
+          {
+            "species": "roe_deer",
+            "confidence": 0.634721851348877,
+            "bounding_box": {
+              "x": 788,
+              "y": 83,
+              "width": 19,
+              "height": 17
+            },
+            "classification_model": "enhanced_european_mapping",
+            "is_uncertain": false,
+            "alternative_species": [
+              "european_hare",
+              "european_rabbit"
+            ],
+            "enhancement_metadata": {
+              "original_classification": "Bos",
+              "size_category": "small",
+              "enhancement_factors": {
+                "size_analysis": "small",
+                "habitat_context": "mixed",
+                "temporal_context": "crepuscular"
+              },
+              "confidence_multiplier": 2.9882210438771604
+            }
+          }
+        ],
+        "processing_time": 0.9455969333648682,
+        "model_version": "MegaDetectorV6-yolov9c"
+      }
+    ]
+  }
+}
