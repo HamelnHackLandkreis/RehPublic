@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict
 # Location schemas
 class LocationCreate(BaseModel):
     """Schema for creating a new location."""
+
     name: str
     longitude: float
     latitude: float
@@ -18,6 +19,7 @@ class LocationCreate(BaseModel):
 
 class LocationResponse(BaseModel):
     """Schema for location response."""
+
     id: UUID
     name: str
     longitude: float
@@ -30,14 +32,17 @@ class LocationResponse(BaseModel):
 # Image schemas
 class ImageUploadResponse(BaseModel):
     """Schema for image upload response."""
+
     image_id: UUID
     location_id: UUID
     upload_timestamp: datetime
     detections_count: int
+    detected_species: List[str]
 
 
 class BoundingBoxResponse(BaseModel):
     """Schema for bounding box coordinates."""
+
     x: int
     y: int
     width: int
@@ -46,6 +51,7 @@ class BoundingBoxResponse(BaseModel):
 
 class DetectionResponse(BaseModel):
     """Schema for animal detection response."""
+
     species: str
     confidence: float
     bounding_box: BoundingBoxResponse
@@ -55,6 +61,7 @@ class DetectionResponse(BaseModel):
 
 class ImageDetailResponse(BaseModel):
     """Schema for detailed image response with detections."""
+
     image_id: UUID
     location_id: UUID
     raw: str  # base64 encoded image
@@ -79,6 +86,7 @@ class ImageBase64Response(BaseModel):
 # Spotting schemas
 class SpottingLocationResponse(BaseModel):
     """Schema for aggregated spotting data by location."""
+
     pos: Dict[str, float]  # {"longitude": x, "latitude": y}
     animals: List[str]  # unique species names
     ts_last_spotting: datetime
@@ -104,6 +112,7 @@ class SpottingsResponse(BaseModel):
 # Wikipedia schemas
 class WikipediaArticleResponse(BaseModel):
     """Schema for Wikipedia article response."""
+
     title: str
     description: Optional[str]
     image_url: Optional[str]
@@ -112,4 +121,5 @@ class WikipediaArticleResponse(BaseModel):
 
 class WikipediaArticlesRequest(BaseModel):
     """Schema for Wikipedia articles request."""
+
     titles: List[str]  # List of article titles to fetch
