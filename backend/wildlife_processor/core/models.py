@@ -288,38 +288,6 @@ class ModelManager:
         detections = []
 
         try:
-            # Debug: log the structure of results
-            logger.debug(
-                f"Detection result keys: {list(detection_result.keys()) if detection_result else 'None'}"
-            )
-            logger.debug(
-                f"Classification result keys: {list(classification_result.keys()) if classification_result else 'None'}"
-            )
-
-            # Debug detection object structure
-            if detection_result and "detections" in detection_result:
-                detections_obj = detection_result["detections"]
-                logger.debug(f"Detections object type: {type(detections_obj)}")
-                logger.debug(f"Detections object attributes: {dir(detections_obj)}")
-                if hasattr(detections_obj, "xyxy"):
-                    logger.debug(
-                        f"xyxy shape: {detections_obj.xyxy.shape if hasattr(detections_obj.xyxy, 'shape') else 'no shape'}"
-                    )
-                    logger.debug(f"xyxy content: {detections_obj.xyxy}")
-                if hasattr(detections_obj, "confidence"):
-                    logger.debug(
-                        f"confidence shape: {detections_obj.confidence.shape if hasattr(detections_obj.confidence, 'shape') else 'no shape'}"
-                    )
-                    logger.debug(f"confidence content: {detections_obj.confidence}")
-                if hasattr(detections_obj, "class_id"):
-                    logger.debug(
-                        f"class_id shape: {detections_obj.class_id.shape if hasattr(detections_obj.class_id, 'shape') else 'no shape'}"
-                    )
-                    logger.debug(f"class_id content: {detections_obj.class_id}")
-
-            # PyTorch Wildlife MegaDetectorV6 returns results with 'detections' key
-            # The detections object has xyxy, confidence, and class_id attributes
-
             # Extract detection boxes - PyTorch Wildlife format
             det_boxes = []
             if detection_result and "detections" in detection_result:
@@ -363,17 +331,12 @@ class ModelManager:
             # Extract classification information
             classifications = []
             if classification_result:
-                # Handle enhanced classification result format
-                if (
-                    "class_name" in classification_result
-                    or "species" in classification_result
-                ):
-                    classifications = [classification_result]
-                elif "predictions" in classification_result:
-                    classifications = classification_result["predictions"]
-                else:
-                    # Try to extract from other possible formats
-                    classifications = []
+                classifications = [
+                    {
+                        "class_name": classification_result["prediction"],
+                        "confidence": classification_result["confidence"],
+                    }
+                ]
 
             # Combine detection boxes with classifications
             for i, detection in enumerate(det_boxes):
