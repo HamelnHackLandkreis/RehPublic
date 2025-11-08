@@ -1,6 +1,7 @@
 """FastAPI application for wildlife camera API."""
 
 import logging
+from collections import defaultdict
 from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
@@ -18,13 +19,20 @@ from api.schemas import (
     ImageUploadResponse,
     LocationCreate,
     LocationResponse,
+    LocationWithImagesResponse,
     SpottingImageResponse,
     SpottingLocationResponse,
+    SpottingsResponse,
     WikipediaArticleResponse,
     WikipediaArticlesRequest,
 )
 from api.models import Spotting
-from api.services import ImageService, LocationService, SpottingService, WikipediaService
+from api.services import (
+    ImageService,
+    LocationService,
+    SpottingService,
+    WikipediaService,
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -104,7 +112,12 @@ def startup_event():
     logger.info("Database initialized successfully")
 
 
-@app.get("/locations", response_model=List[LocationResponse], status_code=status.HTTP_200_OK, tags=["locations"])
+@app.get(
+    "/locations",
+    response_model=List[LocationResponse],
+    status_code=status.HTTP_200_OK,
+    tags=["locations"],
+)
 def get_locations(db: Session = Depends(get_db)):
     """Get all camera locations.
 
@@ -115,11 +128,13 @@ def get_locations(db: Session = Depends(get_db)):
     return locations
 
 
-@app.post("/locations", response_model=LocationResponse, status_code=status.HTTP_201_CREATED, tags=["locations"])
-def create_location(
-    location_data: LocationCreate,
-    db: Session = Depends(get_db)
-):
+@app.post(
+    "/locations",
+    response_model=LocationResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["locations"],
+)
+def create_location(location_data: LocationCreate, db: Session = Depends(get_db)):
     """Create a new camera location.
 
     Args:
@@ -134,32 +149,36 @@ def create_location(
             name=location_data.name,
             longitude=location_data.longitude,
             latitude=location_data.latitude,
-            description=location_data.description
+            description=location_data.description,
         )
         return location
     except Exception as e:
         logger.error(f"Failed to create location: {e}")
         error_msg = str(e)
-        
+
         # Handle duplicate location name
-        if "UNIQUE constraint failed: locations.name" in error_msg or "duplicate" in error_msg.lower():
+        if (
+            "UNIQUE constraint failed: locations.name" in error_msg
+            or "duplicate" in error_msg.lower()
+        ):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"Location with name '{location_data.name}' already exists"
+                detail=f"Location with name '{location_data.name}' already exists",
             )
-        
+
         # Generic error for other cases
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Failed to create location. Please check your input data."
+            detail="Failed to create location. Please check your input data.",
         )
 
 
-@app.get("/locations/{location_id}", response_model=LocationResponse, status_code=status.HTTP_200_OK, tags=["locations"])
-def get_location(
-    location_id: UUID,
-    db: Session = Depends(get_db)
-):
+@app.get(
+    "/locations/{location_id}",
+    response_model=LocationResponse,
+    status_code=status.HTTP_200_OK,
+)
+def get_location(location_id: UUID, db: Session = Depends(get_db)):
     """Get specific location by ID.
 
     Args:
@@ -175,7 +194,7 @@ def get_location(
     if not location:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Location with id {location_id} not found"
+            detail=f"Location with id {location_id} not found",
         )
     return location
 
@@ -184,12 +203,10 @@ def get_location(
     "/locations/{location_id}/image",
     response_model=ImageUploadResponse,
     status_code=status.HTTP_201_CREATED,
-    tags=["images"]
+    tags=["images"],
 )
 async def upload_image(
-    location_id: UUID,
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
+    location_id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db)
 ):
     """Upload an image to a specific location and process it for animal detection.
 
@@ -215,7 +232,7 @@ async def upload_image(
     if not location:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Location with id {location_id} not found"
+            detail=f"Location with id {location_id} not found",
         )
 
     try:
@@ -228,9 +245,13 @@ async def upload_image(
         # Process image synchronously
         logger.info(f"Processing image {image.id} for location {location.name}")
         detections = image_service.process_image(db, image, location.name)
-
-        # Save detections
-        spotting_service.save_detections(db, UUID(image.id), detections)
+        if detections:
+            # Save detections
+            spotting_service.save_detections(
+                db,
+                UUID(image.id),
+                detections,
+            )
 
         # Mark image as processed
         image.processed = True
@@ -245,22 +266,25 @@ async def upload_image(
             image_id=UUID(image.id),
             location_id=UUID(image.location_id),
             upload_timestamp=image.upload_timestamp,
-            detections_count=len(detections)
+            detections_count=len(detections),
+            detected_species=[detection["species"] for detection in detections],
         )
 
     except Exception as e:
         logger.error(f"Failed to upload and process image: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to process image: {str(e)}"
+            detail=f"Failed to process image: {str(e)}",
         )
 
 
-@app.get("/images/{image_id}", response_model=ImageDetailResponse, status_code=status.HTTP_200_OK, tags=["images"])
-def get_image(
-    image_id: UUID,
-    db: Session = Depends(get_db)
-):
+@app.get(
+    "/images/{image_id}",
+    response_model=ImageDetailResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["images"],
+)
+def get_image(image_id: UUID, db: Session = Depends(get_db)):
     """Get image with detection data.
 
     Returns the base64-encoded image along with all detected animals
@@ -279,13 +303,11 @@ def get_image(
     if not image:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Image with id {image_id} not found"
+            detail=f"Image with id {image_id} not found",
         )
 
     # Get all spottings for this image
-    spottings = db.query(Spotting).filter(
-        Spotting.image_id == str(image_id)
-    ).all()
+    spottings = db.query(Spotting).filter(Spotting.image_id == str(image_id)).all()
 
     # Convert spottings to detection responses
     detections = []
@@ -297,10 +319,10 @@ def get_image(
                 x=spotting.bbox_x,
                 y=spotting.bbox_y,
                 width=spotting.bbox_width,
-                height=spotting.bbox_height
+                height=spotting.bbox_height,
             ),
             classification_model=spotting.classification_model,
-            is_uncertain=spotting.is_uncertain
+            is_uncertain=spotting.is_uncertain,
         )
         detections.append(detection)
 
@@ -309,15 +331,17 @@ def get_image(
         location_id=UUID(image.location_id),
         raw=image.base64_data,
         upload_timestamp=image.upload_timestamp,
-        detections=detections
+        detections=detections,
     )
 
 
-@app.get("/images/{image_id}/base64", response_model=ImageBase64Response, status_code=status.HTTP_200_OK, tags=["images"])
-def get_image_base64(
-    image_id: UUID,
-    db: Session = Depends(get_db)
-):
+@app.get(
+    "/images/{image_id}/base64",
+    response_model=ImageBase64Response,
+    status_code=status.HTTP_200_OK,
+    tags=["images"],
+)
+def get_image_base64(image_id: UUID, db: Session = Depends(get_db)):
     """Get base64-encoded image data by image ID.
 
     Returns only the base64-encoded image data for the specified image ID.
@@ -337,47 +361,64 @@ def get_image_base64(
     if not image:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Image with id {image_id} not found"
+            detail=f"Image with id {image_id} not found",
         )
 
-    return ImageBase64Response(
-        image_id=UUID(image.id),
-        base64_data=image.base64_data
-    )
+    return ImageBase64Response(image_id=UUID(image.id), base64_data=image.base64_data)
 
 
-@app.get("/spottings", response_model=List[SpottingImageResponse], status_code=status.HTTP_200_OK, tags=["spottings"])
+@app.get(
+    "/spottings",
+    response_model=SpottingsResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["spottings"],
+)
 def get_spottings(
-    latitude: float = Query(..., description="Center latitude for location search (decimal degrees, e.g., 50.123)"),
-    longitude: float = Query(..., description="Center longitude for location search (decimal degrees, e.g., 10.456)"),
-    distance_range: float = Query(..., description="Maximum distance from center location in kilometers (km). Example: 5.0 for 5 km radius", gt=0),
-    time_start: Optional[datetime] = Query(None, description="Start timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-01-01T00:00:00"),
-    time_end: Optional[datetime] = Query(None, description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59"),
-    db: Session = Depends(get_db)
+    latitude: float = Query(
+        ...,
+        description="Center latitude for location search (decimal degrees, e.g., 50.123)",
+    ),
+    longitude: float = Query(
+        ...,
+        description="Center longitude for location search (decimal degrees, e.g., 10.456)",
+    ),
+    distance_range: float = Query(
+        ...,
+        description="Maximum distance from center location in kilometers (km). Example: 5.0 for 5 km radius",
+        gt=0,
+    ),
+    time_start: Optional[datetime] = Query(
+        None,
+        description="Start timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-01-01T00:00:00",
+    ),
+    time_end: Optional[datetime] = Query(
+        None,
+        description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59",
+    ),
+    db: Session = Depends(get_db),
 ):
-    """Get images within a location and time range.
+    """Get images within a location and time range, grouped by location.
 
     Returns up to 3 most recent images per location that are:
     - Within the specified distance range from the center location (distance_range in kilometers)
     - Within the optional time range (if provided, using ISO 8601 datetime format)
 
-    Each image includes:
-    - Image ID and location ID
-    - Upload timestamp
-    - All detections (species, confidence, bounding boxes)
+    Response is grouped by location, where each location contains:
+    - Location data (id, name, coordinates, description)
+    - List of images with detections (species, confidence, bounding boxes)
     - Note: Base64 image data is NOT included. Use /images/{image_id}/base64 to fetch it.
 
     Query Parameters:
         latitude: Center latitude in decimal degrees (e.g., 50.123)
         longitude: Center longitude in decimal degrees (e.g., 10.456)
         distance_range: Maximum distance in kilometers (km) from center location. Must be > 0.
-        time_start: Optional start timestamp in ISO 8601 format (inclusive). 
+        time_start: Optional start timestamp in ISO 8601 format (inclusive).
                    Examples: "2024-01-01T00:00:00", "2024-01-01"
         time_end: Optional end timestamp in ISO 8601 format (inclusive).
                  Examples: "2024-12-31T23:59:59", "2024-12-31"
 
     Returns:
-        List of images with detections within the specified range (max 3 per location)
+        Response with locations array, each containing location data and images (max 3 per location)
 
     Example:
         GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59
@@ -390,17 +431,25 @@ def get_spottings(
         distance_range=distance_range,
         time_start=time_start,
         time_end=time_end,
-        limit_per_location=3
+        limit_per_location=3,
     )
-    
-    # Convert to response models with detections (without base64)
-    response = []
+
+    # Group images by location
+    images_by_location = defaultdict(list)
+    location_map = {}
+
     for image in images:
+        location_id = image.location_id
+
+        # Fetch location if not already cached
+        if location_id not in location_map:
+            location = location_service.get_location_by_id(db, UUID(location_id))
+            if location:
+                location_map[location_id] = location
+
         # Get all spottings for this image
-        spottings = db.query(Spotting).filter(
-            Spotting.image_id == str(image.id)
-        ).all()
-        
+        spottings = db.query(Spotting).filter(Spotting.image_id == str(image.id)).all()
+
         # Convert spottings to detection responses
         detections = []
         for spotting in spottings:
@@ -411,24 +460,48 @@ def get_spottings(
                     x=spotting.bbox_x,
                     y=spotting.bbox_y,
                     width=spotting.bbox_width,
-                    height=spotting.bbox_height
+                    height=spotting.bbox_height,
                 ),
                 classification_model=spotting.classification_model,
-                is_uncertain=spotting.is_uncertain
+                is_uncertain=spotting.is_uncertain,
             )
             detections.append(detection)
-        
-        response.append(SpottingImageResponse(
-            image_id=UUID(image.id),
-            location_id=UUID(image.location_id),
-            upload_timestamp=image.upload_timestamp,
-            detections=detections
-        ))
-    
-    return response
+
+        # Add image to location group
+        images_by_location[location_id].append(
+            SpottingImageResponse(
+                image_id=UUID(image.id),
+                location_id=UUID(image.location_id),
+                upload_timestamp=image.upload_timestamp,
+                detections=detections,
+            )
+        )
+
+    # Build response with locations and their images
+    locations_response = []
+    for location_id, location_images in images_by_location.items():
+        if location_id in location_map:
+            location = location_map[location_id]
+            locations_response.append(
+                LocationWithImagesResponse(
+                    id=UUID(location.id),
+                    name=location.name,
+                    longitude=location.longitude,
+                    latitude=location.latitude,
+                    description=location.description,
+                    images=location_images,
+                )
+            )
+
+    return SpottingsResponse(locations=locations_response)
 
 
-@app.post("/wikipedia/articles", response_model=List[WikipediaArticleResponse], status_code=status.HTTP_200_OK, tags=["wikipedia"])
+@app.post(
+    "/wikipedia/articles",
+    response_model=List[WikipediaArticleResponse],
+    status_code=status.HTTP_200_OK,
+    tags=["wikipedia"],
+)
 async def get_wikipedia_articles(request: WikipediaArticlesRequest):
     """Fetch Wikipedia articles with main image, description, and link.
 
@@ -444,7 +517,7 @@ async def get_wikipedia_articles(request: WikipediaArticlesRequest):
 
     Returns:
         List of Wikipedia article data (articles not found will be omitted)
-    
+
     Example:
         POST /wikipedia/articles
         {
@@ -458,7 +531,7 @@ async def get_wikipedia_articles(request: WikipediaArticlesRequest):
         logger.error(f"Failed to fetch Wikipedia articles: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to fetch Wikipedia articles: {str(e)}"
+            detail=f"Failed to fetch Wikipedia articles: {str(e)}",
         )
 
 
@@ -474,6 +547,6 @@ def root():
             "get_image": "/images/{image_id}",
             "get_image_base64": "/images/{image_id}/base64",
             "spottings": "/spottings",
-            "wikipedia_articles": "/wikipedia/articles"
-        }
+            "wikipedia_articles": "/wikipedia/articles",
+        },
     }
