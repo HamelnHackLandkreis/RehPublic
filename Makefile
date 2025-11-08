@@ -4,7 +4,7 @@ backend-sync:
 	cd backend && uv sync
 
 backend-run:
-	cd backend && uvicorn api.main:app --reload --port 8000
+	cd backend && uv run uvicorn api.main:app --reload --port 8000
 
 frontend-prep:
 	cd frontend && npm install
