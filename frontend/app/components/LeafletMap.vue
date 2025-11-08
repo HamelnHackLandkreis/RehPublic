@@ -73,9 +73,10 @@ const addMarkers = async () => {
   props.markers.forEach(markerData => {
     if (!map) return
     
-    const marker = L.marker(markerData.position as LatLngExpression, {
-      icon: markerData.icon
-    }).addTo(map)
+    // Create marker options, only include icon if it's provided
+    const markerOptions = markerData.icon ? { icon: markerData.icon } : {}
+    
+    const marker = L.marker(markerData.position as LatLngExpression, markerOptions).addTo(map)
 
     if (markerData.popup) {
       marker.bindPopup(markerData.popup)

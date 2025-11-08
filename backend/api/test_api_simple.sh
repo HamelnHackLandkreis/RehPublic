@@ -10,8 +10,8 @@ curl -X POST "${API_BASE}/locations" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "camera1",
-    "longitude": 10.5,
-    "latitude": 52.3,
+    "longitude": 9.302881164301331,
+    "latitude": 52.09403285834788,
     "description": "Test camera location"
   }'
 
