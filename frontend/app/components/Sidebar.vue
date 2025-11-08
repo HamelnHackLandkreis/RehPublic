@@ -4,7 +4,7 @@
 </script>
 
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 shadow-2xl">
+  <nav class="z-50 bg-slate-900 border-t border-slate-700 shadow-2xl">
     <ul class="flex items-center justify-around list-none p-0 m-0 max-w-screen-xl mx-auto">
       <li>
         <NuxtLink

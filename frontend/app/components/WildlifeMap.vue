@@ -7,15 +7,8 @@
       <p>Error loading locations: {{ error }}</p>
       <button @click="fetchLocations" class="retry-button">Retry</button>
     </div>
-    <LeafletMap 
-      v-else
-      ref="mapRef"
-      :center="mapCenter" 
-      :zoom="zoom"
-      :height="height"
-      :width="width"
-      :markers="markers"
-    />
+    <LeafletMap v-else ref="mapRef" :center="mapCenter" :zoom="zoom" :height="height" :width="width"
+      :markers="markers" />
   </div>
 </template>
 
@@ -56,7 +49,7 @@ const props = withDefaults(defineProps<Props>(), {
   defaultLatitude: 52.10181392588904,
   defaultLongitude: 9.37544441225413,
   defaultDistanceRange: 100,
-  height: '.5vh',
+  height: '100%',
   width: '100%',
   autoCenter: true,
   defaultZoom: 10
@@ -73,9 +66,9 @@ const markersWithIcons = ref<any[]>([])
 
 const createCustomIcon = async (name: string, imageUrl?: string) => {
   const L = await import('leaflet')
-  
+
   const imageSrc = imageUrl || '/fallback.JPG'
-  
+
   const iconHtml = `
     <div class="avatar-marker">
       <div class="avatar-wrapper">
@@ -89,7 +82,7 @@ const createCustomIcon = async (name: string, imageUrl?: string) => {
       <div class="marker-label">${name}</div>
     </div>
   `
-  
+
   return L.divIcon({
     html: iconHtml,
     className: 'custom-div-icon',
@@ -109,11 +102,36 @@ const updateMarkers = async () => {
     locations.value.map(async (location) => {
       // Get the first image if available
       const imageUrl = location.images && location.images.length > 0 && location.images[0]
-        ? `${apiUrl}/images/${location.images[0].image_id}/base64   `
+        ? `${apiUrl}/images/${location.images[0].image_id}/base64`
         : undefined
-      
+
       const imageCount = location.images?.length || 0
-      
+
+      // Create image gallery HTML
+      let imagesHtml = ''
+      if (location.images && location.images.length > 0) {
+        imagesHtml = `
+          <div class="popup-images">
+            ${location.images.map(img => `
+              <div class="popup-image-wrapper">
+                <img 
+                  src="${apiUrl}/images/${img.image_id}/base64" 
+                  alt="Camera image"
+                  class="popup-image"
+                  onerror="this.style.display='none'"
+                />
+                <div class="image-info">
+                  <small>${new Date(img.upload_timestamp).toLocaleString()}</small>
+                  ${img.detections && img.detections.length > 0 ?
+            `<span class="detection-badge">${img.detections.length} detection${img.detections.length !== 1 ? 's' : ''}</span>`
+            : ''}
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `
+      }
+
       return {
         position: [location.latitude, location.longitude] as [number, number],
         popup: `
@@ -124,13 +142,14 @@ const updateMarkers = async () => {
             <div class="popup-stats">
               <span>📷 ${imageCount} image${imageCount !== 1 ? 's' : ''}</span>
             </div>
+            ${imagesHtml}
           </div>
         `,
         icon: await createCustomIcon(location.name, imageUrl)
       }
     })
   )
-  
+
   markersWithIcons.value = newMarkers
 }
 
@@ -149,7 +168,7 @@ const mapCenter = computed((): [number, number] => {
   // Calculate center from all locations
   const latSum = locations.value.reduce((sum, loc) => sum + loc.latitude, 0)
   const lonSum = locations.value.reduce((sum, loc) => sum + loc.longitude, 0)
-  
+
   return [
     latSum / locations.value.length,
     lonSum / locations.value.length
@@ -159,23 +178,23 @@ const mapCenter = computed((): [number, number] => {
 const fetchLocations = async () => {
   loading.value = true
   error.value = null
-  
+
   try {
     const spottingsUrl = `${apiUrl}/spottings?latitude=${props.defaultLatitude}&longitude=${props.defaultLongitude}&distance_range=${props.defaultDistanceRange}`
     const response = await fetch(spottingsUrl)
-    
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
-    
+
     const data: LocationsResponse = await response.json()
     locations.value = data.locations
-    
+
     // Auto-adjust zoom based on number of locations
     if (props.autoCenter && locations.value.length > 1) {
       zoom.value = calculateZoomLevel()
     }
-    
+
     // Update markers with custom icons
     await updateMarkers()
   } catch (err) {
@@ -192,12 +211,12 @@ const calculateZoomLevel = (): number => {
   // Calculate bounding box
   const lats = locations.value.map(loc => loc.latitude)
   const lons = locations.value.map(loc => loc.longitude)
-  
+
   const latDiff = Math.max(...lats) - Math.min(...lats)
   const lonDiff = Math.max(...lons) - Math.min(...lons)
-  
+
   const maxDiff = Math.max(latDiff, lonDiff)
-  
+
   // Simple zoom calculation based on coordinate spread
   if (maxDiff > 5) return 6
   if (maxDiff > 2) return 8
@@ -231,6 +250,7 @@ defineExpose({
   min-height: 400px;
   background-color: #f5f5f5;
   border-radius: 8px;
+  min-width: 100%;
 }
 
 .loading-spinner {
@@ -302,6 +322,57 @@ defineExpose({
 :deep(.popup-stats span) {
   display: inline-block;
   padding: 2px 0;
+}
+
+:deep(.popup-images) {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+:deep(.popup-image-wrapper) {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+:deep(.popup-image) {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+:deep(.popup-image:hover) {
+  transform: scale(1.02);
+}
+
+:deep(.image-info) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+:deep(.image-info small) {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+:deep(.detection-badge) {
+  background-color: #ef4444;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 /* Custom marker styles */

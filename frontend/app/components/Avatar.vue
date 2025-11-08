@@ -11,9 +11,6 @@
       class="avatar-image"
       @error="handleImageError"
     />
-    <div v-else-if="initials" class="avatar-initials">
-      {{ computedInitials }}
-    </div>
     <div v-else class="avatar-icon">
       <svg 
         xmlns="http://www.w3.org/2000/svg" 
@@ -22,9 +19,6 @@
       >
         <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
       </svg>
-    </div>
-    <div v-if="badge" class="avatar-badge" :class="badgeClass">
-      {{ badge }}
     </div>
   </div>
 </template>
@@ -67,24 +61,6 @@ const imageError = ref(false)
 const sizeClass = computed(() => `avatar-${props.size}`)
 const shapeClass = computed(() => `avatar-${props.shape}`)
 const badgeClass = computed(() => `badge-${props.badgePosition}`)
-
-const computedInitials = computed(() => {
-  if (props.initials) {
-    return props.initials.toUpperCase().slice(0, 2)
-  }
-  
-  if (props.name) {
-    const names = props.name.trim().split(' ').filter(n => n.length > 0)
-    if (names.length >= 2 && names[0] && names[names.length - 1]) {
-      return (names[0][0] + names[names.length - 1][0]).toUpperCase()
-    }
-    if (names.length === 1 && names[0]) {
-      return names[0].slice(0, 2).toUpperCase()
-    }
-  }
-  
-  return ''
-})
 
 const handleImageError = () => {
   imageError.value = true
