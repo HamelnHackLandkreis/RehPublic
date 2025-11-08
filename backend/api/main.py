@@ -30,11 +30,54 @@ from api.services import ImageService, LocationService, SpottingService, Wikiped
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app
+# Create FastAPI app with Swagger/OpenAPI documentation
 app = FastAPI(
     title="Wildlife Camera API",
-    description="API for managing wildlife camera locations, images, and animal detections",
-    version="0.1.0"
+    description="""
+    API for managing wildlife camera locations, images, and animal detections.
+    
+    ## Features
+    
+    * **Location Management**: Create and retrieve camera locations with GPS coordinates
+    * **Image Upload**: Upload images to specific locations with automatic animal detection
+    * **Detection Results**: Retrieve images with detected animals, species, and bounding boxes
+    * **Spotting Search**: Search for images within geographic and time ranges
+    * **Wikipedia Integration**: Fetch Wikipedia articles for animal species
+    
+    ## API Documentation
+    
+    * **Swagger UI**: Available at `/docs` - Interactive API documentation
+    * **ReDoc**: Available at `/redoc` - Alternative API documentation
+    * **OpenAPI Schema**: Available at `/openapi.json` - Machine-readable API schema
+    """,
+    version="0.1.0",
+    docs_url="/docs",  # Swagger UI endpoint
+    redoc_url="/redoc",  # ReDoc endpoint
+    openapi_url="/openapi.json",  # OpenAPI schema endpoint
+    contact={
+        "name": "Wildlife Camera API",
+    },
+    license_info={
+        "name": "MIT",
+    },
+    tags_metadata=[
+        {
+            "name": "locations",
+            "description": "Operations for managing camera locations with GPS coordinates.",
+        },
+        {
+            "name": "images",
+            "description": "Operations for uploading and retrieving images with animal detections.",
+        },
+        {
+            "name": "spottings",
+            "description": "Search for images within geographic and time ranges.",
+        },
+        {
+            "name": "wikipedia",
+            "description": "Fetch Wikipedia articles for animal species.",
+        },
+    ],
 )
 
 # Configure CORS
@@ -61,7 +104,7 @@ def startup_event():
     logger.info("Database initialized successfully")
 
 
-@app.get("/locations", response_model=List[LocationResponse], status_code=status.HTTP_200_OK)
+@app.get("/locations", response_model=List[LocationResponse], status_code=status.HTTP_200_OK, tags=["locations"])
 def get_locations(db: Session = Depends(get_db)):
     """Get all camera locations.
 
@@ -72,7 +115,7 @@ def get_locations(db: Session = Depends(get_db)):
     return locations
 
 
-@app.post("/locations", response_model=LocationResponse, status_code=status.HTTP_201_CREATED)
+@app.post("/locations", response_model=LocationResponse, status_code=status.HTTP_201_CREATED, tags=["locations"])
 def create_location(
     location_data: LocationCreate,
     db: Session = Depends(get_db)
@@ -112,7 +155,7 @@ def create_location(
         )
 
 
-@app.get("/locations/{location_id}", response_model=LocationResponse, status_code=status.HTTP_200_OK)
+@app.get("/locations/{location_id}", response_model=LocationResponse, status_code=status.HTTP_200_OK, tags=["locations"])
 def get_location(
     location_id: UUID,
     db: Session = Depends(get_db)
@@ -140,7 +183,8 @@ def get_location(
 @app.post(
     "/locations/{location_id}/image",
     response_model=ImageUploadResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    tags=["images"]
 )
 async def upload_image(
     location_id: UUID,
@@ -212,7 +256,7 @@ async def upload_image(
         )
 
 
-@app.get("/images/{image_id}", response_model=ImageDetailResponse, status_code=status.HTTP_200_OK)
+@app.get("/images/{image_id}", response_model=ImageDetailResponse, status_code=status.HTTP_200_OK, tags=["images"])
 def get_image(
     image_id: UUID,
     db: Session = Depends(get_db)
@@ -269,7 +313,7 @@ def get_image(
     )
 
 
-@app.get("/images/{image_id}/base64", response_model=ImageBase64Response, status_code=status.HTTP_200_OK)
+@app.get("/images/{image_id}/base64", response_model=ImageBase64Response, status_code=status.HTTP_200_OK, tags=["images"])
 def get_image_base64(
     image_id: UUID,
     db: Session = Depends(get_db)
@@ -302,7 +346,7 @@ def get_image_base64(
     )
 
 
-@app.get("/spottings", response_model=List[SpottingImageResponse], status_code=status.HTTP_200_OK)
+@app.get("/spottings", response_model=List[SpottingImageResponse], status_code=status.HTTP_200_OK, tags=["spottings"])
 def get_spottings(
     latitude: float = Query(..., description="Center latitude for location search (decimal degrees, e.g., 50.123)"),
     longitude: float = Query(..., description="Center longitude for location search (decimal degrees, e.g., 10.456)"),
@@ -384,7 +428,7 @@ def get_spottings(
     return response
 
 
-@app.post("/wikipedia/articles", response_model=List[WikipediaArticleResponse], status_code=status.HTTP_200_OK)
+@app.post("/wikipedia/articles", response_model=List[WikipediaArticleResponse], status_code=status.HTTP_200_OK, tags=["wikipedia"])
 async def get_wikipedia_articles(request: WikipediaArticlesRequest):
     """Fetch Wikipedia articles with main image, description, and link.
 
