@@ -317,13 +317,32 @@ class ImageService:
             if time_end is not None:
                 query = query.filter(Image.upload_timestamp <= time_end)
 
-            # Get most recent N images for this location with spottings eagerly loaded
-            location_images = (
-                query.options(selectinload(Image.spottings))
+            # Get most recent N images for this location that have spottings, with spottings eagerly loaded
+            # Prioritize images with spottings, but fall back to most recent if none have spottings
+            location_images_with_spottings = (
+                query.join(Spotting, Image.id == Spotting.image_id)
+                .options(selectinload(Image.spottings))
                 .order_by(Image.upload_timestamp.desc())
+                .distinct()
                 .limit(limit_per_location)
                 .all()
             )
+
+            # If we don't have enough images with spottings, fill with most recent images
+            if len(location_images_with_spottings) < limit_per_location:
+                existing_ids = {img.id for img in location_images_with_spottings}
+                additional_images = (
+                    query.options(selectinload(Image.spottings))
+                    .filter(~Image.id.in_(existing_ids) if existing_ids else True)
+                    .order_by(Image.upload_timestamp.desc())
+                    .limit(limit_per_location - len(location_images_with_spottings))
+                    .all()
+                )
+                location_images = list(location_images_with_spottings) + list(
+                    additional_images
+                )
+            else:
+                location_images = location_images_with_spottings
             all_images.extend(location_images)
 
         # Sort all images by upload timestamp descending
