@@ -22,13 +22,24 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 
+interface ImageDetection {
+  image_id: string
+  location_id: string
+  upload_timestamp: string
+  detections: any[]
+}
+
 interface Location {
   id: string
   name: string
   longitude: number
   latitude: number
   description: string
-  image?: string
+  images?: ImageDetection[]
+}
+
+interface LocationsResponse {
+  locations: Location[]
 }
 
 interface Props {
@@ -37,11 +48,17 @@ interface Props {
   width?: string
   autoCenter?: boolean
   defaultZoom?: number
+  defaultLatitude?: number
+  defaultLongitude?: number
+  defaultDistanceRange?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  apiUrl: 'http://localhost:8000/locations',
-  height: '600px',
+  apiUrl: 'http://localhost:8000/spottings',
+  defaultLatitude: 52.10181392588904,
+  defaultLongitude: 9.37544441225413,
+  defaultDistanceRange: 100,
+  height: '.5vh',
   width: '100%',
   autoCenter: true,
   defaultZoom: 10
@@ -94,17 +111,29 @@ const updateMarkers = async () => {
   }
 
   const newMarkers = await Promise.all(
-    locations.value.map(async (location) => ({
-      position: [location.latitude, location.longitude] as [number, number],
-      popup: `
-        <div class="marker-popup">
-          <h3><strong>${location.name}</strong></h3>
-          <p>${location.description}</p>
-          <small>Lat: ${location.latitude}, Lon: ${location.longitude}</small>
-        </div>
-      `,
-      icon: await createCustomIcon(location.name, location.image)
-    }))
+    locations.value.map(async (location) => {
+      // Get the first image if available
+      const imageUrl = location.images && location.images.length > 0 && location.images[0]
+        ? location.images[0].image_id 
+        : undefined
+      
+      const imageCount = location.images?.length || 0
+      
+      return {
+        position: [location.latitude, location.longitude] as [number, number],
+        popup: `
+          <div class="marker-popup">
+            <h3><strong>${location.name}</strong></h3>
+            <p>${location.description}</p>
+            <small>Lat: ${location.latitude}, Lon: ${location.longitude}</small>
+            <div class="popup-stats">
+              <span>📷 ${imageCount} image${imageCount !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+        `,
+        icon: await createCustomIcon(location.name, imageUrl)
+      }
+    })
   )
   
   markersWithIcons.value = newMarkers
@@ -137,14 +166,15 @@ const fetchLocations = async () => {
   error.value = null
   
   try {
-    const response = await fetch(props.apiUrl)
+    const locationsUrl = `${props.apiUrl}?latitude=${props.defaultLatitude}&longitude=${props.defaultLongitude}&distance_range=${props.defaultDistanceRange}`
+    const response = await fetch(locationsUrl)
     
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
     
-    const data = await response.json()
-    locations.value = data
+    const data: LocationsResponse = await response.json()
+    locations.value = data.locations
     
     // Auto-adjust zoom based on number of locations
     if (props.autoCenter && locations.value.length > 1) {
@@ -264,6 +294,19 @@ defineExpose({
 :deep(.marker-popup small) {
   font-size: 12px;
   color: #6b7280;
+}
+
+:deep(.popup-stats) {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 13px;
+  color: #4b5563;
+}
+
+:deep(.popup-stats span) {
+  display: inline-block;
+  padding: 2px 0;
 }
 
 /* Custom marker styles */
