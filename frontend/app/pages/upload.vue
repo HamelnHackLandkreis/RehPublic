@@ -152,7 +152,7 @@ interface UploadFile {
   imageId?: string
 }
 
-const API_BASE_URL = 'http://localhost:8000'
+const API_BASE_URL = useApiUrl()
 
 const isDragging = ref(false)
 const uploadingFiles = ref<UploadFile[]>([])

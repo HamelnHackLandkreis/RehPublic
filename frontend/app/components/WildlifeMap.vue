@@ -43,7 +43,6 @@ interface LocationsResponse {
 }
 
 interface Props {
-  apiUrl?: string
   height?: string
   width?: string
   autoCenter?: boolean
@@ -54,7 +53,6 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  apiUrl: 'http://localhost:8000',
   defaultLatitude: 52.10181392588904,
   defaultLongitude: 9.37544441225413,
   defaultDistanceRange: 100,
@@ -63,6 +61,8 @@ const props = withDefaults(defineProps<Props>(), {
   autoCenter: true,
   defaultZoom: 10
 })
+
+const apiUrl = useApiUrl()
 
 const locations = ref<Location[]>([])
 const loading = ref(true)
@@ -109,7 +109,7 @@ const updateMarkers = async () => {
     locations.value.map(async (location) => {
       // Get the first image if available
       const imageUrl = location.images && location.images.length > 0 && location.images[0]
-        ? `${props.apiUrl}/images/${location.images[0].image_id}/base64   `
+        ? `${apiUrl}/images/${location.images[0].image_id}/base64   `
         : undefined
       
       const imageCount = location.images?.length || 0
@@ -161,7 +161,7 @@ const fetchLocations = async () => {
   error.value = null
   
   try {
-    const spottingsUrl = `${props.apiUrl}/spottings?latitude=${props.defaultLatitude}&longitude=${props.defaultLongitude}&distance_range=${props.defaultDistanceRange}`
+    const spottingsUrl = `${apiUrl}/spottings?latitude=${props.defaultLatitude}&longitude=${props.defaultLongitude}&distance_range=${props.defaultDistanceRange}`
     const response = await fetch(spottingsUrl)
     
     if (!response.ok) {

@@ -104,6 +104,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
+const apiUrl = useApiUrl()
+
 // Types
 interface WikipediaArticle {
   title: string
@@ -135,7 +137,7 @@ const fetchAnimals = async () => {
     loading.value = true
     error.value = null
     
-    const response = await fetch('http://localhost:8000/wikipedia/articles', {
+    const response = await fetch(`${apiUrl}/wikipedia/articles`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

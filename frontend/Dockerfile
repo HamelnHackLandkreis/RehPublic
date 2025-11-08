@@ -4,6 +4,12 @@
 # ------------------------------------
 FROM node:20-alpine AS builder
 
+# Build argument for API URL
+ARG NUXT_PUBLIC_API_URL=http://135.181.78.114:9002
+
+# Set as environment variable for build time
+ENV NUXT_PUBLIC_API_URL=$NUXT_PUBLIC_API_URL
+
 # Setze das Arbeitsverzeichnis
 WORKDIR /app
 

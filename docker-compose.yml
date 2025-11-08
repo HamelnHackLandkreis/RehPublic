@@ -2,12 +2,12 @@ services:
   nuxt-frontend:
     build:
       context: ./frontend
+      args:
+        - NUXT_PUBLIC_API_URL=http://135.181.78.114:9002
     ports:
       - "9001:80"
     restart: always
     container_name: rehpublic-frontend
-    environment:
-      - NUXT_API_URL=http://135.181.78.114:9002
 
   backend:
     build:
