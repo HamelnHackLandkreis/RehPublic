@@ -27,8 +27,19 @@ from wildlife_processor.core.data_models import (
     ModelInfo,
 )
 from wildlife_processor.core.species_mapper import SpeciesMapper
+import os
 
 logger = logging.getLogger(__name__)
+
+MODEL_PATH = (
+    Path(__file__).parent.parent.parent.parent
+    / "backend"
+    / "models"
+    / "deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt"
+)
+
+if model_path := os.getenv("MODEL_PATH", None):
+    MODEL_PATH = Path(model_path)
 
 # Custom DeepFaune v4 classifier for 38 classes
 try:
@@ -93,48 +104,33 @@ class ModelManager:
                 # Use DeepFaune for European regions
                 # Try to use local v4 model file if available, otherwise download v3
                 # Path from backend/wildlife_processor/core/models.py to project root
-                v4_model_path = (
-                    Path(__file__).parent.parent.parent.parent
-                    / "backend"
-                    / "models"
-                    / "deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt"
-                )
 
-                if v4_model_path.exists():
-                    v4_model_path = v4_model_path.resolve()
-
-                    if DEEPFAUNE_V4_AVAILABLE:
-                        # Use custom v4 classifier that supports 38 classes
-                        logger.info(
-                            f"Using DeepFaune v4 model (38 classes): {v4_model_path}"
-                        )
-                        self.classification_model = DeepfauneV4Classifier(
-                            device="cpu",
-                            weights=str(v4_model_path),
-                        )
-                        self._model_versions["classification"] = (
-                            "DeepfauneClassifier-v4"
-                        )
-                    else:
-                        # Fallback: try to use standard classifier (may fail due to class mismatch)
-                        logger.warning(
-                            "DeepFaune v4 classifier not available, trying standard classifier..."
-                        )
-                        logger.warning(
-                            "Note: v4 model has 38 classes, standard classifier expects 34"
-                        )
-                        self.classification_model = (
-                            pw_classification.DeepfauneClassifier(device="cpu")
-                        )
-                        self._model_versions["classification"] = "DeepfauneClassifier"
-                else:
+                if not MODEL_PATH.exists():
+                    raise FileNotFoundError(f"Model file not found at {MODEL_PATH}")
+                v4_model_path = MODEL_PATH.resolve()
+                if DEEPFAUNE_V4_AVAILABLE:
+                    # Use custom v4 classifier that supports 38 classes
                     logger.info(
-                        "Using default DeepFaune model (will download if needed)"
+                        f"Using DeepFaune v4 model (38 classes): {v4_model_path}"
+                    )
+                    self.classification_model = DeepfauneV4Classifier(
+                        device="cpu",
+                        weights=str(v4_model_path),
+                    )
+                    self._model_versions["classification"] = "DeepfauneClassifier-v4"
+                else:
+                    # Fallback: try to use standard classifier (may fail due to class mismatch)
+                    logger.warning(
+                        "DeepFaune v4 classifier not available, trying standard classifier..."
+                    )
+                    logger.warning(
+                        "Note: v4 model has 38 classes, standard classifier expects 34"
                     )
                     self.classification_model = pw_classification.DeepfauneClassifier(
                         device="cpu"
                     )
                     self._model_versions["classification"] = "DeepfauneClassifier"
+
             elif self.model_config.classification_model_class == "AI4GAmazonRainforest":
                 self.classification_model = pw_classification.AI4GAmazonRainforest()
                 self._model_versions["classification"] = "AI4GAmazonRainforest"

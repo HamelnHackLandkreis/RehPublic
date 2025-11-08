@@ -263,7 +263,13 @@ def get_location(location_id: UUID, db: Session = Depends(get_db)):
     tags=["images"],
 )
 async def upload_image(
-    location_id: UUID, file: UploadFile = File(...), db: Session = Depends(get_db)
+    location_id: UUID,
+    file: UploadFile = File(...),
+    upload_timestamp: Optional[datetime] = Query(
+        None,
+        description="Optional ISO 8601 timestamp for the upload (e.g., 2024-01-01T12:00:00). If not provided, current time is used.",
+    ),
+    db: Session = Depends(get_db),
 ):
     """Upload an image to a specific location and process it for animal detection.
 
@@ -277,6 +283,7 @@ async def upload_image(
     Args:
         location_id: UUID of the location
         file: Uploaded image file
+        upload_timestamp: Optional ISO 8601 timestamp for the upload
 
     Returns:
         Image upload response with image_id and detection count
@@ -297,7 +304,9 @@ async def upload_image(
         file_bytes = await file.read()
 
         # Save image to database
-        image = image_service.save_image(db, location_id, file_bytes)
+        image = image_service.save_image(
+            db, location_id, file_bytes, upload_timestamp=upload_timestamp
+        )
 
         # Process image synchronously
         logger.info(f"Processing image {image.id} for location {location.name}")

@@ -8,6 +8,7 @@ Usage:
 import argparse
 import random
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import List, Optional
 
@@ -34,7 +35,12 @@ def get_all_locations(api_base: str) -> List[dict]:
         print(f"Response: {response.text}")
         sys.exit(1)
 
-    locations = response.json()
+    locations_data = response.json()
+    if "locations" in locations_data:
+        locations = locations_data["locations"]
+    else:
+        locations = locations_data
+
     if not locations:
         print("Error: No locations found. Please create at least one location first.")
         sys.exit(1)
@@ -42,22 +48,32 @@ def get_all_locations(api_base: str) -> List[dict]:
     return locations
 
 
-def upload_image(api_base: str, location_id: str, image_path: Path) -> Optional[dict]:
+def upload_image(
+    api_base: str,
+    location_id: str,
+    image_path: Path,
+    upload_timestamp: Optional[str] = None,
+) -> Optional[dict]:
     """Upload an image to a location.
 
     Args:
         api_base: Base URL of the API
         location_id: UUID of the location
         image_path: Path to the image file
+        upload_timestamp: Optional ISO 8601 timestamp string
 
     Returns:
         Upload response dictionary if successful, None otherwise
     """
     url = f"{api_base}/locations/{location_id}/image"
 
+    params = {}
+    if upload_timestamp:
+        params["upload_timestamp"] = upload_timestamp
+
     with open(image_path, "rb") as f:
         files = {"file": (image_path.name, f, "image/jpeg")}
-        response = requests.post(url, files=files, timeout=300)
+        response = requests.post(url, files=files, params=params, timeout=300)
 
     if response.status_code != 201:
         print(
@@ -151,6 +167,21 @@ def main() -> None:
     print(f"Found {len(image_files)} image file(s)")
     print()
 
+    # Generate random timestamps spread over the current year
+    now = datetime.now()
+    year_start = datetime(now.year, 1, 1)
+    year_end = datetime(now.year, 12, 31, 23, 59, 59)
+    # Use current time as end if we're not at the end of the year yet
+    if now < year_end:
+        year_end = now
+
+    random_timestamps = []
+    for _ in range(len(image_files)):
+        random_time = year_start + timedelta(
+            seconds=random.randint(0, int((year_end - year_start).total_seconds()))
+        )
+        random_timestamps.append(random_time.isoformat())
+
     print("=== Uploading images ===")
     successful = 0
     failed = 0
@@ -167,13 +198,21 @@ def main() -> None:
             selected_location_id = location_id
             selected_location_name = location["name"]
 
+        # Use random timestamp for this image
+        upload_timestamp = random_timestamps[i - 1]
+
         print(
             f"[{i}/{len(image_files)}] Uploading {image_path.name} "
-            f"to {selected_location_name}...",
+            f"to {selected_location_name} (timestamp: {upload_timestamp})...",
             end=" ",
         )
 
-        result = upload_image(args.api_base, selected_location_id, image_path)
+        result = upload_image(
+            args.api_base,
+            selected_location_id,
+            image_path,
+            upload_timestamp=upload_timestamp,
+        )
 
         if result:
             detections_count = result.get("detections_count", 0)

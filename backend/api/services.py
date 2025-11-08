@@ -157,13 +157,16 @@ class ImageService:
             model_region="europe"
         )
 
-    def save_image(self, db: Session, location_id: UUID, file_bytes: bytes) -> Image:
+    def save_image(
+        self, db: Session, location_id: UUID, file_bytes: bytes, upload_timestamp: Optional[datetime] = None
+    ) -> Image:
         """Save uploaded image as base64.
 
         Args:
             db: Database session
             location_id: UUID of the location
             file_bytes: Raw image bytes
+            upload_timestamp: Optional timestamp to use for upload (defaults to current time)
 
         Returns:
             Created Image object
@@ -172,9 +175,15 @@ class ImageService:
         base64_data = base64.b64encode(file_bytes).decode("utf-8")
 
         # Create image record
-        image = Image(
-            location_id=str(location_id), base64_data=base64_data, processed=False
-        )
+        image_kwargs = {
+            "location_id": str(location_id),
+            "base64_data": base64_data,
+            "processed": False,
+        }
+        if upload_timestamp is not None:
+            image_kwargs["upload_timestamp"] = upload_timestamp
+
+        image = Image(**image_kwargs)
         db.add(image)
         db.commit()
         db.refresh(image)
