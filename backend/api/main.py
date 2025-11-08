@@ -776,8 +776,8 @@ def get_spottings(
                 location_map[location_id] = location
 
         # Get all spottings for this image
-        # Spottings are already loaded via eager loading in get_images_in_range
-        spottings = image.spottings
+        # Explicitly query spottings to ensure they're loaded
+        spottings = db.query(Spotting).filter(Spotting.image_id == image.id).all()
 
         # Convert spottings to detection responses
         detections = []
@@ -814,12 +814,35 @@ def get_spottings(
     for location_id, location_images in images_by_location.items():
         if location_id in location_map:
             location = location_map[location_id]
-            # Count images that contain animals (have at least one detection)
-            images_with_animals = sum(
-                1
-                for image_response in location_images
-                if len(image_response.detections) > 0
+
+            # Calculate per-location statistics from ALL spottings at this location
+            # (not just the returned images, to match /locations endpoint behavior)
+            spottings_query = (
+                db.query(Spotting)
+                .join(Image, Spotting.image_id == Image.id)
+                .filter(Image.location_id == location_id)
             )
+
+            # Apply time range filters if provided
+            if time_start is not None:
+                spottings_query = spottings_query.filter(
+                    Image.upload_timestamp >= time_start
+                )
+            if time_end is not None:
+                spottings_query = spottings_query.filter(
+                    Image.upload_timestamp <= time_end
+                )
+
+            all_location_spottings = spottings_query.all()
+            location_species = set(
+                spotting.species for spotting in all_location_spottings
+            )
+            location_spottings_count = len(all_location_spottings)
+
+            # Update global counts
+            all_species.update(location_species)
+            total_spottings_count += location_spottings_count
+
             locations_response.append(
                 LocationWithImagesResponse(
                     id=UUID(location.id),
@@ -828,14 +851,10 @@ def get_spottings(
                     latitude=location.latitude,
                     description=location.description,
                     images=location_images,
-                    total_images_with_animals=images_with_animals,
+                    total_unique_species=len(location_species),
+                    total_spottings=location_spottings_count,
                 )
             )
-            # Count spottings and collect unique species
-            for image_response in location_images:
-                total_spottings_count += len(image_response.detections)
-                for detection in image_response.detections:
-                    all_species.add(detection.species)
 
     return SpottingsResponse(
         locations=locations_response,

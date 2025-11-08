@@ -108,6 +108,11 @@ def test_upload_image_to_location(client, sample_image_bytes):
     assert location["total_unique_species"] > 0
     assert location["total_spottings"] > 0
 
+    response = client.get("/locations")
+    assert response.status_code == 200
+    locations_data = response.json()
+    assert "locations" in locations_data
+
 
 def test_upload_image_invalid_location(client, sample_image_bytes):
     """Test uploading image to non-existent location returns 404."""
