@@ -7,7 +7,16 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, File, HTTPException, Query, Response, UploadFile, status
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -15,14 +24,13 @@ from api.database import get_db, init_db
 from api.schemas import (
     BoundingBoxResponse,
     DetectionResponse,
-    ImageBase64Response,
     ImageDetailResponse,
     ImageUploadResponse,
     LocationCreate,
     LocationResponse,
+    LocationsResponse,
     LocationWithImagesResponse,
     SpottingImageResponse,
-    SpottingLocationResponse,
     SpottingsResponse,
     WikipediaArticleResponse,
     WikipediaArticlesRequest,
@@ -118,18 +126,41 @@ def startup_event():
 
 @app.get(
     "/locations",
-    response_model=List[LocationResponse],
+    response_model=LocationsResponse,
     status_code=status.HTTP_200_OK,
     tags=["locations"],
 )
 def get_locations(db: Session = Depends(get_db)):
-    """Get all camera locations.
+    """Get all camera locations with spotting statistics.
 
     Returns:
-        List of all locations with name, longitude, latitude, and description
+        LocationsResponse containing:
+        - locations: List of all locations with name, longitude, latitude, and description
+        - total_unique_species: Total number of unique species detected across all locations
+        - total_spottings: Total number of animal detections across all locations
     """
-    locations = location_service.get_all_locations(db)
-    return locations
+    locations_data, total_unique_species, total_spottings = (
+        location_service.get_all_locations_with_statistics(db)
+    )
+
+    locations = [
+        LocationResponse(
+            id=UUID(location.id),
+            name=location.name,
+            longitude=location.longitude,
+            latitude=location.latitude,
+            description=location.description,
+            total_unique_species=loc_unique_species,
+            total_spottings=loc_spottings,
+        )
+        for location, loc_unique_species, loc_spottings in locations_data
+    ]
+
+    return LocationsResponse(
+        locations=locations,
+        total_unique_species=total_unique_species,
+        total_spottings=total_spottings,
+    )
 
 
 @app.post(
@@ -155,7 +186,15 @@ def create_location(location_data: LocationCreate, db: Session = Depends(get_db)
             latitude=location_data.latitude,
             description=location_data.description,
         )
-        return location
+        return LocationResponse(
+            id=UUID(location.id),
+            name=location.name,
+            longitude=location.longitude,
+            latitude=location.latitude,
+            description=location.description,
+            total_unique_species=0,
+            total_spottings=0,
+        )
     except Exception as e:
         logger.error(f"Failed to create location: {e}")
         error_msg = str(e)
@@ -183,24 +222,38 @@ def create_location(location_data: LocationCreate, db: Session = Depends(get_db)
     status_code=status.HTTP_200_OK,
 )
 def get_location(location_id: UUID, db: Session = Depends(get_db)):
-    """Get specific location by ID.
+    """Get specific location by ID with spotting statistics.
 
     Args:
         location_id: UUID of the location
 
     Returns:
-        Location details
+        Location details with:
+        - Location data (id, name, coordinates, description)
+        - total_unique_species: Total number of unique species detected at this location
+        - total_spottings: Total number of animal detections at this location
 
     Raises:
         HTTPException: 404 if location not found
     """
-    location = location_service.get_location_by_id(db, location_id)
-    if not location:
+    result = location_service.get_location_by_id_with_statistics(db, location_id)
+    if not result:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Location with id {location_id} not found",
         )
-    return location
+
+    location, total_unique_species, total_spottings = result
+
+    return LocationResponse(
+        id=UUID(location.id),
+        name=location.name,
+        longitude=location.longitude,
+        latitude=location.latitude,
+        description=location.description,
+        total_unique_species=total_unique_species,
+        total_spottings=total_spottings,
+    )
 
 
 @app.post(
@@ -387,7 +440,11 @@ def get_image_base64(image_id: UUID, db: Session = Depends(get_db)):
         elif image_bytes[:3] == b"GIF":
             content_type = "image/gif"
         # Check for WebP
-        elif len(image_bytes) >= 12 and image_bytes[:4] == b"RIFF" and image_bytes[8:12] == b"WEBP":
+        elif (
+            len(image_bytes) >= 12
+            and image_bytes[:4] == b"RIFF"
+            and image_bytes[8:12] == b"WEBP"
+        ):
             content_type = "image/webp"
         # JPEG is default (starts with FF D8)
 
@@ -441,6 +498,10 @@ def get_spottings(
     - List of images with detections (species, confidence, bounding boxes)
     - Note: Base64 image data is NOT included. Use /images/{image_id}/base64 to fetch it.
 
+    Response also includes:
+    - total_unique_species: Total number of unique species detected across all locations
+    - total_spottings: Total number of animal detections across all locations
+
     Query Parameters:
         latitude: Center latitude in decimal degrees (e.g., 50.123)
         longitude: Center longitude in decimal degrees (e.g., 10.456)
@@ -451,7 +512,8 @@ def get_spottings(
                  Examples: "2024-12-31T23:59:59", "2024-12-31"
 
     Returns:
-        Response with locations array, each containing location data and images (max 3 per location)
+        Response with locations array, each containing location data and images (max 3 per location),
+        plus total_unique_species and total_spottings counts
 
     Example:
         GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59
@@ -512,6 +574,9 @@ def get_spottings(
 
     # Build response with locations and their images
     locations_response = []
+    all_species = set()
+    total_spottings_count = 0
+
     for location_id, location_images in images_by_location.items():
         if location_id in location_map:
             location = location_map[location_id]
@@ -525,8 +590,17 @@ def get_spottings(
                     images=location_images,
                 )
             )
+            # Count spottings and collect unique species
+            for image_response in location_images:
+                total_spottings_count += len(image_response.detections)
+                for detection in image_response.detections:
+                    all_species.add(detection.species)
 
-    return SpottingsResponse(locations=locations_response)
+    return SpottingsResponse(
+        locations=locations_response,
+        total_unique_species=len(all_species),
+        total_spottings=total_spottings_count,
+    )
 
 
 @app.post(

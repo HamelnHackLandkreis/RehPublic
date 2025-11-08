@@ -25,8 +25,18 @@ class LocationResponse(BaseModel):
     longitude: float
     latitude: float
     description: Optional[str]
+    total_unique_species: int
+    total_spottings: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class LocationsResponse(BaseModel):
+    """Schema for locations list response with totals."""
+
+    locations: List[LocationResponse]
+    total_unique_species: int
+    total_spottings: int
 
 
 # Image schemas
@@ -71,6 +81,7 @@ class ImageDetailResponse(BaseModel):
 
 class SpottingImageResponse(BaseModel):
     """Schema for spotting image response without base64 data."""
+
     image_id: UUID
     location_id: UUID
     upload_timestamp: datetime
@@ -79,6 +90,7 @@ class SpottingImageResponse(BaseModel):
 
 class ImageBase64Response(BaseModel):
     """Schema for image base64 data response."""
+
     image_id: UUID
     base64_data: str
 
@@ -96,6 +108,7 @@ class SpottingLocationResponse(BaseModel):
 
 class LocationWithImagesResponse(BaseModel):
     """Schema for location with its images."""
+
     id: UUID
     name: str
     longitude: float
@@ -106,6 +119,7 @@ class LocationWithImagesResponse(BaseModel):
 
 class SpottingsResponse(BaseModel):
     """Schema for spottings endpoint response grouped by location."""
+
     locations: List[LocationWithImagesResponse]
 
 

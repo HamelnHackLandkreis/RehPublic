@@ -34,6 +34,42 @@ class LocationService:
         return db.query(Location).all()
 
     @staticmethod
+    def get_all_locations_with_statistics(
+        db: Session,
+    ) -> Tuple[List[Tuple[Location, int, int]], int, int]:
+        """Retrieve all locations with spotting statistics.
+
+        Args:
+            db: Database session
+
+        Returns:
+            Tuple containing:
+            - List of tuples (location, unique_species_count, spottings_count) for each location
+            - Total number of unique species detected across all locations
+            - Total number of animal detections across all locations
+        """
+        locations = db.query(Location).all()
+
+        # Calculate per-location statistics
+        location_stats = []
+        all_species = set()
+        total_spottings_count = 0
+
+        for location in locations:
+            spottings = (
+                db.query(Spotting)
+                .join(Image, Spotting.image_id == Image.id)
+                .filter(Image.location_id == location.id)
+                .all()
+            )
+            unique_species = set(spotting.species for spotting in spottings)
+            location_stats.append((location, len(unique_species), len(spottings)))
+            all_species.update(unique_species)
+            total_spottings_count += len(spottings)
+
+        return location_stats, len(all_species), total_spottings_count
+
+    @staticmethod
     def get_location_by_id(db: Session, location_id: UUID) -> Optional[Location]:
         """Get specific location by ID.
 
@@ -45,6 +81,39 @@ class LocationService:
             Location object or None if not found
         """
         return db.query(Location).filter(Location.id == str(location_id)).first()
+
+    @staticmethod
+    def get_location_by_id_with_statistics(
+        db: Session, location_id: UUID
+    ) -> Optional[Tuple[Location, int, int]]:
+        """Get specific location by ID with spotting statistics.
+
+        Args:
+            db: Database session
+            location_id: UUID of the location
+
+        Returns:
+            Tuple containing:
+            - Location object or None if not found
+            - Total number of unique species detected at this location
+            - Total number of animal detections at this location
+        """
+        location = db.query(Location).filter(Location.id == str(location_id)).first()
+        if not location:
+            return None
+
+        # Get all spottings for images belonging to this location
+        spottings = (
+            db.query(Spotting)
+            .join(Image, Spotting.image_id == Image.id)
+            .filter(Image.location_id == str(location_id))
+            .all()
+        )
+
+        unique_species = set(spotting.species for spotting in spottings)
+        total_spottings_count = len(spottings)
+
+        return location, len(unique_species), total_spottings_count
 
     @staticmethod
     def create_location(
