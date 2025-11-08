@@ -5,6 +5,7 @@ from typing import List
 from uuid import UUID
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile, status
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from api.database import get_db, init_db
@@ -29,6 +30,15 @@ app = FastAPI(
     title="Wildlife Camera API",
     description="API for managing wildlife camera locations, images, and animal detections",
     version="0.1.0"
+)
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize services
