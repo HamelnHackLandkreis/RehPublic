@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-gray-50 to-gray-200">
+  <div class="bg-gradient-to-b  overflow-hidden">
     <!-- Full Size Image - Border to Border -->
-    <div class="w-full h-[60vh] overflow-hidden mb-12 relative">
+    <div class="w-full h-[60vh] overflow-hidden mb-2 relative">
       <img 
         src="/fallback.JPG" 
         alt="Main Wildlife Image" 
@@ -12,78 +12,90 @@
       </div>
     </div>
 
-    <!-- Animal Match Cards -->
-    <div class="max-w-6xl mx-auto px-8 pb-12">
-      <div v-if="loading" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-        <p class="mt-4 text-gray-600">Loading animals...</p>
-      </div>
+    <!-- Loading/Error States -->
+    <div v-if="loading" class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+      <p class="mt-4 text-gray-600">Loading animals...</p>
+    </div>
 
-      <div v-else-if="error" class="text-center py-12 text-red-600">
-        <p>{{ error }}</p>
-      </div>
+    <div v-else-if="error" class="text-center py-12 text-red-600">
+      <p>{{ error }}</p>
+    </div>
 
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- Swipeable Cards Container -->
+    <div 
+      v-else 
+      class="relative h-[calc(42vh-2rem)] w-full mx-auto"
+    >
+      <!-- Cards -->
+      <div class="relative h-full">
         <div 
           v-for="(animal, index) in animals" 
           :key="index"
-          @click="selectAnimal(animal)"
-          class="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
-          :class="selectedAnimal?.title === animal.title ? 'ring-4 ring-green-500 scale-105' : ''"
+          class="absolute inset-0 transition-all duration-300 ease-out cursor-grab active:cursor-grabbing"
+          :style="getCardStyle(index)"
+          @touchstart="handleTouchStart"
+          @touchmove="handleTouchMove"
+          @touchend="handleTouchEnd"
+          @mousedown="handleMouseDown"
+          @mousemove="handleMouseMove"
+          @mouseup="handleMouseEnd"
+          @mouseleave="handleMouseEnd"
         >
-          <!-- Animal Image -->
-          <div class="aspect-video bg-gradient-to-br from-green-400 to-blue-500 relative overflow-hidden">
+          <div 
+            class="w-full h-full overflow-hidden relative"
+          >
+            <!-- Full Image Background -->
             <img 
               v-if="animal.image_url"
               :src="animal.image_url" 
               :alt="animal.title"
               class="w-full h-full object-cover"
             />
-            <div v-else class="w-full h-full flex items-center justify-center text-white text-2xl font-bold">
+            <div 
+              v-else 
+              class="w-full h-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white text-3xl font-bold"
+            >
               {{ animal.title }}
             </div>
-            <div 
-              v-if="selectedAnimal?.title === animal.title"
-              class="absolute inset-0 bg-green-500/20 flex items-center justify-center"
-            >
-              <div class="bg-green-500 text-white rounded-full p-3">
-                <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                </svg>
-              </div>
-            </div>
-          </div>
 
-          <!-- Animal Info -->
-          <div class="p-5">
-            <h3 class="text-xl font-bold text-gray-800 mb-3">{{ animal.title }}</h3>
-            <p class="text-gray-600 text-sm mb-4 line-clamp-4">
-              {{ animal.description }}
-            </p>
+            <!-- Overlay Gradient -->
+            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+
+            <!-- Wikipedia Link - Top Right -->
             <a 
               :href="animal.article_url" 
               target="_blank"
               @click.stop
-              class="inline-flex items-center text-purple-600 hover:text-purple-800 font-medium text-sm"
+              class="absolute top-4 right-4 bg-white/90 hover:bg-white text-gray-800 p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110 z-10"
+              title="View on Wikipedia"
             >
-              Learn more on Wikipedia
-              <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1 4v2h2V6h-2zm0 4v8h2v-8h-2z"/>
               </svg>
             </a>
+
+            <!-- Text Content - Bottom -->
+            <div class="absolute bottom-0 left-0 right-0 p-6 text-white z-10 pointer-events-none">
+              <h3 class="text-3xl font-bold mb-3 drop-shadow-lg">{{ animal.title }}</h3>
+              <p class="text-white/90 text-base leading-relaxed line-clamp-3 drop-shadow-md">
+                {{ animal.description }}
+              </p>
+            </div>
+
+            <!-- Swipe Up Hint -->
+            <div class="absolute bottom-40 left-1/2 -translate-x-1/2 text-white text-center z-10 pointer-events-none">
+              <div class="animate-bounce">
+                <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"/>
+                </svg>
+                <p class="text-sm font-medium drop-shadow-lg">Swipe up to match</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Submit Button -->
-      <div v-if="selectedAnimal" class="mt-8 text-center">
-        <button 
-          @click="submitMatch"
-          class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105"
-        >
-          Confirm: This is a {{ selectedAnimal.title }}
-        </button>
-      </div>
     </div>
 
   </div>
@@ -102,11 +114,10 @@ interface WikipediaArticle {
 
 // State
 const currentSlide = ref(0)
-const placeholderImages = ref([1, 2, 3, 4, 5])
 const animals = ref<WikipediaArticle[]>([])
-const selectedAnimal = ref<WikipediaArticle | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
+const dragOffset = ref({ x: 0, y: 0 })
 
 // Animals to fetch (you can customize this list based on your detection model)
 const animalList = [
@@ -148,17 +159,33 @@ const fetchAnimals = async () => {
   }
 }
 
-// Select an animal
-const selectAnimal = (animal: WikipediaArticle) => {
-  selectedAnimal.value = animal
+// Get card positioning style
+const getCardStyle = (index: number) => {
+  const offset = index - currentSlide.value
+  const isActive = offset === 0
+  
+  const baseTransform = `translateX(${offset * 100}%)`
+  const dragTransform = isActive && isDragging.value 
+    ? ` translateX(${dragOffset.value.x}px) translateY(${dragOffset.value.y}px) rotate(${dragOffset.value.x * 0.05}deg)`
+    : ''
+  
+  return {
+    transform: `${baseTransform}${dragTransform} scale(${isActive ? 1 : 0.9})`,
+    opacity: isActive ? 1 : 0,
+    zIndex: isActive ? 10 : 0,
+    pointerEvents: (isActive ? 'auto' : 'none') as 'auto' | 'none',
+  }
 }
 
 // Submit the match
-const submitMatch = () => {
-  if (selectedAnimal.value) {
-    alert(`Great! You identified this as a ${selectedAnimal.value.title}!`)
-    // TODO: Send to backend for validation/learning
-    console.log('Selected animal:', selectedAnimal.value)
+const submitMatch = (animal: WikipediaArticle) => {
+  alert(`Great! You identified this as a ${animal.title}!`)
+  // TODO: Send to backend for validation/learning
+  console.log('Selected animal:', animal)
+  
+  // Move to next card
+  if (currentSlide.value < animals.value.length - 1) {
+    currentSlide.value++
   }
 }
 
@@ -169,67 +196,95 @@ onMounted(() => {
 
 // Touch/Swipe handling for carousel
 const touchStartX = ref(0)
-const touchEndX = ref(0)
+const touchStartY = ref(0)
 const isDragging = ref(false)
-const startX = ref(0)
 
 const handleTouchStart = (e: TouchEvent) => {
   if (e.touches[0]) {
+    isDragging.value = true
     touchStartX.value = e.touches[0].clientX
+    touchStartY.value = e.touches[0].clientY
+    dragOffset.value = { x: 0, y: 0 }
   }
 }
 
 const handleTouchMove = (e: TouchEvent) => {
-  if (e.touches[0]) {
-    touchEndX.value = e.touches[0].clientX
+  if (!isDragging.value || !e.touches[0]) return
+  
+  dragOffset.value = {
+    x: e.touches[0].clientX - touchStartX.value,
+    y: e.touches[0].clientY - touchStartY.value
   }
 }
 
 const handleTouchEnd = () => {
+  if (!isDragging.value) return
+  
   handleSwipe()
+  isDragging.value = false
+  dragOffset.value = { x: 0, y: 0 }
 }
 
 const handleMouseDown = (e: MouseEvent) => {
   isDragging.value = true
-  startX.value = e.clientX
   touchStartX.value = e.clientX
+  touchStartY.value = e.clientY
+  dragOffset.value = { x: 0, y: 0 }
 }
 
 const handleMouseMove = (e: MouseEvent) => {
   if (!isDragging.value) return
-  touchEndX.value = e.clientX
+  
+  dragOffset.value = {
+    x: e.clientX - touchStartX.value,
+    y: e.clientY - touchStartY.value
+  }
 }
 
 const handleMouseEnd = () => {
   if (!isDragging.value) return
-  isDragging.value = false
+  
   handleSwipe()
+  isDragging.value = false
+  dragOffset.value = { x: 0, y: 0 }
 }
 
 const handleSwipe = () => {
-  const swipeThreshold = 50
-  const diff = touchStartX.value - touchEndX.value
+  const swipeThreshold = 80
+  const matchThreshold = -100 // Swipe up threshold
   
-  if (Math.abs(diff) > swipeThreshold) {
-    if (diff > 0) {
+  const diffX = dragOffset.value.x
+  const diffY = dragOffset.value.y
+  
+  // Check for swipe up (match)
+  if (diffY < matchThreshold && Math.abs(diffX) < swipeThreshold) {
+    const currentAnimal = animals.value[currentSlide.value]
+    if (currentAnimal) {
+      submitMatch(currentAnimal)
+    }
+    return
+  }
+  
+  // Check for horizontal swipe (navigate)
+  if (Math.abs(diffX) > swipeThreshold && Math.abs(diffY) < swipeThreshold) {
+    if (diffX < 0) {
       nextSlide()
     } else {
       prevSlide()
     }
   }
-  
-  touchStartX.value = 0
-  touchEndX.value = 0
 }
 
 const nextSlide = () => {
-  currentSlide.value = (currentSlide.value + 1) % placeholderImages.value.length
+  if (currentSlide.value < animals.value.length - 1) {
+    currentSlide.value++
+  }
 }
 
 const prevSlide = () => {
-  currentSlide.value = currentSlide.value === 0 
-    ? placeholderImages.value.length - 1 
-    : currentSlide.value - 1
+  if (currentSlide.value > 0) {
+    currentSlide.value--
+  }
 }
 
 const goToSlide = (index: number) => {
@@ -238,9 +293,10 @@ const goToSlide = (index: number) => {
 </script>
 
 <style scoped>
-.line-clamp-4 {
+.line-clamp-3 {
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
