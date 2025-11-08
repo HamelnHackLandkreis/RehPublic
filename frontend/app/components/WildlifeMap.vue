@@ -15,6 +15,7 @@
       :height="height"
       :width="width"
       :markers="markers"
+      @marker-click="handleMarkerClick"
     />
   </div>
 </template>
@@ -46,6 +47,10 @@ const props = withDefaults(defineProps<Props>(), {
   autoCenter: true,
   defaultZoom: 10
 })
+
+const emit = defineEmits<{
+  markerClick: [location: Location]
+}>()
 
 const locations = ref<Location[]>([])
 const loading = ref(true)
@@ -103,7 +108,9 @@ const updateMarkers = async () => {
           <small>Lat: ${location.latitude}, Lon: ${location.longitude}</small>
         </div>
       `,
-      icon: await createCustomIcon(location.name, location.image)
+      icon: await createCustomIcon(location.name, location.image),
+      id: location.id,
+      data: location
     }))
   )
   
@@ -111,6 +118,10 @@ const updateMarkers = async () => {
 }
 
 const markers = computed(() => markersWithIcons.value)
+
+const handleMarkerClick = (locationData: Location) => {
+  emit('markerClick', locationData)
+}
 
 // Watch for location changes and create custom icons
 watch(() => locations.value, () => {
@@ -186,10 +197,17 @@ onMounted(() => {
   fetchLocations()
 })
 
+const zoomToLocation = (lat: number, lon: number, zoomLevel: number = 15) => {
+  if (mapRef.value?.setCenter) {
+    mapRef.value.setCenter([lat, lon], zoomLevel)
+  }
+}
+
 // Expose methods for parent components
 defineExpose({
   refresh: fetchLocations,
-  getLocations: () => locations.value
+  getLocations: () => locations.value,
+  zoomToLocation
 })
 </script>
 

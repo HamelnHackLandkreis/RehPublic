@@ -15,6 +15,8 @@ interface Props {
     position: [number, number]
     popup?: string
     icon?: any
+    id?: string
+    data?: any
   }>
 }
 
@@ -25,6 +27,10 @@ const props = withDefaults(defineProps<Props>(), {
   width: '100%',
   markers: () => []
 })
+
+const emit = defineEmits<{
+  markerClick: [data: any]
+}>()
 
 const mapContainer = ref<HTMLElement | null>(null)
 let map: Map | null = null
@@ -82,6 +88,11 @@ const addMarkers = async () => {
       marker.bindPopup(markerData.popup)
     }
 
+    // Add click event listener
+    marker.on('click', () => {
+      emit('markerClick', markerData.data || markerData)
+    })
+
     markerInstances.push(marker)
   })
 }
@@ -105,9 +116,16 @@ onUnmounted(() => {
   }
 })
 
+const setCenter = (center: [number, number], zoomLevel?: number) => {
+  if (map) {
+    map.setView(center as LatLngExpression, zoomLevel ?? props.zoom)
+  }
+}
+
 // Expose map instance for parent components
 defineExpose({
-  getMap: () => map
+  getMap: () => map,
+  setCenter
 })
 </script>
 
