@@ -41,7 +41,7 @@ onMounted(async () => {
 
   // Dynamically import Leaflet to avoid SSR issues
   const L = await import('leaflet')
-  
+
   // Import Leaflet CSS
   await import('leaflet/dist/leaflet.css')
 
@@ -70,7 +70,7 @@ const addMarkers = async () => {
   if (!map || props.markers.length === 0) return
 
   const L = await import('leaflet')
-  
+
   // Clear existing markers
   markerInstances.forEach(marker => marker.remove())
   markerInstances = []
@@ -78,10 +78,10 @@ const addMarkers = async () => {
   // Add new markers
   props.markers.forEach(markerData => {
     if (!map) return
-    
+
     // Create marker options, only include icon if it's provided
     const markerOptions = markerData.icon ? { icon: markerData.icon } : {}
-    
+
     const marker = L.marker(markerData.position as LatLngExpression, markerOptions).addTo(map)
 
     if (markerData.popup) {
@@ -89,8 +89,27 @@ const addMarkers = async () => {
     }
 
     // Add click event listener
-    marker.on('click', () => {
+    marker.on('click', (e) => {
       emit('markerClick', markerData.data || markerData)
+
+      // Move the marker to the bottom center of the viewport only if popup is closed
+      if (map && !e.target.isPopupOpen()) {
+        const targetLatLng = e.target.getLatLng()
+        const containerSize = map.getSize()
+
+        // Calculate offset to place marker at bottom center
+        // We want the marker at 75% down from the top (bottom center area)
+        const targetY = containerSize.y * 0.75
+
+        const newPoint = L.point(containerSize.x / 2, targetY)
+        const newLatLng = map.containerPointToLatLng(newPoint)
+
+        // Calculate the difference and pan
+        const latDiff = targetLatLng.lat - newLatLng.lat
+        const lngDiff = targetLatLng.lng - newLatLng.lng
+
+        map.panTo([targetLatLng.lat + latDiff, targetLatLng.lng + lngDiff], { animate: true })
+      }
     })
 
     markerInstances.push(marker)

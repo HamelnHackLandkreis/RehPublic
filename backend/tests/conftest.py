@@ -1,5 +1,6 @@
 """Pytest configuration for API tests."""
 
+import os
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -8,6 +9,9 @@ from fastapi.testclient import TestClient
 from api.models import Base
 from api.database import get_db
 from api.main import app
+
+# Set TESTING environment variable to skip production DB initialization
+os.environ["TESTING"] = "1"
 
 # Create test database
 TEST_DATABASE_URL = "sqlite:///./test_wildlife_camera.db"

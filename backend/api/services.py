@@ -11,7 +11,7 @@ from uuid import UUID
 
 import httpx
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from api.models import Image, Location, Spotting
 from api.processor_integration import ProcessorClient
@@ -159,7 +159,11 @@ class ImageService:
         )
 
     def save_image(
-        self, db: Session, location_id: UUID, file_bytes: bytes, upload_timestamp: Optional[datetime] = None
+        self,
+        db: Session,
+        location_id: UUID,
+        file_bytes: bytes,
+        upload_timestamp: Optional[datetime] = None,
     ) -> Image:
         """Save uploaded image as base64.
 
@@ -313,9 +317,10 @@ class ImageService:
             if time_end is not None:
                 query = query.filter(Image.upload_timestamp <= time_end)
 
-            # Get most recent N images for this location
+            # Get most recent N images for this location with spottings eagerly loaded
             location_images = (
-                query.order_by(Image.upload_timestamp.desc())
+                query.options(selectinload(Image.spottings))
+                .order_by(Image.upload_timestamp.desc())
                 .limit(limit_per_location)
                 .all()
             )

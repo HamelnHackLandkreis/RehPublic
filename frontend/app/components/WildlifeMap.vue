@@ -135,13 +135,8 @@ const updateMarkers = async () => {
       return {
         position: [location.latitude, location.longitude] as [number, number],
         popup: `
-          <div class="marker-popup">
+          <div class="marker-popup w-75">
             <h3><strong>${location.name}</strong></h3>
-            <p>${location.description}</p>
-            <small>Lat: ${location.latitude}, Lon: ${location.longitude}</small>
-            <div class="popup-stats">
-              <span>📷 ${imageCount} image${imageCount !== 1 ? 's' : ''}</span>
-            </div>
             ${imagesHtml}
           </div>
         `,
