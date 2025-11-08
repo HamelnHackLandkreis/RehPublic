@@ -1,18 +1,25 @@
 """Database connection and session management."""
 
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
 from api.models import Base
 
-# SQLite database URL
-DATABASE_URL = "sqlite:///./wildlife_camera.db"
+# PostgreSQL database URL
+# Format: postgresql://user:password@host:port/database
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://rehpublic:hamelnhack2025@135.181.78.114:5432/rehpublic"
+)
 
 # Create engine
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},  # Needed for SQLite
-    echo=False  # Set to True for SQL query logging
+    echo=False,  # Set to True for SQL query logging
+    pool_pre_ping=True,  # Verify connections before using them
+    pool_size=10,  # Number of connections to maintain
+    max_overflow=20,  # Maximum number of connections beyond pool_size
 )
 
 # Create session factory
