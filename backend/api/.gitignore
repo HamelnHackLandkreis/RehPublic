@@ -6,8 +6,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # Test cache
 .pytest_cache/
-
-**.pyc
