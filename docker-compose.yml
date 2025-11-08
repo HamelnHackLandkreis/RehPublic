@@ -1,0 +1,19 @@
+services:
+  # Der Name deines Dienstes
+  nuxt-frontend:
+    # Build-Kontext: Docker sucht die Dockerfile im Ordner './frontend'
+    build: 
+      context: ./frontend
+      # Optional: Name des Images, falls du es später separat taggen möchtest
+      # target: runner
+    
+    # Port-Mapping: HOST_PORT:CONTAINER_PORT
+    # Wir mappen den Host-Port 9001 auf den Container-Port 80 (den Nginx verwendet)
+    ports:
+      - "9001:80"
+    
+    # Startet den Container automatisch neu, falls er abstürzt
+    restart: always
+    
+    # Optional: Ein eindeutiger Name für den laufenden Container
+    container_name: rehpublic-frontend
