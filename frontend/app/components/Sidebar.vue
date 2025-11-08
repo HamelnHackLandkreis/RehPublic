@@ -27,6 +27,7 @@
             to="/map" 
             class="block py-2.5 px-4 no-underline text-gray-800 rounded transition-colors hover:bg-gray-200 [&.router-link-active]:bg-blue-600 [&.router-link-active]:text-white"
           >
+          <Icon name="uil:github" />
             Map
           </NuxtLink>
         </li>
