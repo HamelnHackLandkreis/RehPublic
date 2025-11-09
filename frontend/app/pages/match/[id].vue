@@ -146,8 +146,6 @@
             </div>
 
             <!-- Swipe Hints -->
-            <div
-              class="absolute bottom-40 left-0 right-0 flex justify-between px-8 text-white z-10 pointer-events-none">
             <div class="absolute bottom-[11rem] left-0 right-0 flex justify-between px-8 text-white z-10 pointer-events-none">
               <!-- Left: Incorrect -->
               <div class="text-center">
