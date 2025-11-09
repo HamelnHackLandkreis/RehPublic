@@ -174,7 +174,16 @@ const updateMarkers = async () => {
         position: [location.latitude, location.longitude] as [number, number],
         popup: props.noMarkerPopup ? undefined : `
           <div class="marker-popup w-75">
-            <h3><strong>${location.name}</strong></h3>
+            <div class="popup-header">
+              <h3><strong>${location.name}</strong></h3>
+              <a href="/camera/${location.id}" class="camera-detail-button-inline">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                Details
+              </a>
+            </div>
             ${imagesHtml}
           </div>
         `,
@@ -363,10 +372,48 @@ defineExpose({
   padding: 4px;
 }
 
-:deep(.marker-popup h3) {
-  margin: 0 0 8px 0;
+:deep(.popup-header) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+:deep(.popup-header h3) {
+  margin: 0;
   font-size: 16px;
   color: #1f2937;
+  flex: 1;
+}
+
+:deep(.camera-detail-button-inline) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background-color: #3b82f6;
+  color: white;
+  text-decoration: none;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  transition: all 0.2s;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+:deep(.camera-detail-button-inline:hover) {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+:deep(.camera-detail-button-inline svg) {
+  width: 14px;
+  height: 14px;
 }
 
 :deep(.marker-popup p) {

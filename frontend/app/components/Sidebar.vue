@@ -1,6 +1,11 @@
-<script setup>
-// Bottom navigation bar component
+<script setup lang="ts">
+import { computed } from 'vue'
 
+const route = useRoute()
+
+const isCameraPage = computed(() => {
+  return route.path.startsWith('/camera')
+})
 </script>
 
 <template>
@@ -28,8 +33,22 @@
         </NuxtLink>
       </li>
       <li>
-        <NuxtLink to="/match"
-          class="flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white [&.router-link-active]:text-indigo-400 group">
+        <NuxtLink
+          to="/camera"
+          :class="[
+            'flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white group',
+            isCameraPage && 'text-indigo-400'
+          ]"
+        >
+          <Icon name="mdi:camera" class="text-2xl" />
+          <span class="text-xs font-medium">Cams</span>
+        </NuxtLink>
+      </li>
+      <li>
+        <NuxtLink
+          to="/match"
+          class="flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white [&.router-link-active]:text-indigo-400 group"
+        >
           <Icon name="mdi:image-search" class="text-2xl" />
           <span class="text-xs font-medium">Match</span>
         </NuxtLink>
