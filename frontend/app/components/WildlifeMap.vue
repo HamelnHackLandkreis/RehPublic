@@ -8,7 +8,7 @@
       <button @click="fetchLocations" class="retry-button">Retry</button>
     </div>
     <LeafletMap v-else ref="mapRef" :center="mapCenter" :zoom="zoom" :height="height" :width="width"
-      :markers="markers" />
+      :markers="markers" @marker-click="handleMarkerClick" />
   </div>
 </template>
 
@@ -45,6 +45,7 @@ interface Props {
   defaultLatitude?: number
   defaultLongitude?: number
   defaultDistanceRange?: number
+  noMarkerPopup?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -54,7 +55,8 @@ const props = withDefaults(defineProps<Props>(), {
   height: '100%',
   width: '100%',
   autoCenter: true,
-  defaultZoom: 10
+  defaultZoom: 10,
+  noMarkerPopup: false
 })
 
 const apiUrl = useApiUrl()
@@ -65,6 +67,11 @@ const error = ref<string | null>(null)
 const zoom = ref(props.defaultZoom)
 const mapRef = ref()
 const markersWithIcons = ref<any[]>([])
+
+// Define emits for parent components
+const emit = defineEmits<{
+  locationSelected: [location: Location]
+}>()
 
 const createCustomIcon = async (name: string, imageUrl?: string) => {
   const L = await import('leaflet')
@@ -94,6 +101,19 @@ const createCustomIcon = async (name: string, imageUrl?: string) => {
   })
 }
 
+const handleMarkerClick = (markerData: any) => {
+  if (props.noMarkerPopup && markerData.location) {
+    // In noMarkerPopup mode, emit the location and center the map
+    emit('locationSelected', markerData.location)
+    
+    // Center the map on the clicked location
+    if (mapRef.value?.setCenter) {
+      mapRef.value.setCenter([markerData.location.latitude, markerData.location.longitude], 15)
+    }
+  }
+  // If noMarkerPopup is false, the default popup behavior will happen
+}
+
 const updateMarkers = async () => {
   if (locations.value.length === 0) {
     markersWithIcons.value = []
@@ -109,9 +129,9 @@ const updateMarkers = async () => {
 
       const imageCount = location.images?.length || 0
 
-      // Create image gallery HTML
+      // Create image gallery HTML (only if popups are enabled)
       let imagesHtml = ''
-      if (location.images && location.images.length > 0) {
+      if (!props.noMarkerPopup && location.images && location.images.length > 0) {
         imagesHtml = `
           <div class="popup-images">
             ${location.images.map(img => {
@@ -152,13 +172,16 @@ const updateMarkers = async () => {
 
       return {
         position: [location.latitude, location.longitude] as [number, number],
-        popup: `
+        popup: props.noMarkerPopup ? undefined : `
           <div class="marker-popup w-75">
             <h3><strong>${location.name}</strong></h3>
             ${imagesHtml}
           </div>
         `,
-        icon: await createCustomIcon(location.name, imageUrl)
+        icon: await createCustomIcon(location.name, imageUrl),
+        data: {
+          location: location
+        }
       }
     })
   )
@@ -273,7 +296,13 @@ watch(() => route.query, () => {
 // Expose methods for parent components
 defineExpose({
   refresh: fetchLocations,
-  getLocations: () => locations.value
+  getLocations: () => locations.value,
+  centerOnLocation: (locationId: string) => {
+    const location = locations.value.find(loc => loc.id === locationId)
+    if (location && mapRef.value?.setCenter) {
+      mapRef.value.setCenter([location.latitude, location.longitude], 15)
+    }
+  }
 })
 </script>
 

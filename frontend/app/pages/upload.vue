@@ -12,7 +12,8 @@
             height="100%"
             :auto-center="!selectedLocation"
             :default-zoom="20"
-            @marker-click="handleLocationSelect"
+            :no-marker-popup="true"
+            @location-selected="handleLocationSelect"
           />
         </div>
 
@@ -211,17 +212,16 @@ onMounted(async () => {
 const handleLocationSelect = (location: CameraLocation) => {
   selectedLocation.value = location
   selectedLocationId.value = location.id
-  
-  // Zoom to the selected location
-  if (mapRef.value?.zoomToLocation) {
-    mapRef.value.zoomToLocation(location.latitude, location.longitude, 15)
-  }
 }
 
 const handleDropdownSelect = () => {
   const location = cameraLocations.value.find(loc => loc.id === selectedLocationId.value)
   if (location) {
-    handleLocationSelect(location)
+    selectedLocation.value = location
+    // Center the map on the selected location
+    if (mapRef.value?.centerOnLocation) {
+      mapRef.value.centerOnLocation(location.id)
+    }
   }
 }
 
