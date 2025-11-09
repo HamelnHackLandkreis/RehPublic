@@ -1,0 +1,35 @@
+name: Docker CI/CD (PR Check)
+
+# 1. Trigger: Löst den Workflow bei jedem Pull Request aus
+on:
+  pull_request:
+    # Optional: Beschränkt den Trigger nur auf PRs, die gegen den 'main'-Branch gehen
+    branches:
+      - main
+      - master
+    # Optional: Beschränkt den Trigger nur auf bestimmte PR-Aktionen 
+    # (standardmäßig sind es 'opened', 'synchronize', 'reopened')
+    types: 
+      - opened
+      - synchronize 
+      - reopened
+      
+# 2. Jobs, die ausgeführt werden sollen
+jobs:
+  build_and_test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      # Code auschecken
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      # Hier würden Sie typischerweise Ihre Tests oder einen Docker Build ausführen
+      - name: Build Docker Images (ohne Deployment)
+        run: docker compose build
+        
+      # Optional: Tests ausführen
+      - name: Run Tests
+        # Führen Sie Ihre Test-Befehle aus, z.B. 
+        # run: docker compose run --rm web pytest
+        run: echo "Tests werden ausgeführt..."
