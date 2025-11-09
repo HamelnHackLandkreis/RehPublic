@@ -173,11 +173,11 @@ const updateMarkers = async () => {
               
               return `
               <div class="popup-image-wrapper">
-                <a href="/match/${img.image_id}" class="image-link">${imageContent}</a>
+                <a href="#" data-nuxt-link="/match/${img.image_id}" class="image-link nuxt-link">${imageContent}</a>
                 <div class="image-info">
                   <small>${new Date(img.upload_timestamp).toLocaleString()}</small>
                   ${hasDetections ?
-            `<a href="/match/${img.image_id}" class="detection-badge-link">
+            `<a href="#" data-nuxt-link="/match/${img.image_id}" class="detection-badge-link nuxt-link">
               <span class="detection-badge">${img.detections.length} detection${img.detections.length !== 1 ? 's' : ''}</span>
             </a>`
             : `<span class="no-detection-badge">No detection</span>`}
@@ -194,7 +194,7 @@ const updateMarkers = async () => {
           <div class="marker-popup w-75">
             <div class="popup-header">
               <h3><strong>${location.name}</strong></h3>
-              <a href="/camera/${location.id}" class="camera-detail-button-inline">
+              <a href="#" data-nuxt-link="/camera/${location.id}" class="camera-detail-button-inline nuxt-link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                   <circle cx="12" cy="10" r="3"></circle>
