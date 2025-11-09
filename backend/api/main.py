@@ -219,34 +219,137 @@ def get_locations(
                 total_spottings=0,
             )
 
-        # Get locations with statistics for filtered locations
+        # Get locations with statistics for filtered locations using SQL aggregations
         locations_data = []
-        all_species = set()
-        total_spottings_count = 0
+        location_ids_for_global = []
 
         for loc_id in locations_in_range:
             location = location_service.get_location_by_id(db, UUID(loc_id))
             if not location:
                 continue
 
-            spottings = (
+            location_ids_for_global.append(loc_id)
+
+            # Use SQL aggregations for per-location statistics
+            base_query = (
                 db.query(Spotting)
                 .join(Image, Spotting.image_id == Image.id)
                 .filter(Image.location_id == loc_id)
-                .all()
             )
-            unique_species = set(spotting.species for spotting in spottings)
-            locations_data.append((location, len(unique_species), len(spottings)))
-            all_species.update(unique_species)
-            total_spottings_count += len(spottings)
 
-        total_unique_species = len(all_species)
-        total_spottings = total_spottings_count
+            # Apply time range filters if provided
+            if time_start is not None:
+                base_query = base_query.filter(Image.upload_timestamp >= time_start)
+            if time_end is not None:
+                base_query = base_query.filter(Image.upload_timestamp <= time_end)
+
+            # Get unique species count using SQL DISTINCT COUNT aggregation
+            unique_species_count = (
+                base_query.with_entities(Spotting.species).distinct().count()
+            )
+
+            # Get total spottings count using SQL COUNT aggregation
+            spottings_count = base_query.count()
+
+            locations_data.append((location, unique_species_count, spottings_count))
+
+        # Calculate global totals using SQL aggregations
+        if location_ids_for_global:
+            global_base_query = (
+                db.query(Spotting)
+                .join(Image, Spotting.image_id == Image.id)
+                .filter(Image.location_id.in_(location_ids_for_global))
+            )
+
+            # Apply time range filters if provided
+            if time_start is not None:
+                global_base_query = global_base_query.filter(
+                    Image.upload_timestamp >= time_start
+                )
+            if time_end is not None:
+                global_base_query = global_base_query.filter(
+                    Image.upload_timestamp <= time_end
+                )
+
+            # Get global unique species count using SQL DISTINCT COUNT aggregation
+            total_unique_species = (
+                global_base_query.with_entities(Spotting.species).distinct().count()
+            )
+
+            # Get global total spottings count using SQL COUNT aggregation
+            total_spottings = global_base_query.count()
+        else:
+            total_unique_species = 0
+            total_spottings = 0
     else:
         # Get all locations with statistics
-        locations_data, total_unique_species, total_spottings = (
-            location_service.get_all_locations_with_statistics(db)
-        )
+        # If time filters are applied, recalculate using SQL aggregations
+        if time_start is not None or time_end is not None:
+            locations_data = []
+            all_location_ids = []
+
+            # Get all locations
+            all_locations = db.query(Location).all()
+
+            for location in all_locations:
+                all_location_ids.append(location.id)
+
+                # Use SQL aggregations for per-location statistics with time filters
+                base_query = (
+                    db.query(Spotting)
+                    .join(Image, Spotting.image_id == Image.id)
+                    .filter(Image.location_id == location.id)
+                )
+
+                # Apply time range filters
+                if time_start is not None:
+                    base_query = base_query.filter(Image.upload_timestamp >= time_start)
+                if time_end is not None:
+                    base_query = base_query.filter(Image.upload_timestamp <= time_end)
+
+                # Get unique species count using SQL DISTINCT COUNT aggregation
+                unique_species_count = (
+                    base_query.with_entities(Spotting.species).distinct().count()
+                )
+
+                # Get total spottings count using SQL COUNT aggregation
+                spottings_count = base_query.count()
+
+                locations_data.append((location, unique_species_count, spottings_count))
+
+            # Calculate global totals using SQL aggregations
+            if all_location_ids:
+                global_base_query = (
+                    db.query(Spotting)
+                    .join(Image, Spotting.image_id == Image.id)
+                    .filter(Image.location_id.in_(all_location_ids))
+                )
+
+                # Apply time range filters
+                if time_start is not None:
+                    global_base_query = global_base_query.filter(
+                        Image.upload_timestamp >= time_start
+                    )
+                if time_end is not None:
+                    global_base_query = global_base_query.filter(
+                        Image.upload_timestamp <= time_end
+                    )
+
+                # Get global unique species count using SQL DISTINCT COUNT aggregation
+                total_unique_species = (
+                    global_base_query.with_entities(Spotting.species).distinct().count()
+                )
+
+                # Get global total spottings count using SQL COUNT aggregation
+                total_spottings = global_base_query.count()
+            else:
+                total_unique_species = 0
+                total_spottings = 0
+        else:
+            # No time filters - use pre-calculated totals
+            locations_data, total_unique_species, total_spottings = (
+                location_service.get_all_locations_with_statistics(db)
+            )
 
     # Get images for each location (up to 3 per location)
     location_images_map = {}
@@ -270,8 +373,6 @@ def get_locations(
 
     # Build response with locations, images, and statistics
     locations_response = []
-    all_species_global = set()
-    total_spottings_global = 0
 
     for location, loc_unique_species, loc_spottings in locations_data:
         images = location_images_map.get(location.id, [])
@@ -295,8 +396,6 @@ def get_locations(
                     is_uncertain=spotting.is_uncertain,
                 )
                 detections.append(detection)
-                all_species_global.add(spotting.species)
-                total_spottings_global += 1
 
             image_responses.append(
                 SpottingImageResponse(
@@ -307,10 +406,25 @@ def get_locations(
                 )
             )
 
-        # Count images with animals
-        images_with_animals = sum(
-            1 for img_resp in image_responses if len(img_resp.detections) > 0
+        # Count images with animals using SQL aggregation
+        # Count distinct images that have spottings (with filters applied)
+        images_with_animals_query = (
+            db.query(Image.id)
+            .join(Spotting, Spotting.image_id == Image.id)
+            .filter(Image.location_id == location.id)
         )
+
+        # Apply time range filters if provided
+        if time_start is not None:
+            images_with_animals_query = images_with_animals_query.filter(
+                Image.upload_timestamp >= time_start
+            )
+        if time_end is not None:
+            images_with_animals_query = images_with_animals_query.filter(
+                Image.upload_timestamp <= time_end
+            )
+
+        images_with_animals = images_with_animals_query.distinct().count()
 
         locations_response.append(
             LocationResponse(
@@ -326,13 +440,9 @@ def get_locations(
             )
         )
 
-    # Use global counts if filtering by location, otherwise use pre-calculated totals
-    if latitude is not None and longitude is not None and distance_range is not None:
-        final_total_unique_species = len(all_species_global)
-        final_total_spottings = total_spottings_global
-    else:
-        final_total_unique_species = total_unique_species
-        final_total_spottings = total_spottings
+    # Use SQL-aggregated totals (already calculated above)
+    final_total_unique_species = total_unique_species
+    final_total_spottings = total_spottings
 
     return LocationsResponse(
         locations=locations_response,
@@ -834,8 +944,7 @@ def get_spottings(
 
     # Build response with locations and their images
     locations_response = []
-    all_species = set()
-    total_spottings_count = 0
+    location_ids_list = list(location_map.keys())
 
     for location_id, location_images in images_by_location.items():
         if location_id in location_map:
@@ -843,7 +952,8 @@ def get_spottings(
 
             # Calculate per-location statistics from ALL spottings at this location
             # (not just the returned images, to match /locations endpoint behavior)
-            spottings_query = (
+            # Use SQL aggregations for efficiency
+            base_query = (
                 db.query(Spotting)
                 .join(Image, Spotting.image_id == Image.id)
                 .filter(Image.location_id == location_id)
@@ -851,34 +961,55 @@ def get_spottings(
 
             # Apply species filter if provided
             if species:
-                spottings_query = spottings_query.filter(
+                base_query = base_query.filter(Spotting.species.ilike(f"%{species}%"))
+
+            # Apply time range filters if provided
+            if time_start is not None:
+                base_query = base_query.filter(Image.upload_timestamp >= time_start)
+            if time_end is not None:
+                base_query = base_query.filter(Image.upload_timestamp <= time_end)
+
+            # Get unique species count using SQL DISTINCT COUNT aggregation
+            location_unique_species_count = (
+                base_query.with_entities(Spotting.species).distinct().count()
+            )
+
+            # Get total spottings count using SQL COUNT aggregation
+            location_spottings_count = base_query.count()
+
+            # Get total images count for this location (with filters applied)
+            images_query = db.query(Image).filter(Image.location_id == location_id)
+            if time_start is not None:
+                images_query = images_query.filter(Image.upload_timestamp >= time_start)
+            if time_end is not None:
+                images_query = images_query.filter(Image.upload_timestamp <= time_end)
+            total_images_count = images_query.count()
+
+            # Count images with animals using SQL aggregation
+            # Count distinct images that have spottings (with filters applied)
+            images_with_animals_query = (
+                db.query(Image.id)
+                .join(Spotting, Spotting.image_id == Image.id)
+                .filter(Image.location_id == location_id)
+            )
+
+            # Apply species filter if provided
+            if species:
+                images_with_animals_query = images_with_animals_query.filter(
                     Spotting.species.ilike(f"%{species}%")
                 )
 
             # Apply time range filters if provided
             if time_start is not None:
-                spottings_query = spottings_query.filter(
+                images_with_animals_query = images_with_animals_query.filter(
                     Image.upload_timestamp >= time_start
                 )
             if time_end is not None:
-                spottings_query = spottings_query.filter(
+                images_with_animals_query = images_with_animals_query.filter(
                     Image.upload_timestamp <= time_end
                 )
 
-            all_location_spottings = spottings_query.all()
-            location_species = set(
-                spotting.species for spotting in all_location_spottings
-            )
-            location_spottings_count = len(all_location_spottings)
-
-            # Update global counts
-            all_species.update(location_species)
-            total_spottings_count += location_spottings_count
-
-            # Count images with animals (images that have detections)
-            images_with_animals = sum(
-                1 for img in location_images if len(img.detections) > 0
-            )
+            images_with_animals = images_with_animals_query.distinct().count()
 
             locations_response.append(
                 LocationWithImagesResponse(
@@ -888,16 +1019,52 @@ def get_spottings(
                     latitude=location.latitude,
                     description=location.description,
                     images=location_images,
-                    total_unique_species=len(location_species),
+                    total_images=total_images_count,
+                    total_unique_species=location_unique_species_count,
                     total_spottings=location_spottings_count,
                     total_images_with_animals=images_with_animals,
                 )
             )
 
+    # Calculate global totals using SQL aggregations across all locations in range
+    if location_ids_list:
+        global_base_query = (
+            db.query(Spotting)
+            .join(Image, Spotting.image_id == Image.id)
+            .filter(Image.location_id.in_(location_ids_list))
+        )
+
+        # Apply species filter if provided
+        if species:
+            global_base_query = global_base_query.filter(
+                Spotting.species.ilike(f"%{species}%")
+            )
+
+        # Apply time range filters if provided
+        if time_start is not None:
+            global_base_query = global_base_query.filter(
+                Image.upload_timestamp >= time_start
+            )
+        if time_end is not None:
+            global_base_query = global_base_query.filter(
+                Image.upload_timestamp <= time_end
+            )
+
+        # Get global unique species count using SQL DISTINCT COUNT aggregation
+        global_unique_species_count = (
+            global_base_query.with_entities(Spotting.species).distinct().count()
+        )
+
+        # Get global total spottings count using SQL COUNT aggregation
+        global_total_spottings_count = global_base_query.count()
+    else:
+        global_unique_species_count = 0
+        global_total_spottings_count = 0
+
     return SpottingsResponse(
         locations=locations_response,
-        total_unique_species=len(all_species),
-        total_spottings=total_spottings_count,
+        total_unique_species=global_unique_species_count,
+        total_spottings=global_total_spottings_count,
     )
 
 
@@ -962,6 +1129,10 @@ def get_statistics(
         description="Maximum number of spottings to include in statistics before aggregation. If not provided, all spottings in the period are included.",
         gt=0,
     ),
+    location_id: Optional[str] = Query(
+        None,
+        description="Optional location ID to filter statistics by a specific location.",
+    ),
     db: Session = Depends(get_db),
 ):
     """Get statistics for animal spottings grouped by time period.
@@ -998,7 +1169,11 @@ def get_statistics(
     """
     try:
         stats_data = spotting_service.get_statistics(
-            db, period=period, granularity=granularity, limit=limit
+            db,
+            period=period,
+            granularity=granularity,
+            limit=limit,
+            location_id=location_id,
         )
 
         # Convert to response models

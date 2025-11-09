@@ -117,6 +117,9 @@ class LocationWithImagesResponse(BaseModel):
     latitude: float
     description: Optional[str]
     images: List[SpottingImageResponse]
+    total_images: int
+    total_unique_species: int
+    total_spottings: int
     total_images_with_animals: int
 
 

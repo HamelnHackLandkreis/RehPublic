@@ -82,22 +82,19 @@
           <!-- Statistics Section -->
           <div class="mb-8">
             <h2 class="text-2xl font-bold text-gray-900 mb-6">Statistics</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
               <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-center text-white">
                 <div class="text-4xl font-bold mb-2">{{ totalImages }}</div>
                 <div class="text-sm opacity-90 uppercase tracking-wide">Total Images</div>
               </div>
               <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-center text-white">
-                <div class="text-4xl font-bold mb-2">{{ uniqueSpecies.size }}</div>
+                <div class="text-4xl font-bold mb-2">{{ location?.total_unique_species ?? uniqueSpecies.size }}</div>
                 <div class="text-sm opacity-90 uppercase tracking-wide">Unique Species</div>
               </div>
               <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-center text-white">
                 <div class="text-4xl font-bold mb-2">{{ totalDetections }}</div>
                 <div class="text-sm opacity-90 uppercase tracking-wide">Total Detections</div>
-              </div>
-              <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-center text-white">
-                <div class="text-4xl font-bold mb-2">{{ imagesWithDetections }}</div>
-                <div class="text-sm opacity-90 uppercase tracking-wide">Images with Detections</div>
+                <div class="text-xs opacity-75 mt-1">({{ imagesWithDetections }} images)</div>
               </div>
             </div>
 
@@ -297,9 +294,14 @@ interface Location {
   latitude: number
   description: string
   images?: ImageDetection[]
+  total_images?: number
+  total_unique_species?: number
+  total_spottings?: number
+  total_images_with_animals?: number
 }
 
 const location = ref<Location | null>(null)
+const statistics = ref<any[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const activeTab = ref<'overview' | 'upload'>('overview')
@@ -311,19 +313,31 @@ const mapRef = ref<any>(null)
 
 const cameraId = computed(() => route.params.id as string)
 
-const totalImages = computed(() => location.value?.images?.length || 0)
+const totalImages = computed(() => location.value?.total_images ?? location.value?.images?.length ?? 0)
 
 const totalDetections = computed(() => {
+  // Use API value if available, otherwise compute from images
+  if (location.value?.total_spottings !== undefined) {
+    return location.value.total_spottings
+  }
   if (!location.value?.images) return 0
   return location.value.images.reduce((sum, img) => sum + (img.detections?.length || 0), 0)
 })
 
 const imagesWithDetections = computed(() => {
+  // Use API value if available, otherwise compute from images
+  if (location.value?.total_images_with_animals !== undefined) {
+    return location.value.total_images_with_animals
+  }
   if (!location.value?.images) return 0
   return location.value.images.filter(img => img.detections && img.detections.length > 0).length
 })
 
 const uniqueSpecies = computed(() => {
+  // Use API value if available, otherwise compute from images
+  if (location.value?.total_unique_species !== undefined) {
+    return new Set<string>() // Return empty set, size will be taken from total_unique_species
+  }
   const species = new Set<string>()
   if (location.value?.images) {
     location.value.images.forEach(img => {
@@ -336,6 +350,23 @@ const uniqueSpecies = computed(() => {
 })
 
 const speciesBreakdown = computed(() => {
+  // Use statistics from API if available (complete data)
+  if (statistics.value.length > 0) {
+    const speciesMap = new Map<string, number>()
+    
+    statistics.value.forEach(stat => {
+      stat.species.forEach((s: { name: string; count: number }) => {
+        const currentCount = speciesMap.get(s.name) || 0
+        speciesMap.set(s.name, currentCount + s.count)
+      })
+    })
+    
+    return Array.from(speciesMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+  }
+  
+  // Fallback to calculating from images (limited data)
   const speciesMap = new Map<string, number>()
   
   if (location.value?.images) {
@@ -377,6 +408,24 @@ const fetchCameraData = async () => {
     }
 
     location.value = foundLocation
+
+    // Fetch statistics for this location to get complete species breakdown
+    try {
+      const statsParams = new URLSearchParams({
+        period: 'year',
+        granularity: 'daily',
+        location_id: cameraId.value
+      })
+      const statsResponse = await fetch(`${apiUrl}/statistics?${statsParams.toString()}`)
+      
+      if (statsResponse.ok) {
+        const statsData = await statsResponse.json()
+        statistics.value = statsData.statistics || []
+      }
+    } catch (statsErr) {
+      console.warn('Failed to fetch statistics:', statsErr)
+      // Continue without statistics - will use fallback from images
+    }
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch camera data'
     console.error('Error fetching camera data:', err)
