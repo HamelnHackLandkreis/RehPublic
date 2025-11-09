@@ -145,13 +145,26 @@
               </p>
             </div>
 
-            <!-- Swipe Up Hint -->
-            <div class="absolute bottom-40 left-1/2 -translate-x-1/2 text-white text-center z-10 pointer-events-none">
-              <div class="animate-bounce">
-                <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                </svg>
-                <p class="text-sm font-medium drop-shadow-lg">Swipe up to match</p>
+            <!-- Swipe Hints -->
+            <div class="absolute bottom-40 left-0 right-0 flex justify-between px-8 text-white z-10 pointer-events-none">
+              <!-- Left: Incorrect -->
+              <div class="text-center">
+                <div class="animate-pulse">
+                  <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  <p class="text-sm font-medium drop-shadow-lg">Swipe left<br/>if wrong</p>
+                </div>
+              </div>
+              
+              <!-- Right: Correct -->
+              <div class="text-center">
+                <div class="animate-pulse">
+                  <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p class="text-sm font-medium drop-shadow-lg">Swipe right<br/>if correct</p>
+                </div>
               </div>
             </div>
           </div>
@@ -210,6 +223,17 @@ interface UserStats {
   user_detections: SpeciesCount[]
   total_user_detections: number
   automated_detections: string[]
+}
+
+interface TimePeriodStatistics {
+  start_time: string
+  end_time: string
+  species: SpeciesCount[]
+  total_spottings: number
+}
+
+interface StatisticsResponse {
+  statistics: TimePeriodStatistics[]
 }
 
 // Get image ID from route parameter (required for this dynamic route)
@@ -379,18 +403,54 @@ const fetchImageData = async () => {
     // Extract unique species from detections for candidates
     const detectedSpecies = [...new Set(data.detections.map((d: Detection) => d.species))] as string[]
 
-    // Fetch Wikipedia articles for detected species
-    if (detectedSpecies.length > 0) {
-      await fetchAnimals(detectedSpecies)
+    // Fetch historical species as fallback
+    const historicalSpecies = await fetchHistoricalSpecies()
+
+    // Merge detected species with historical, keeping detected ones first and ensuring uniqueness
+    const allSpecies = [...new Set([...detectedSpecies, ...historicalSpecies])]
+
+    // Fetch Wikipedia articles for all species
+    if (allSpecies.length > 0) {
+      await fetchAnimals(allSpecies)
     } else {
-      // Fallback to default list if no detections
-      await fetchAnimals([
-        'Roe deer'
-      ])
+      // Ultimate fallback to default list if no detections and no history
+      await fetchAnimals(['Roe deer'])
     }
   } catch (e) {
     console.error('Failed to fetch image data:', e)
     error.value = 'Failed to load image data. Please try again later.'
+  }
+}
+
+// Fetch historical species from statistics endpoint
+const fetchHistoricalSpecies = async (): Promise<string[]> => {
+  try {
+    const response = await fetch(`${apiUrl}/statistics?period=year&granularity=daily`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    if (!response.ok) {
+      console.warn('Failed to fetch statistics, using default fallback')
+      return []
+    }
+
+    const data: StatisticsResponse = await response.json()
+    
+    // Collect all unique species from all time periods
+    const speciesSet = new Set<string>()
+    data.statistics.forEach(period => {
+      period.species.forEach(species => {
+        speciesSet.add(species.name)
+      })
+    })
+
+    return Array.from(speciesSet)
+  } catch (e) {
+    console.error('Failed to fetch historical species:', e)
+    return []
   }
 }
 
@@ -474,30 +534,41 @@ const getCardStyle = (index: number) => {
 }
 
 // Submit the match
-const submitMatch = async (animal: WikipediaArticle) => {
+const submitMatch = async (animal: WikipediaArticle, isCorrect: boolean) => {
   try {
-    // Submit user detection to backend
-    const response = await fetch(`${apiUrl}/user-detections`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        image_id: imageId.value,
-        species: animal.title,
-        user_session_id: null // Optional: could add session tracking later
+    if (isCorrect) {
+      // Submit user detection to backend
+      const response = await fetch(`${apiUrl}/user-detections`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image_id: imageId.value,
+          species: animal.title,
+          user_session_id: null // Optional: could add session tracking later
+        })
       })
-    })
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      // Show success feedback
+      console.log(`User identified: ${animal.title}`)
+      
+      // Redirect to /match to load a random image
+      await navigateTo('/match')
+    } else {
+      // User said this is incorrect - just log it for now
+      console.log(`User rejected: ${animal.title}`)
+      
+      // Move to next card if available
+      if (currentSlide.value < animals.value.length - 1) {
+        currentSlide.value++
+        return // Don't reload, let them try another option
+      }
     }
-
-    // Show success feedback
-    console.log(`User identified: ${animal.title}`)
-
-    // Reload the page to get fresh data (or navigate to next image when random endpoint is ready)
-    window.location.reload()
 
   } catch (e) {
     console.error('Failed to submit user detection:', e)
@@ -561,46 +632,26 @@ const handleMouseEnd = () => {
 }
 
 const handleSwipe = () => {
-  const swipeThreshold = 80
-  const matchThreshold = -100 // Swipe up threshold
+  const swipeThreshold = 100 // Increased threshold for more deliberate swipes
 
   const diffX = dragOffset.value.x
   const diffY = dragOffset.value.y
 
-  // Check for swipe up (match)
-  if (diffY < matchThreshold && Math.abs(diffX) < swipeThreshold) {
+  // Check for horizontal swipe (needs to be primarily horizontal, not diagonal)
+  if (Math.abs(diffX) > swipeThreshold && Math.abs(diffY) < Math.abs(diffX) * 0.5) {
     const currentAnimal = animals.value[currentSlide.value]
     if (currentAnimal) {
-      submitMatch(currentAnimal)
-    }
-    return
-  }
-
-  // Check for horizontal swipe (navigate)
-  if (Math.abs(diffX) > swipeThreshold && Math.abs(diffY) < swipeThreshold) {
-    if (diffX < 0) {
-      nextSlide()
-    } else {
-      prevSlide()
+      if (diffX > 0) {
+        // Swipe right = correct match
+        submitMatch(currentAnimal, true)
+      } else {
+        // Swipe left = incorrect/skip
+        submitMatch(currentAnimal, false)
+      }
     }
   }
 }
 
-const nextSlide = () => {
-  if (currentSlide.value < animals.value.length - 1) {
-    currentSlide.value++
-  }
-}
-
-const prevSlide = () => {
-  if (currentSlide.value > 0) {
-    currentSlide.value--
-  }
-}
-
-const goToSlide = (index: number) => {
-  currentSlide.value = index
-}
 </script>
 
 <style scoped>
