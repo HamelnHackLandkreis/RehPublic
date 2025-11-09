@@ -243,6 +243,15 @@ watch(() => locationsWithNewImages.value.size, () => {
 })
 
 const mapCenter = computed((): [number, number] => {
+  // Check for lat/lng query parameters (from revealOnMap)
+  if (route.query.lat && route.query.lng) {
+    const lat = parseFloat(route.query.lat as string)
+    const lng = parseFloat(route.query.lng as string)
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return [lat, lng]
+    }
+  }
+  
   if (!props.autoCenter || locations.value.length === 0) {
     return [props.defaultLatitude, props.defaultLongitude]
   }
@@ -346,6 +355,22 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
     if (!isPollingCall && props.autoCenter && locations.value.length > 1) {
       zoom.value = calculateZoomLevel()
     }
+    
+    // If lat/lng query params are present, center on that location with appropriate zoom
+    if (!isPollingCall && route.query.lat && route.query.lng) {
+      const lat = parseFloat(route.query.lat as string)
+      const lng = parseFloat(route.query.lng as string)
+      if (!isNaN(lat) && !isNaN(lng)) {
+        // Set zoom to a close level (15) to show the location clearly
+        zoom.value = 15
+        // Center the map on the location after a short delay to ensure map is ready
+        setTimeout(() => {
+          if (mapRef.value?.setCenter) {
+            mapRef.value.setCenter([lat, lng], 15)
+          }
+        }, 100)
+      }
+    }
 
     // Update markers with custom icons
     if (!isPollingCall) {
@@ -407,6 +432,19 @@ onUnmounted(() => {
 // Watch for route query changes and refetch
 watch(() => route.query, () => {
   fetchLocations()
+  // If lat/lng query params changed, center on the new location
+  if (route.query.lat && route.query.lng) {
+    const lat = parseFloat(route.query.lat as string)
+    const lng = parseFloat(route.query.lng as string)
+    if (!isNaN(lat) && !isNaN(lng)) {
+      zoom.value = 15
+      setTimeout(() => {
+        if (mapRef.value?.setCenter) {
+          mapRef.value.setCenter([lat, lng], 15)
+        }
+      }, 300)
+    }
+  }
 }, { deep: true })
 
 // Expose methods for parent components
