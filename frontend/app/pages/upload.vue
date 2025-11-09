@@ -29,15 +29,15 @@
 
         <!-- Location Dropdown (always visible) -->
         <div v-if="cameraLocations.length > 0" class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-2">Or select from dropdown:</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Select Camera:</label>
           <select 
             v-model="selectedLocationId" 
             @change="handleDropdownSelect"
-            class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-400"
+            class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 bg-white"
           >
             <option value="">Choose a camera...</option>
             <option v-for="location in cameraLocations" :key="location.id" :value="location.id">
-              {{ location.name }} - {{ location.description }}
+              {{ location.name }}{{ location.description && location.description !== 'string' ? ' - ' + location.description : '' }}
             </option>
           </select>
         </div>
@@ -168,7 +168,8 @@ onMounted(async () => {
   try {
     const response = await fetch(`${API_BASE_URL}/locations`)
     if (response.ok) {
-      cameraLocations.value = await response.json()
+      const data = await response.json()
+      cameraLocations.value = data.locations || []
     }
   } catch (error) {
     console.error('Failed to fetch camera locations:', error)
