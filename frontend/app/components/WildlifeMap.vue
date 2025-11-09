@@ -207,7 +207,7 @@ watch(() => locations.value, () => {
 
 const mapCenter = computed((): [number, number] => {
   if (!props.autoCenter || locations.value.length === 0) {
-    return [51.9244, 9.4305] // Default: Hameln, Germany
+    return [props.defaultLatitude, props.defaultLongitude]
   }
 
   // Calculate center from all locations
