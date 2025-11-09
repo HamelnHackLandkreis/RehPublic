@@ -55,6 +55,13 @@
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
         </svg>
       </button>
+      
+      <!-- Zoom Button Tooltip -->
+      <div v-if="showZoomTooltip && croppedImageSrc"
+        class="absolute top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 max-w-xs animate-bounce">
+        <div class="absolute -top-2 right-8 w-4 h-4 bg-blue-600 transform rotate-45"></div>
+        <p class="text-sm font-medium">Toggle between cropped and full image view!</p>
+      </div>
 
       <div class="bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm absolute top-4 left-4">
         <p class="text-sm font-medium">What animal do you see?</p>
@@ -68,6 +75,13 @@
             d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </button>
+      
+      <!-- Unknown Button Tooltip -->
+      <div v-if="showUnknownTooltip"
+        class="absolute top-16 left-[230px] bg-blue-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 max-w-xs animate-bounce">
+        <div class="absolute -top-2 left-4 w-4 h-4 bg-blue-600 transform rotate-45"></div>
+        <p class="text-sm font-medium">Can't identify the animal? Click here to skip this image!</p>
+      </div>
     </div>
 
     <!-- Loading/Error States -->
@@ -118,6 +132,13 @@
                   d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1 4v2h2V6h-2zm0 4v8h2v-8h-2z" />
               </svg>
             </a>
+            
+            <!-- Wikipedia Button Tooltip -->
+            <div v-if="showWikipediaTooltip"
+              class="absolute top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 max-w-xs animate-bounce">
+              <div class="absolute -top-2 right-8 w-4 h-4 bg-blue-600 transform rotate-45"></div>
+              <p class="text-sm font-medium">Learn more about this species on Wikipedia!</p>
+            </div>
 
             <!-- Text Content - Bottom -->
             <div class="absolute bottom-0 left-0 right-0 p-6 text-white z-10 pointer-events-none">
@@ -262,6 +283,11 @@ const showCropped = ref(true) // Default to showing cropped view
 const fullImageRef = ref<HTMLImageElement | null>(null)
 const fullImageDimensions = ref({ width: 1920, height: 1080 })
 const boundingBoxOverlay = ref(false)
+
+// Tooltip state
+const showUnknownTooltip = ref(false)
+const showWikipediaTooltip = ref(false)
+const showZoomTooltip = ref(false)
 
 // Computed property for main image source
 const mainImageSrc = computed(() => {
@@ -522,6 +548,29 @@ const fetchUserStats = async () => {
 onMounted(() => {
   fetchImageData()
   fetchUserStats() // Fetch stats automatically when page loads
+  
+  // Check if user has seen tooltips before
+  if (typeof window !== 'undefined') {
+    const hasSeenTooltips = localStorage.getItem('hasSeenMatchTooltips')
+    if (!hasSeenTooltips) {
+      // Show tooltips after a short delay to let the page load
+      setTimeout(() => {
+        showUnknownTooltip.value = true
+        setTimeout(() => {
+          showUnknownTooltip.value = false
+          showZoomTooltip.value = true
+          setTimeout(() => {
+            showZoomTooltip.value = false
+            showWikipediaTooltip.value = true
+            setTimeout(() => {
+              showWikipediaTooltip.value = false
+              localStorage.setItem('hasSeenMatchTooltips', 'true')
+            }, 3000)
+          }, 3000)
+        }, 3000)
+      }, 1000)
+    }
+  }
 })
 
 // Touch/Swipe handling for carousel
