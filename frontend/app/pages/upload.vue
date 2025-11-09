@@ -1,12 +1,12 @@
 <template>
-  <div class="upload-page">
-    <div class="upload-container">
+  <div class="flex flex-grow flex-col overflow-x-hidden">
+    <div class="flex-1 flex flex-col max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-4 sm:py-6 overflow-y-auto">
       <!-- Camera Selection Section -->
-      <div class="camera-section">
+      <div class="mb-4">
         <h2 class="text-2xl font-bold mb-4">Select Camera Location</h2>
         
         <!-- Map for camera selection -->
-        <div class="map-container">
+        <div class="relative h-[25vh] min-h-[200px] mb-4 rounded-xl overflow-hidden border-2 border-gray-300">
           <WildlifeMap 
             ref="mapRef"
             height="100%"
@@ -46,24 +46,25 @@
 
       <!-- Drop Zone -->
       <div
-        class="drop-zone"
+        class="flex-shrink-0 bg-gray-50 border-2 border-dashed rounded-xl py-6 px-8 text-center cursor-pointer transition-all duration-300 mb-6"
         :class="{ 
-          'drop-zone-active': isDragging,
-          'drop-zone-disabled': !selectedLocation
+          'border-gray-400 bg-gray-100': isDragging,
+          'opacity-50 cursor-not-allowed': !selectedLocation,
+          'hover:border-gray-400 hover:bg-gray-100': selectedLocation && !isDragging
         }"
         @click="selectedLocation ? triggerFileInput() : null"
         @drop.prevent="handleDrop"
         @dragover.prevent="isDragging = true"
         @dragleave.prevent="isDragging = false"
       >
-        <svg class="text-gray-400 mb-4 mx-auto" width="24" height="24" viewBox="0 0 24 24" fill="none">
+        <svg class="text-gray-400 mb-2 mx-auto" width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path d="M12 15V3M12 3L8 7M12 3L16 7M2 17L2 19C2 20.1046 2.89543 21 4 21L20 21C21.1046 21 22 20.1046 22 19V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <p class="text-gray-700 text-base mb-2">
+        <p class="text-gray-700 text-sm mb-1">
           <span v-if="!selectedLocation" class="text-red-500">⚠ Please select a camera location first</span>
           <span v-else>Drop files here or <span class="text-gray-900 underline">browse files</span> to add</span>
         </p>
-        <p class="text-gray-500 text-sm">Supported: JPG, PNG, GIF (max 10 MB)</p>
+        <p class="text-gray-500 text-xs">Supported: JPG, PNG, GIF (max 10 MB)</p>
         <input
           ref="fileInput"
           type="file"
@@ -75,11 +76,10 @@
       </div>
 
       <!-- Upload Lists Container -->
-      <div class="upload-lists">
+      <div class="flex-1 overflow-y-auto min-h-0">
         <!-- Uploading Files -->
-        <div v-if="uploadingFiles.length > 0" class="upload-section">
+        <div v-if="uploadingFiles.length > 0" class="mb-6">
           <div class="flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 mb-4">
-            <LoadingSpinner size="sm" />
             <span>UPLOADING</span>
           </div>
           <div v-for="file in uploadingFiles" :key="file.id" class="bg-white border border-gray-200 rounded-lg p-4 flex items-center gap-4 mb-3 shadow-sm">
@@ -97,57 +97,38 @@
         </div>
 
         <!-- Finished Files -->
-        <div v-if="finishedFiles.length > 0" class="upload-section">
-          <div class="flex items-center gap-2 text-xs font-semibold tracking-wider text-gray-500 mb-4">
-            <svg class="text-green-500" width="20" height="20" viewBox="0 0 24 24" fill="none">
+        <div v-if="finishedFiles.length > 0" class="mb-6">
+          <div class="flex items-center gap-2 text-sm font-bold tracking-wider text-green-600 mb-4">
+            <svg class="text-green-500" width="24" height="24" viewBox="0 0 24 24" fill="none">
               <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            <span>FINISHED</span>
+            <span>FINISHED UPLOADS</span>
           </div>
-          <div v-for="file in finishedFiles" :key="file.id" class="bg-white border border-gray-200 rounded-lg p-4 mb-3 shadow-sm">
+          <div v-for="file in finishedFiles" :key="file.id" class="bg-white border-2 border-green-200 rounded-xl p-5 mb-4 shadow-lg hover:shadow-xl transition-shadow">
             <div class="flex items-start gap-4">
-              <div class="text-2xl flex-shrink-0">📄</div>
+              <div class="text-3xl flex-shrink-0">📄</div>
               <div class="flex-1 min-w-0">
-                <div class="flex justify-between items-center mb-2">
-                  <span class="text-gray-900 text-sm font-medium truncate">{{ file.name }}</span>
-                  <span class="text-gray-500 text-xs ml-4 flex-shrink-0">{{ file.progress }}%</span>
+                <div class="flex justify-between items-center mb-3">
+                  <span class="text-gray-900 text-base font-semibold truncate">{{ file.name }}</span>
+                  <span class="text-green-600 text-sm font-bold ml-4 flex-shrink-0 bg-green-100 px-3 py-1 rounded-full">{{ file.progress }}%</span>
                 </div>
-                <div class="h-1 bg-gray-200 rounded-full overflow-hidden mb-3">
-                  <div class="h-full bg-green-500 transition-all duration-300" :style="{ width: file.progress + '%' }"></div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
+                  <div class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300" :style="{ width: file.progress + '%' }"></div>
                 </div>
                 
-                <!-- Upload Result Details -->
-                <div class="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <div v-if="file.detectedSpecies && file.detectedSpecies.length > 0" class="flex items-center gap-2">
-                    <svg class="text-green-600 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none">
-                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <span class="text-sm font-semibold text-green-700 mb-1">Detected species:</span>
-                  </div>
-                  
-                  <div v-if="file.detectedSpecies && file.detectedSpecies.length > 0" class="ml-6">
-                    <div class="flex flex-wrap gap-1">
-                      <span 
-                        v-for="(species, idx) in file.detectedSpecies" 
-                        :key="idx"
-                        class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-medium"
-                      >
-                        {{ species }}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div v-if="file.detectionCount === 0 || (file.detectedSpecies && file.detectedSpecies.length === 0)" class="ml-6 text-xs text-gray-500 italic">
-                    No animals detected in this image
-                  </div>
-                  
-                  <div v-if="file.uploadTimestamp" class="ml-6 text-xs text-gray-500 mt-2">
-                    Uploaded: {{ formatTimestamp(file.uploadTimestamp) }}
-                  </div>
-                  
-                  <div v-if="file.imageId" class="ml-6 text-xs text-gray-500 mt-1">
-                    Image ID: <span class="font-mono">{{ file.imageId }}</span>
-                  </div>
+                <!-- Detected Species -->
+                <div v-if="file.detectedSpecies && file.detectedSpecies.length > 0" class="flex flex-wrap gap-3 mt-4">
+                  <span 
+                    v-for="(species, idx) in file.detectedSpecies" 
+                    :key="idx"
+                    class="inline-block bg-gradient-to-r from-green-500 to-green-600 text-white text-base font-bold px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                  >
+                    {{ species }}
+                  </span>
+                </div>
+                
+                <div v-if="file.detectionCount === 0 || (file.detectedSpecies && file.detectedSpecies.length === 0)" class="text-base text-gray-600 italic bg-gray-50 p-4 rounded-lg mt-4">
+                  No animals detected in this image
                 </div>
               </div>
             </div>
@@ -361,76 +342,3 @@ const formatTimestamp = (timestamp: string): string => {
   }
 }
 </script>
-
-<style scoped>
-.upload-page {
-  height: calc(100vh - 4rem); /* Subtract bottom nav bar height */
-  width: 100%;
-  background-color: white;
-  color: rgb(17 24 39);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.upload-container {
-  height: 100%;
-  max-width: 80rem;
-  margin: 0 auto;
-  padding: 2rem;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.camera-section {
-  flex-shrink: 0;
-  margin-bottom: 1.5rem;
-}
-
-.map-container {
-  height: 30vh;
-  margin-bottom: 1rem;
-  border-radius: 0.75rem;
-  overflow: hidden;
-  border: 2px solid rgb(209 213 219);
-}
-
-.drop-zone {
-  flex-shrink: 0;
-  background-color: rgb(249 250 251);
-  border: 2px dashed rgb(209 213 219);
-  border-radius: 0.75rem;
-  padding: 3rem;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin-bottom: 1.5rem;
-}
-
-.drop-zone:hover:not(.drop-zone-disabled) {
-  border-color: rgb(156 163 175);
-  background-color: rgb(243 244 246);
-}
-
-.drop-zone-active {
-  border-color: rgb(156 163 175);
-  background-color: rgb(243 244 246);
-}
-
-.drop-zone-disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.upload-lists {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.upload-section {
-  margin-bottom: 2rem;
-}
-</style>

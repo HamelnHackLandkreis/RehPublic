@@ -322,16 +322,21 @@ defineExpose({
 .wildlife-map-container {
   position: relative;
   width: 100%;
+  height: 100%;
 }
 
 .loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
   background-color: #f5f5f5;
   border-radius: 8px;
-  min-width: 100%;
+  z-index: 1000;
 }
 
 .loading-spinner {
@@ -341,14 +346,19 @@ defineExpose({
 }
 
 .error-message {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 400px;
   background-color: #fee;
   border-radius: 8px;
   padding: 20px;
+  z-index: 1000;
 }
 
 .error-message p {
