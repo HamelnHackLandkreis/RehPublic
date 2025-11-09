@@ -876,6 +876,11 @@ def get_spottings(
             all_species.update(location_species)
             total_spottings_count += location_spottings_count
 
+            # Count images with animals (images that have detections)
+            images_with_animals = sum(
+                1 for img in location_images if len(img.detections) > 0
+            )
+
             locations_response.append(
                 LocationWithImagesResponse(
                     id=UUID(location.id),
@@ -886,6 +891,7 @@ def get_spottings(
                     images=location_images,
                     total_unique_species=len(location_species),
                     total_spottings=location_spottings_count,
+                    total_images_with_animals=images_with_animals,
                 )
             )
 
