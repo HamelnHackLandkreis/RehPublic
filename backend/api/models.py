@@ -65,21 +65,3 @@ class Spotting(Base):
     __table_args__ = (
         Index("idx_spottings_image_id", "image_id"),
     )
-
-
-class UserDetection(Base):
-    """UserDetection model representing a manual user identification of an animal in an image."""
-
-    __tablename__ = "user_detections"
-
-    id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    image_id = Column(String, ForeignKey("images.id", ondelete="CASCADE"), nullable=False)
-    species = Column(String, nullable=False, index=True)
-    user_session_id = Column(String, nullable=True)  # Optional session tracking
-    detection_timestamp = Column(DateTime, default=datetime.utcnow)
-
-    # Indexes
-    __table_args__ = (
-        Index("idx_user_detections_image_id", "image_id"),
-        Index("idx_user_detections_species", "species"),
-    )

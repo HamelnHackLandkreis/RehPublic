@@ -1,31 +1,46 @@
 <template>
-  <div class="bg-gradient-to-b  overflow-hidden">
+  <div class="flex-1 bg-gradient-to-b overflow-hidden flex flex-col">
     <!-- Full Size Image - Border to Border -->
-    <div class="w-full h-[60vh] overflow-hidden mb-2 relative">
+    <div class="w-full h-[60vh] overflow-hidden mb-2 relative bg-gray-100 flex-shrink-0">
+      <!-- Skeleton loader for main image -->
+      <div 
+        v-if="!mainImageSrc"
+        class="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 animate-pulse flex items-center justify-center"
+      >
+        <div class="text-gray-400">
+          <svg class="w-16 h-16 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+          </svg>
+        </div>
+      </div>
+      
+      <!-- Actual image -->
       <img 
+        v-if="mainImageSrc"
         :src="mainImageSrc" 
         alt="Main Wildlife Image" 
-        class="w-full h-full object-cover"
+        class="absolute inset-0 w-full h-full object-cover"
       />
+      
       <div class="absolute top-4 left-4 bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
         <p class="text-sm font-medium">What animal do you see?</p>
       </div>
     </div>
 
     <!-- Loading/Error States -->
-    <div v-if="loading" class="text-center py-12">
+    <div v-if="loading" class="text-center py-12 flex-1">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
       <p class="mt-4 text-gray-600">Loading image data...</p>
     </div>
 
-    <div v-else-if="error" class="text-center py-12 text-red-600">
+    <div v-else-if="error" class="text-center py-12 text-red-600 flex-1">
       <p>{{ error }}</p>
     </div>
 
     <!-- Swipeable Cards Container -->
     <div 
       v-else 
-      class="relative h-[calc(42vh-2rem)] w-full mx-auto"
+      class="relative flex-1 w-full"
     >
       <!-- Cards -->
       <div class="relative h-full">
@@ -43,21 +58,27 @@
           @mouseleave="handleMouseEnd"
         >
           <div 
-            class="w-full h-full overflow-hidden relative"
+            class="w-full h-full overflow-hidden relative bg-gray-100"
           >
-            <!-- Full Image Background -->
+            <!-- Skeleton loader for animal image -->
+            <div 
+              v-if="!animal.image_url"
+              class="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 animate-pulse flex items-center justify-center"
+            >
+              <div class="text-gray-400">
+                <svg class="w-16 h-16 mx-auto" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                </svg>
+              </div>
+            </div>
+            
+            <!-- Actual animal image -->
             <img 
               v-if="animal.image_url"
               :src="animal.image_url" 
               :alt="animal.title"
-              class="w-full h-full object-cover"
+              class="absolute inset-0 w-full h-full object-cover"
             />
-            <div 
-              v-else 
-              class="w-full h-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white text-3xl font-bold"
-            >
-              {{ animal.title }}
-            </div>
 
             <!-- Overlay Gradient -->
             <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
@@ -77,7 +98,15 @@
 
             <!-- Text Content - Bottom -->
             <div class="absolute bottom-0 left-0 right-0 p-6 text-white z-10 pointer-events-none">
-              <h3 class="text-3xl font-bold mb-3 drop-shadow-lg">{{ animal.title }}</h3>
+              <div class="flex items-center gap-3 mb-3">
+                <h3 class="text-3xl font-bold drop-shadow-lg">{{ animal.title }}</h3>
+                <span 
+                  v-if="getUserDetectionCount(animal.title) > 0"
+                  class="bg-blue-500/90 text-white text-sm font-semibold px-3 py-1 rounded-full backdrop-blur-sm"
+                >
+                  {{ getUserDetectionCount(animal.title) }} user{{ getUserDetectionCount(animal.title) !== 1 ? 's' : '' }}
+                </span>
+              </div>
               <p class="text-white/90 text-base leading-relaxed line-clamp-3 drop-shadow-md">
                 {{ animal.description }}
               </p>
@@ -138,6 +167,18 @@ interface ImageData {
   detections: Detection[]
 }
 
+interface SpeciesCount {
+  name: string
+  count: number
+}
+
+interface UserStats {
+  image_id: string
+  user_detections: SpeciesCount[]
+  total_user_detections: number
+  automated_detections: string[]
+}
+
 // Get image ID from route parameter (required for this dynamic route)
 const imageId = computed(() => {
   return route.params.id as string
@@ -147,6 +188,7 @@ const imageId = computed(() => {
 const currentSlide = ref(0)
 const animals = ref<WikipediaArticle[]>([])
 const imageData = ref<ImageData | null>(null)
+const userStats = ref<UserStats | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
 const dragOffset = ref({ x: 0, y: 0 })
@@ -156,8 +198,24 @@ const mainImageSrc = computed(() => {
   if (imageData.value?.raw) {
     return `data:image/jpeg;base64,${imageData.value.raw}`
   }
-  return '/fallback.JPG'
+  return null
 })
+
+// Get user detection count for a specific species
+const getUserDetectionCount = (speciesName: string): number => {
+  if (!userStats.value) {
+    console.log('getUserDetectionCount: userStats is null')
+    return 0
+  }
+  
+  console.log('getUserDetectionCount called for:', speciesName)
+  console.log('Available user detections:', userStats.value.user_detections)
+  
+  const detection = userStats.value.user_detections.find(d => d.name === speciesName)
+  const count = detection ? detection.count : 0
+  console.log('Found count:', count)
+  return count
+}
 
 // Fetch image data from backend
 const fetchImageData = async () => {
@@ -221,7 +279,41 @@ const fetchAnimals = async (speciesList: string[]) => {
   }
 }
 
-// Get card positioning style
+// Fetch user detection stats
+const fetchUserStats = async () => {
+  try {
+    console.log('Fetching user stats for image:', imageId.value)
+    const response = await fetch(`${apiUrl}/user-detections/${imageId.value}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    console.log('User stats response status:', response.status)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('User stats API error:', response.status, errorText)
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const data = await response.json()
+    console.log('User stats data received:', data)
+    userStats.value = data
+  } catch (e) {
+    console.error('Failed to fetch user stats:', e)
+    // Don't show error to user, stats are optional
+  }
+}
+
+// Fetch on mount
+onMounted(() => {
+  fetchImageData()
+  fetchUserStats() // Fetch stats automatically when page loads
+})
+
+// Touch/Swipe handling for carousel
 const getCardStyle = (index: number) => {
   const offset = index - currentSlide.value
   const isActive = offset === 0
@@ -240,21 +332,36 @@ const getCardStyle = (index: number) => {
 }
 
 // Submit the match
-const submitMatch = (animal: WikipediaArticle) => {
-  alert(`Great! You identified this as a ${animal.title}!`)
-  // TODO: Send to backend for validation/learning
-  console.log('Selected animal:', animal)
-  
-  // Move to next card
-  if (currentSlide.value < animals.value.length - 1) {
-    currentSlide.value++
+const submitMatch = async (animal: WikipediaArticle) => {
+  try {
+    // Submit user detection to backend
+    const response = await fetch(`${apiUrl}/user-detections`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image_id: imageId.value,
+        species: animal.title,
+        user_session_id: null // Optional: could add session tracking later
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    // Show success feedback
+    console.log(`User identified: ${animal.title}`)
+
+    // Reload the page to get fresh data (or navigate to next image when random endpoint is ready)
+    window.location.reload()
+    
+  } catch (e) {
+    console.error('Failed to submit user detection:', e)
+    alert('Failed to save your answer. Please try again.')
   }
 }
-
-// Fetch on mount
-onMounted(() => {
-  fetchImageData()
-})
 
 // Touch/Swipe handling for carousel
 const touchStartX = ref(0)

@@ -317,32 +317,13 @@ class ImageService:
             if time_end is not None:
                 query = query.filter(Image.upload_timestamp <= time_end)
 
-            # Get most recent N images for this location that have spottings, with spottings eagerly loaded
-            # Prioritize images with spottings, but fall back to most recent if none have spottings
-            location_images_with_spottings = (
-                query.join(Spotting, Image.id == Spotting.image_id)
-                .options(selectinload(Image.spottings))
+            # Get most recent N images for this location with spottings eagerly loaded
+            location_images = (
+                query.options(selectinload(Image.spottings))
                 .order_by(Image.upload_timestamp.desc())
-                .distinct()
                 .limit(limit_per_location)
                 .all()
             )
-
-            # If we don't have enough images with spottings, fill with most recent images
-            if len(location_images_with_spottings) < limit_per_location:
-                existing_ids = {img.id for img in location_images_with_spottings}
-                additional_images = (
-                    query.options(selectinload(Image.spottings))
-                    .filter(~Image.id.in_(existing_ids) if existing_ids else True)
-                    .order_by(Image.upload_timestamp.desc())
-                    .limit(limit_per_location - len(location_images_with_spottings))
-                    .all()
-                )
-                location_images = list(location_images_with_spottings) + list(
-                    additional_images
-                )
-            else:
-                location_images = location_images_with_spottings
             all_images.extend(location_images)
 
         # Sort all images by upload timestamp descending
@@ -569,87 +550,6 @@ class SpottingService:
             )
 
         return statistics
-
-
-class UserDetectionService:
-    """Service for user detection operations."""
-
-    @staticmethod
-    def create_user_detection(
-        db: Session,
-        image_id: UUID,
-        species: str,
-        user_session_id: Optional[str] = None,
-    ) -> "UserDetection":
-        """Create a new user detection (manual identification).
-
-        Args:
-            db: Database session
-            image_id: UUID of the image
-            species: Species name identified by user
-            user_session_id: Optional session ID for tracking
-
-        Returns:
-            Created UserDetection object
-        """
-        from api.models import UserDetection
-
-        user_detection = UserDetection(
-            image_id=str(image_id),
-            species=species,
-            user_session_id=user_session_id,
-        )
-        db.add(user_detection)
-        db.commit()
-        db.refresh(user_detection)
-        return user_detection
-
-    @staticmethod
-    def get_user_detections_for_image(
-        db: Session, image_id: UUID
-    ) -> Dict[str, any]:
-        """Get user detection statistics for a specific image.
-
-        Returns counts of each species identified by users, plus the automated detections.
-
-        Args:
-            db: Database session
-            image_id: UUID of the image
-
-        Returns:
-            Dictionary with user_detections (species counts), total_user_detections, and automated_detections
-        """
-        from api.models import UserDetection, Spotting
-
-        # Get user detections
-        user_detections = (
-            db.query(UserDetection)
-            .filter(UserDetection.image_id == str(image_id))
-            .all()
-        )
-
-        # Count species from user detections
-        species_counts = defaultdict(int)
-        for detection in user_detections:
-            species_counts[detection.species] += 1
-
-        # Get automated detections (from AI)
-        automated_detections = (
-            db.query(Spotting.species)
-            .filter(Spotting.image_id == str(image_id))
-            .distinct()
-            .all()
-        )
-        automated_species = [species[0] for species in automated_detections]
-
-        return {
-            "user_detections": [
-                {"name": species, "count": count}
-                for species, count in sorted(species_counts.items())
-            ],
-            "total_user_detections": len(user_detections),
-            "automated_detections": automated_species,
-        }
 
 
 class WikipediaService:
