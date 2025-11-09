@@ -56,7 +56,17 @@
         </svg>
       </button>
 
-      <div class="absolute top-4 left-4 bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm">
+      <!-- Unknown button - top right -->
+      <button @click="submitUnknown"
+        class="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2.5 rounded-full transition-all duration-200 z-10"
+        title="Can't identify the animal">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </button>
+
+      <div class="bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm absolute top-4 left-4">
         <p class="text-sm font-medium">What animal do you see?</p>
       </div>
     </div>
@@ -530,6 +540,36 @@ const getCardStyle = (index: number) => {
     opacity: isActive ? 1 : 0,
     zIndex: isActive ? 10 : 0,
     pointerEvents: (isActive ? 'auto' : 'none') as 'auto' | 'none',
+  }
+}
+
+// Submit unknown and go back to match
+const submitUnknown = async () => {
+  try {
+    // Submit "unknown" as the species
+    const response = await fetch(`${apiUrl}/user-detections`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        image_id: imageId.value,
+        species: 'unknown',
+        user_session_id: null
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    console.log('User marked as unknown')
+
+    // Redirect to /match to load a random image
+    await navigateTo('/match')
+  } catch (e) {
+    console.error('Failed to submit unknown detection:', e)
+    alert('Failed to save your answer. Please try again.')
   }
 }
 
