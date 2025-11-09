@@ -118,10 +118,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",  # Local development
-        "http://135.181.78.114:9001",  # Production frontend
-    ],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -960,6 +957,11 @@ def get_statistics(
         description="Grouping granularity: 'hourly', 'daily', or 'weekly'. If not provided, defaults based on period (day=hourly, week/month=daily, year=weekly)",
         regex="^(hourly|daily|weekly)$",
     ),
+    limit: Optional[int] = Query(
+        None,
+        description="Maximum number of spottings to include in statistics before aggregation. If not provided, all spottings in the period are included.",
+        gt=0,
+    ),
     db: Session = Depends(get_db),
 ):
     """Get statistics for animal spottings grouped by time period.
@@ -983,6 +985,7 @@ def get_statistics(
     Query Parameters:
         period: Time period range - "day", "week", "month", or "year" (default: "day")
         granularity: Grouping granularity - "hourly", "daily", or "weekly" (optional, auto-selected if not provided)
+        limit: Maximum number of spottings to include before aggregation (optional, for performance)
 
     Returns:
         Statistics response with list of time periods and their species counts
@@ -991,11 +994,11 @@ def get_statistics(
         GET /statistics?period=day&granularity=hourly
         GET /statistics?period=week&granularity=daily
         GET /statistics?period=month&granularity=weekly
-        GET /statistics?period=year&granularity=weekly
+        GET /statistics?period=year&granularity=weekly&limit=10000
     """
     try:
         stats_data = spotting_service.get_statistics(
-            db, period=period, granularity=granularity
+            db, period=period, granularity=granularity, limit=limit
         )
 
         # Convert to response models
