@@ -120,7 +120,7 @@
             <h2 class="text-2xl font-bold text-gray-900 mb-6">Images ({{ location.images?.length || 0 }})</h2>
             <div v-if="location.images && location.images.length > 0" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-4">
               <div v-for="image in location.images" :key="image.image_id" class="flex flex-col gap-3">
-                <a :href="`/match/${image.image_id}`" class="group block relative rounded-lg overflow-hidden border-2 border-transparent transition-all hover:border-blue-500 hover:-translate-y-0.5 hover:shadow-lg">
+                <div @click="() => router.push(`/match/${image.image_id}`)" class="group block relative rounded-lg overflow-hidden border-2 border-transparent transition-all hover:border-blue-500 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
                   <div class="relative w-full aspect-[4/3] overflow-hidden bg-gray-100">
                     <img 
                       :src="`${apiUrl}/images/${image.image_id}/base64`" 
@@ -135,17 +135,17 @@
                       <span class="text-white text-sm font-semibold drop-shadow-lg">Click to match</span>
                     </div>
                   </div>
-                </a>
+                </div>
                 <div class="flex justify-between items-center gap-2">
                   <small class="text-xs text-gray-500">{{ new Date(image.upload_timestamp).toLocaleString() }}</small>
                   <div class="flex gap-2">
-                    <a 
+                    <div 
                       v-if="image.detections && image.detections.length > 0"
-                      :href="`/match/${image.image_id}`"
-                      class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold transition-opacity hover:opacity-85"
+                      @click="() => router.push(`/match/${image.image_id}`)"
+                      class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold transition-opacity hover:opacity-85 cursor-pointer"
                     >
                       {{ image.detections.length }} detection{{ image.detections.length !== 1 ? 's' : '' }}
-                    </a>
+                    </div>
                     <span v-else class="bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-semibold">No detection</span>
                   </div>
                 </div>
