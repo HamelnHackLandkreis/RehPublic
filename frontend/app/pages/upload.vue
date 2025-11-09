@@ -368,6 +368,7 @@ const formatTimestamp = (timestamp: string): string => {
 <style scoped>
 .upload-page {
   height: calc(100vh - 4rem); /* Subtract bottom nav bar height */
+  width: 100%;
   background-color: white;
   color: rgb(17 24 39);
   overflow: hidden;
