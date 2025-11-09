@@ -327,12 +327,17 @@ class ModelManager:
             # Extract classification information
             classifications = []
             if classification_result:
-                classifications = [
-                    {
-                        "class_name": classification_result["prediction"],
-                        "confidence": classification_result["confidence"],
-                    }
-                ]
+                # Handle different classification result formats
+                class_name = classification_result.get("prediction") or classification_result.get("class_name") or classification_result.get("species")
+                confidence = classification_result.get("confidence", 0.0)
+                
+                if class_name:
+                    classifications = [
+                        {
+                            "class_name": class_name,
+                            "confidence": confidence,
+                        }
+                    ]
 
             # Combine detection boxes with classifications
             for i, detection in enumerate(det_boxes):
