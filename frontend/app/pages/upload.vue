@@ -38,7 +38,7 @@
           >
             <option value="">Choose a camera...</option>
             <option v-for="location in cameraLocations" :key="location.id" :value="location.id">
-              {{ location.name }}{{ location.description && location.description !== 'string' ? ' - ' + location.description : '' }}
+              {{ location.name }}
             </option>
           </select>
         </div>
