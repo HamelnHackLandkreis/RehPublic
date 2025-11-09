@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-gradient-to-b overflow-hidden min-h-screen flex items-center justify-center">
+  <div class="w-full bg-gradient-to-b overflow-hidden min-h-screen flex items-center justify-center">
     <!-- Loading State -->
     <div class="text-center py-12">
       <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
