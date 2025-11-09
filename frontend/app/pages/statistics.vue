@@ -41,13 +41,22 @@
         <div class="species-list">
           <div v-for="(species, index) in topSpecies" :key="species.name" v-show="showAllSpecies || index < 3"
             class="species-item">
-            <div class="species-info">
-              <span class="species-name">{{ species.name }}</span>
-              <span class="species-count">{{ species.count }} sightings</span>
+            <div class="species-content">
+              <div class="species-info">
+                <span class="species-name">{{ species.name }}</span>
+                <span class="species-count">{{ species.count }} sightings</span>
+              </div>
+              <div class="species-bar">
+                <div class="species-bar-fill" :style="{ width: `${(species.count / totalSpottings) * 100}%` }"></div>
+              </div>
             </div>
-            <div class="species-bar">
-              <div class="species-bar-fill" :style="{ width: `${(species.count / totalSpottings) * 100}%` }"></div>
-            </div>
+            <button @click="showInMap(species.name)" class="map-icon-btn" title="Show in map">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                <circle cx="12" cy="10" r="3"></circle>
+              </svg>
+            </button>
           </div>
         </div>
         <button v-if="topSpecies.length > 3" @click="showAllSpecies = !showAllSpecies" class="toggle-species-btn">
@@ -126,8 +135,17 @@ const topSpecies = computed(() => {
   return Array.from(speciesMap.entries())
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 10)
 })
+
+const showInMap = (speciesName: string) => {
+  const params = new URLSearchParams()
+
+  // Add species parameter
+  params.set('species', speciesName)
+
+  // Navigate to map page with query parameters
+  navigateTo(`/map?${params.toString()}`)
+}
 
 const fetchStatistics = async () => {
   loading.value = true
@@ -465,6 +483,13 @@ onUnmounted(() => {
 
 .species-item {
   display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.species-content {
+  flex: 1;
+  display: flex;
   flex-direction: column;
   gap: 8px;
 }
@@ -497,6 +522,26 @@ onUnmounted(() => {
   background: linear-gradient(90deg, #3b82f6, #2563eb);
   border-radius: 4px;
   transition: width 0.3s ease;
+}
+
+.map-icon-btn {
+  padding: 8px;
+  background: transparent;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.map-icon-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
 }
 
 .toggle-species-btn {

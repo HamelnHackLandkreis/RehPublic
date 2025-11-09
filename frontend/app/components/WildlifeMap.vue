@@ -15,6 +15,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 
+const route = useRoute()
+
 interface ImageDetection {
   image_id: string
   location_id: string
@@ -48,7 +50,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   defaultLatitude: 52.10181392588904,
   defaultLongitude: 9.37544441225413,
-  defaultDistanceRange: 100,
+  defaultDistanceRange: 100000000000,
   height: '100%',
   width: '100%',
   autoCenter: true,
@@ -191,7 +193,29 @@ const fetchLocations = async () => {
   error.value = null
 
   try {
-    const spottingsUrl = `${apiUrl}/spottings?latitude=${props.defaultLatitude}&longitude=${props.defaultLongitude}&distance_range=${props.defaultDistanceRange}`
+    // Build base URL with required parameters
+    const params = new URLSearchParams({
+      latitude: props.defaultLatitude.toString(),
+      longitude: props.defaultLongitude.toString(),
+      distance_range: props.defaultDistanceRange.toString()
+    })
+
+    // Add optional species parameter from route
+    if (route.query.species && typeof route.query.species === 'string') {
+      params.set('species', route.query.species)
+    }
+
+    // Add optional time_start parameter from route
+    if (route.query.time_start && typeof route.query.time_start === 'string') {
+      params.set('time_start', route.query.time_start)
+    }
+
+    // Add optional time_end parameter from route
+    if (route.query.time_end && typeof route.query.time_end === 'string') {
+      params.set('time_end', route.query.time_end)
+    }
+
+    const spottingsUrl = `${apiUrl}/spottings?${params.toString()}`
     const response = await fetch(spottingsUrl)
 
     if (!response.ok) {
@@ -240,6 +264,11 @@ const calculateZoomLevel = (): number => {
 onMounted(() => {
   fetchLocations()
 })
+
+// Watch for route query changes and refetch
+watch(() => route.query, () => {
+  fetchLocations()
+}, { deep: true })
 
 // Expose methods for parent components
 defineExpose({
