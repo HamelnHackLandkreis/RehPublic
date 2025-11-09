@@ -13,7 +13,7 @@ import httpx
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from api.models import Image, Location, Spotting
+from api.models import Image, Location, Spotting, UserDetection
 from api.processor_integration import ProcessorClient
 
 logger = logging.getLogger(__name__)
@@ -672,3 +672,105 @@ class WikipediaService:
                 results.append(article_data)
 
         return results
+
+
+class UserDetectionService:
+    """Service for user detection operations."""
+
+    @staticmethod
+    def create_user_detection(
+        db: Session, image_id: UUID, species: str, user_session_id: Optional[str] = None
+    ) -> UserDetection:
+        """Create a new user detection.
+
+        Args:
+            db: Database session
+            image_id: UUID of the image
+            species: Name of the species detected by the user
+            user_session_id: Optional session ID to track user submissions
+
+        Returns:
+            Created UserDetection object
+
+        Raises:
+            Exception: If database operation fails
+        """
+        try:
+            user_detection = UserDetection(
+                image_id=str(image_id),
+                species=species,
+                user_session_id=user_session_id,
+            )
+
+            db.add(user_detection)
+            db.commit()
+            db.refresh(user_detection)
+
+            logger.info(
+                f"Created user detection for image {image_id}, species: {species}"
+            )
+            return user_detection
+
+        except Exception as e:
+            db.rollback()
+            logger.error(f"Failed to create user detection: {e}")
+            raise
+
+    @staticmethod
+    def get_user_detections_for_image(db: Session, image_id: UUID) -> Dict:
+        """Get aggregated user detection statistics for an image.
+
+        Args:
+            db: Database session
+            image_id: UUID of the image
+
+        Returns:
+            Dictionary containing:
+            - user_detections: List of species with counts
+            - total_user_detections: Total number of user submissions
+            - automated_detections: List of AI-detected species
+
+        Raises:
+            Exception: If database operation fails
+        """
+        try:
+            # Get user detections grouped by species
+            user_detections = (
+                db.query(
+                    UserDetection.species,
+                    func.count(UserDetection.id).label("count"),
+                )
+                .filter(UserDetection.image_id == str(image_id))
+                .group_by(UserDetection.species)
+                .all()
+            )
+
+            # Get automated detections for comparison
+            automated_detections = (
+                db.query(Spotting.species)
+                .filter(Spotting.image_id == str(image_id))
+                .distinct()
+                .all()
+            )
+
+            # Calculate total user detections
+            total_user_detections = sum(count for _, count in user_detections)
+
+            result = {
+                "user_detections": [
+                    {"name": species, "count": count}
+                    for species, count in user_detections
+                ],
+                "total_user_detections": total_user_detections,
+                "automated_detections": [species for (species,) in automated_detections],
+            }
+
+            logger.info(
+                f"Retrieved user detection stats for image {image_id}: "
+                f"{total_user_detections} total submissions"
+            )
+            return result
+
+        except Exception as e:
+            logger.error(f"Failed to get user detection stats: {e}")
+            raise
