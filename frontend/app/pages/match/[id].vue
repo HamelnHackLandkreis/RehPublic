@@ -28,12 +28,12 @@
         :viewBox="`0 0 ${fullImageDimensions.width} ${fullImageDimensions.height}`" preserveAspectRatio="xMidYMid meet">
         <rect v-for="(detection, index) in imageData.detections" :key="index" :x="detection.bounding_box.x"
           :y="detection.bounding_box.y" :width="detection.bounding_box.width" :height="detection.bounding_box.height"
-          fill="none" stroke="#22c55e" stroke-width="3" stroke-dasharray="10,5" />
+          fill="none" stroke="#3b82f6" stroke-width="12" stroke-dasharray="18,10" />
         <!-- Label for each detection -->
         <g v-for="(detection, index) in imageData.detections" :key="`label-${index}`">
-          <rect :x="detection.bounding_box.x" :y="detection.bounding_box.y - 25"
-            :width="detection.species.length * 8 + 20" height="25" fill="#22c55e" opacity="0.9" />
-          <text :x="detection.bounding_box.x + 10" :y="detection.bounding_box.y - 8" fill="white" font-size="16"
+          <rect :x="detection.bounding_box.x" :y="detection.bounding_box.y - 60"
+            :width="detection.species.length * 19 + 40" height="60" fill="#3b82f6" opacity="0.9" />
+          <text :x="detection.bounding_box.x + 20" :y="detection.bounding_box.y - 18" fill="white" font-size="38"
             font-weight="bold" font-family="system-ui, sans-serif">
             {{ detection.species }} ({{ Math.round(detection.confidence * 100) }}%)
           </text>
@@ -146,6 +146,8 @@
             </div>
 
             <!-- Swipe Hints -->
+            <div
+              class="absolute bottom-40 left-0 right-0 flex justify-between px-8 text-white z-10 pointer-events-none">
             <div class="absolute bottom-[11rem] left-0 right-0 flex justify-between px-8 text-white z-10 pointer-events-none">
               <!-- Left: Incorrect -->
               <div class="text-center">
@@ -153,17 +155,17 @@
                   <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                  <p class="text-sm font-medium drop-shadow-lg">Swipe left<br/>if wrong</p>
+                  <p class="text-sm font-medium drop-shadow-lg">Swipe left<br />if wrong</p>
                 </div>
               </div>
-              
+
               <!-- Right: Correct -->
               <div class="text-center">
                 <div class="animate-pulse">
                   <svg class="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
-                  <p class="text-sm font-medium drop-shadow-lg">Swipe right<br/>if correct</p>
+                  <p class="text-sm font-medium drop-shadow-lg">Swipe right<br />if correct</p>
                 </div>
               </div>
             </div>
@@ -438,7 +440,7 @@ const fetchHistoricalSpecies = async (): Promise<string[]> => {
     }
 
     const data: StatisticsResponse = await response.json()
-    
+
     // Collect all unique species from all time periods
     const speciesSet = new Set<string>()
     data.statistics.forEach(period => {
@@ -556,13 +558,13 @@ const submitMatch = async (animal: WikipediaArticle, isCorrect: boolean) => {
 
       // Show success feedback
       console.log(`User identified: ${animal.title}`)
-      
+
       // Redirect to /match to load a random image
       await navigateTo('/match')
     } else {
       // User said this is incorrect - just log it for now
       console.log(`User rejected: ${animal.title}`)
-      
+
       // Move to next card if available
       if (currentSlide.value < animals.value.length - 1) {
         currentSlide.value++

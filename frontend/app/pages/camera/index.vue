@@ -16,7 +16,7 @@
     <!-- Content -->
     <div v-else class="w-full max-w-7xl mx-auto">
       <div class="mb-8">
-        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Select Camera</h1>
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-900 mb-2">All Locations</h1>
         <p class="text-base text-gray-500">Choose a camera to view its details, statistics, and images</p>
       </div>
 
@@ -31,11 +31,20 @@
           @click="selectCamera(camera.id)"
           class="group flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl cursor-pointer transition-all text-left w-full hover:border-blue-500 hover:shadow-lg hover:-translate-y-0.5"
         >
-          <div class="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl text-white">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-10 h-10 sm:w-12 sm:h-12">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-              <circle cx="12" cy="13" r="4"></circle>
-            </svg>
+          <div class="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100">
+            <img
+              v-if="camera.images && camera.images.length > 0 && camera.images[0]"
+              :src="`${apiUrl}/images/${camera.images[0].image_id}/base64`"
+              :alt="camera.name"
+              class="w-full h-full object-cover"
+              @error="handleImageError"
+            />
+            <div v-else class="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-600">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="w-8 h-8 sm:w-10 sm:h-10 text-white">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
             <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{{ camera.name }}</h3>
@@ -68,6 +77,12 @@ interface CameraLocation {
   longitude: number
   latitude: number
   description: string
+  images?: Array<{
+    image_id: string
+    location_id: string
+    upload_timestamp: string
+    detections?: any[]
+  }>
 }
 
 const apiUrl = useApiUrl()
@@ -82,14 +97,20 @@ const fetchCameras = async () => {
   error.value = null
 
   try {
-    const response = await fetch(`${apiUrl}/locations`)
+    const params = new URLSearchParams({
+      latitude: '52.10181392588904',
+      longitude: '9.37544441225413',
+      distance_range: '100000000000'
+    })
+
+    const response = await fetch(`${apiUrl}/spottings?${params.toString()}`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
-    cameras.value = data.locations || data
+    cameras.value = data.locations || []
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to fetch cameras'
     console.error('Error fetching cameras:', err)
@@ -100,6 +121,11 @@ const fetchCameras = async () => {
 
 const selectCamera = (cameraId: string) => {
   router.push(`/camera/${cameraId}`)
+}
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement
+  img.src = '/fallback.JPG'
 }
 
 onMounted(() => {

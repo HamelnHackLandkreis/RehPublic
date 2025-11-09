@@ -45,9 +45,6 @@
             </svg>
             Reveal on Map
           </button>
-          <span class="text-sm text-gray-500 font-mono">
-            📍 {{ location.latitude.toFixed(6) }}, {{ location.longitude.toFixed(6) }}
-          </span>
         </div>
       </div>
 
