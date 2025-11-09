@@ -4,11 +4,63 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   css: ["./app/assets/css/main.css"],
-  modules: ["@nuxt/image", "@nuxt/eslint", "@nuxt/ui"],
+  modules: ["@nuxt/image", "@nuxt/eslint", "@nuxt/ui", "@vite-pwa/nuxt"],
   runtimeConfig: {
     public: {
       apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:8000'
     }
+  },
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'RehPublic - Wildlife Monitoring',
+      short_name: 'RehPublic',
+      description: 'Wildlife camera trap monitoring and analysis platform',
+      theme_color: '#4CAF50',
+      background_color: '#ffffff',
+      display: 'standalone',
+      icons: [
+        {
+          src: '/icon-192x192.png',
+          sizes: '192x192',
+          type: 'image/png'
+        },
+        {
+          src: '/icon-512x512.png',
+          sizes: '512x512',
+          type: 'image/png'
+        }
+      ]
+    },
+    workbox: {
+      navigateFallback: '/',
+      cleanupOutdatedCaches: true,
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/api\..*/i,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-cache',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 60 * 60 * 24 // 24 hours
+            }
+          }
+        }
+      ]
+    },
+    client: {
+      installPrompt: true,
+      // Disable periodic sync in dev
+      periodicSyncForUpdates: 3600
+    },
+    devOptions: {
+      enabled: false,
+      suppressWarnings: true,
+      navigateFallback: '/',
+      type: 'module'
+    },
+    disable: true  // Disable PWA in development completely
   },
   vite: {
     plugins: [

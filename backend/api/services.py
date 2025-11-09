@@ -457,7 +457,11 @@ class SpottingService:
 
     @staticmethod
     def get_statistics(
-        db: Session, period: str = "day", granularity: Optional[str] = None
+        db: Session,
+        period: str = "day",
+        granularity: Optional[str] = None,
+        limit: Optional[int] = None,
+        location_id: Optional[str] = None,
     ) -> List[Dict]:
         """Get statistics for spottings grouped by time period.
 
@@ -466,6 +470,8 @@ class SpottingService:
             period: Time period range - "day", "week", "month", or "year"
             granularity: Grouping granularity - "hourly", "daily", or "weekly".
                          If None, defaults based on period (day=hourly, week/month=daily, year=weekly)
+            limit: Maximum number of spottings to include before aggregation (optional)
+            location_id: Optional location ID to filter spottings by location
 
         Returns:
             List of statistics dictionaries with time periods and species counts
@@ -520,14 +526,24 @@ class SpottingService:
             time_delta = timedelta(weeks=1)
 
         # Query spottings in the time range
-        spottings = (
-            db.query(Spotting.species, Spotting.detection_timestamp)
-            .filter(
-                Spotting.detection_timestamp >= start_time,
-                Spotting.detection_timestamp <= end_time,
-            )
-            .all()
+        query = db.query(Spotting.species, Spotting.detection_timestamp).filter(
+            Spotting.detection_timestamp >= start_time,
+            Spotting.detection_timestamp <= end_time,
         )
+
+        # Filter by location if provided
+        if location_id:
+            query = query.join(Image, Spotting.image_id == Image.id).filter(
+                Image.location_id == location_id
+            )
+
+        query = query.order_by(Spotting.detection_timestamp.desc())
+
+        # Apply limit if provided (limit before aggregation for performance)
+        if limit is not None:
+            query = query.limit(limit)
+
+        spottings = query.all()
 
         # Group by time period and species
         period_data = defaultdict(lambda: defaultdict(int))

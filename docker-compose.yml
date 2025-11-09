@@ -5,7 +5,7 @@ services:
       context: ./frontend
       # Frontend now talks to the 'loadbalancer' service's internal port (80)
       args:
-        - NUXT_PUBLIC_API_URL=http://loadbalancer:80
+        - NUXT_PUBLIC_API_URL=https://rehpublic-api.3ggert.de
     ports:
       - "9001:80"
     restart: always

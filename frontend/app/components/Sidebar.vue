@@ -46,13 +46,6 @@ const isCameraPage = computed(() => {
           <span class="text-xs font-medium">Match</span>
         </NuxtLink>
       </li>
-      <li>
-        <NuxtLink to="/upload"
-          class="flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white [&.router-link-active]:text-indigo-400 group">
-          <Icon name="mdi:cloud-upload" class="text-2xl" />
-          <span class="text-xs font-medium">Upload</span>
-        </NuxtLink>
-      </li>
     </ul>
   </nav>
 </template>

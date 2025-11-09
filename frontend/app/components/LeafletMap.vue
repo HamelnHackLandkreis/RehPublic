@@ -6,6 +6,8 @@
 import type { LatLngExpression, Map, Marker } from 'leaflet'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+const router = useRouter()
+
 interface Props {
   center?: [number, number]
   zoom?: number
@@ -16,6 +18,7 @@ interface Props {
     popup?: string
     icon?: any
     id?: string
+    zIndexOffset?: number
     data?: any
   }>
 }
@@ -80,12 +83,39 @@ const addMarkers = async () => {
     if (!map) return
 
     // Create marker options, only include icon if it's provided
-    const markerOptions = markerData.icon ? { icon: markerData.icon } : {}
+    const markerOptions: any = {}
+    if (markerData.icon) {
+      markerOptions.icon = markerData.icon
+    }
+    if (markerData.zIndexOffset !== undefined) {
+      markerOptions.zIndexOffset = markerData.zIndexOffset
+    }
 
     const marker = L.marker(markerData.position as LatLngExpression, markerOptions).addTo(map)
 
     if (markerData.popup) {
       marker.bindPopup(markerData.popup)
+      
+      // Add click handler for Nuxt links in popup
+      marker.on('popupopen', () => {
+        const popup = marker.getPopup()
+        if (popup && popup.getElement()) {
+          const popupElement = popup.getElement()
+          const nuxtLinks = popupElement?.querySelectorAll('.nuxt-link')
+          nuxtLinks?.forEach((link: Element) => {
+            const anchor = link as HTMLAnchorElement
+            const routePath = anchor.getAttribute('data-nuxt-link')
+            if (routePath && !anchor.dataset.listenerAdded) {
+              anchor.dataset.listenerAdded = 'true'
+              anchor.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push(routePath)
+              })
+            }
+          })
+        }
+      })
     }
 
     // Add click event listener
