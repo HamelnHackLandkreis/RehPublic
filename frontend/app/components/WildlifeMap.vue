@@ -5,7 +5,7 @@
     </div>
     <div v-else-if="error" class="error-message">
       <p>Error loading locations: {{ error }}</p>
-      <button @click="fetchLocations" class="retry-button">Retry</button>
+      <button @click="() => fetchLocations()" class="retry-button">Retry</button>
     </div>
     <LeafletMap v-else ref="mapRef" :center="mapCenter" :zoom="zoom" :height="height" :width="width"
       :markers="markers" @marker-click="handleMarkerClick" />
@@ -13,7 +13,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const route = useRoute()
 
@@ -67,20 +67,26 @@ const error = ref<string | null>(null)
 const zoom = ref(props.defaultZoom)
 const mapRef = ref()
 const markersWithIcons = ref<any[]>([])
+const seenImageIds = ref<Set<string>>(new Set())
+const locationsWithNewImages = ref<Set<string>>(new Set())
+const isPolling = ref(false)
+let pollingInterval: ReturnType<typeof setInterval> | null = null
 
 // Define emits for parent components
 const emit = defineEmits<{
   locationSelected: [location: Location]
 }>()
 
-const createCustomIcon = async (name: string, imageUrl?: string) => {
+const createCustomIcon = async (name: string, imageUrl?: string, hasNewImages: boolean = false) => {
   const L = await import('leaflet')
 
   const imageSrc = imageUrl || '/fallback.JPG'
 
+  const wrapperClass = hasNewImages ? 'avatar-wrapper has-new-images' : 'avatar-wrapper'
+
   const iconHtml = `
     <div class="avatar-marker">
-      <div class="avatar-wrapper">
+      <div class="${wrapperClass}">
         <img 
           src="${imageSrc}" 
           alt="${name}"
@@ -102,6 +108,17 @@ const createCustomIcon = async (name: string, imageUrl?: string) => {
 }
 
 const handleMarkerClick = (markerData: any) => {
+  // Clear notification for this location when clicked
+  if (markerData.location) {
+    if (locationsWithNewImages.value.has(markerData.location.id)) {
+      // Create a new Set to trigger reactivity
+      const updatedSet = new Set(locationsWithNewImages.value)
+      updatedSet.delete(markerData.location.id)
+      locationsWithNewImages.value = updatedSet
+      updateMarkers()
+    }
+  }
+
   if (props.noMarkerPopup && markerData.location) {
     // In noMarkerPopup mode, emit the location and center the map
     emit('locationSelected', markerData.location)
@@ -128,6 +145,7 @@ const updateMarkers = async () => {
         : undefined
 
       const imageCount = location.images?.length || 0
+      const hasNewImages = locationsWithNewImages.value.has(location.id)
 
       // Create image gallery HTML (only if popups are enabled)
       let imagesHtml = ''
@@ -187,13 +205,23 @@ const updateMarkers = async () => {
             ${imagesHtml}
           </div>
         `,
-        icon: await createCustomIcon(location.name, imageUrl),
+        icon: await createCustomIcon(location.name, imageUrl, hasNewImages),
+        zIndexOffset: hasNewImages ? 1000 : 0,
         data: {
           location: location
         }
       }
     })
   )
+
+  // Sort markers so that ones with new images are added last (appear on top)
+  newMarkers.sort((a, b) => {
+    const aHasNew = locationsWithNewImages.value.has(a.data?.location?.id)
+    const bHasNew = locationsWithNewImages.value.has(b.data?.location?.id)
+    if (aHasNew && !bHasNew) return 1 // a comes after b
+    if (!aHasNew && bHasNew) return -1 // a comes before b
+    return 0 // keep original order
+  })
 
   markersWithIcons.value = newMarkers
 }
@@ -202,8 +230,17 @@ const markers = computed(() => markersWithIcons.value)
 
 // Watch for location changes and create custom icons
 watch(() => locations.value, () => {
-  updateMarkers()
+  // Don't auto-update during polling if we're tracking new images
+  // The polling logic will handle marker updates
+  if (!isPolling.value || locationsWithNewImages.value.size === 0) {
+    updateMarkers()
+  }
 }, { deep: true })
+
+// Watch for new images and update markers
+watch(() => locationsWithNewImages.value.size, () => {
+  updateMarkers()
+})
 
 const mapCenter = computed((): [number, number] => {
   if (!props.autoCenter || locations.value.length === 0) {
@@ -220,8 +257,11 @@ const mapCenter = computed((): [number, number] => {
   ]
 })
 
-const fetchLocations = async () => {
-  loading.value = true
+const fetchLocations = async (isPollingCall: boolean = false) => {
+  isPolling.value = isPollingCall
+  if (!isPollingCall) {
+    loading.value = true
+  }
   error.value = null
 
   try {
@@ -255,20 +295,75 @@ const fetchLocations = async () => {
     }
 
     const data: LocationsResponse = await response.json()
-    locations.value = data.locations
+    const newLocations = data.locations
+
+    let hasNewImages = false
+
+    // Check for new images if polling
+    if (isPollingCall && seenImageIds.value.size > 0) {
+      const newImageIds = new Set<string>()
+      const newLocationsWithImages = new Set<string>()
+
+      newLocations.forEach(location => {
+        if (location.images) {
+          location.images.forEach(img => {
+            if (!seenImageIds.value.has(img.image_id)) {
+              newImageIds.add(img.image_id)
+              newLocationsWithImages.add(location.id)
+            }
+          })
+        }
+      })
+
+      // Update locations with new images BEFORE updating locations.value
+      if (newLocationsWithImages.size > 0) {
+        hasNewImages = true
+        // Create a new Set to trigger reactivity
+        const updatedSet = new Set(locationsWithNewImages.value)
+        newLocationsWithImages.forEach(locId => {
+          updatedSet.add(locId)
+        })
+        locationsWithNewImages.value = updatedSet
+      }
+
+      // Add new image IDs to seen set
+      newImageIds.forEach(id => seenImageIds.value.add(id))
+    } else {
+      // Initial load - mark all images as seen
+      newLocations.forEach(location => {
+        if (location.images) {
+          location.images.forEach(img => {
+            seenImageIds.value.add(img.image_id)
+          })
+        }
+      })
+    }
+
+    // Update locations AFTER we've set the new images flags
+    locations.value = newLocations
 
     // Auto-adjust zoom based on number of locations
-    if (props.autoCenter && locations.value.length > 1) {
+    if (!isPollingCall && props.autoCenter && locations.value.length > 1) {
       zoom.value = calculateZoomLevel()
     }
 
     // Update markers with custom icons
-    await updateMarkers()
+    if (!isPollingCall) {
+      await updateMarkers()
+    } else if (hasNewImages) {
+      // If polling and we have new images, update markers to show notifications
+      await updateMarkers()
+    }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to fetch locations'
-    console.error('Error fetching locations:', err)
+    if (!isPollingCall) {
+      error.value = err instanceof Error ? err.message : 'Failed to fetch locations'
+      console.error('Error fetching locations:', err)
+    }
   } finally {
-    loading.value = false
+    if (!isPollingCall) {
+      loading.value = false
+    }
+    isPolling.value = false
   }
 }
 
@@ -295,6 +390,18 @@ const calculateZoomLevel = (): number => {
 
 onMounted(() => {
   fetchLocations()
+  
+  // Start polling every 15 seconds
+  pollingInterval = setInterval(() => {
+    fetchLocations(true)
+  }, 15000)
+})
+
+onUnmounted(() => {
+  if (pollingInterval) {
+    clearInterval(pollingInterval)
+    pollingInterval = null
+  }
 })
 
 // Watch for route query changes and refetch
@@ -589,13 +696,37 @@ defineExpose({
   cursor: pointer;
 }
 
+:deep(.avatar-wrapper.has-new-images) {
+  border: 5px solid #3b82f6;
+  animation: pulse-blue-border 1s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pulse-blue-border {
+  0%, 100% {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 0 20px rgba(59, 130, 246, 0.8), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 16px rgba(59, 130, 246, 0), 0 0 30px rgba(59, 130, 246, 1), 0 2px 16px rgba(59, 130, 246, 0.8);
+  }
+}
+
+:deep(.avatar-image) {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 :deep(.avatar-wrapper) {
   position: relative;
   width: 56px;
   height: 56px;
   border-radius: 50%;
   overflow: hidden;
-  border: 3px solid white;
+  border: 2px solid white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   transition: transform 0.2s, box-shadow 0.2s;
   background-color: #f3f4f6;
@@ -606,11 +737,21 @@ defineExpose({
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-:deep(.avatar-image) {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
+:deep(.avatar-wrapper.has-new-images) {
+  border: 5px solid #3b82f6;
+  animation: pulse-blue-border 1s ease-in-out infinite;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pulse-blue-border {
+  0%, 100% {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 0 20px rgba(59, 130, 246, 0.8), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    border-color: #1d4ed8;
+    box-shadow: 0 0 0 16px rgba(59, 130, 246, 0), 0 0 30px rgba(59, 130, 246, 1), 0 2px 16px rgba(59, 130, 246, 0.8);
+  }
 }
 
 :deep(.camera-badge) {

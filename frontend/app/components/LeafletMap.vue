@@ -16,6 +16,7 @@ interface Props {
     popup?: string
     icon?: any
     id?: string
+    zIndexOffset?: number
     data?: any
   }>
 }
@@ -80,7 +81,13 @@ const addMarkers = async () => {
     if (!map) return
 
     // Create marker options, only include icon if it's provided
-    const markerOptions = markerData.icon ? { icon: markerData.icon } : {}
+    const markerOptions: any = {}
+    if (markerData.icon) {
+      markerOptions.icon = markerData.icon
+    }
+    if (markerData.zIndexOffset !== undefined) {
+      markerOptions.zIndexOffset = markerData.zIndexOffset
+    }
 
     const marker = L.marker(markerData.position as LatLngExpression, markerOptions).addTo(map)
 
