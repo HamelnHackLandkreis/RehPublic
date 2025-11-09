@@ -69,9 +69,9 @@ def upload_image(
     """
     url = f"{api_base}/locations/{location_id}/image"
 
-    params = {}
-    if upload_timestamp:
-        params["upload_timestamp"] = upload_timestamp
+    params = {
+        "upload_timestamp": upload_timestamp,
+    }
 
     with open(image_path, "rb") as f:
         files = {"file": (image_path.name, f, "image/jpeg")}

@@ -277,9 +277,11 @@ class ImageService:
         time_start: Optional[datetime] = None,
         time_end: Optional[datetime] = None,
         limit_per_location: int = 3,
+        species_filter: Optional[str] = None,
     ) -> List[Image]:
         """Get images within a distance range from a location and optional time range.
         Limits to the most recent N images per location.
+        If species_filter is provided, only returns images that have spottings matching that species.
 
         Args:
             db: Database session
@@ -289,6 +291,7 @@ class ImageService:
             time_start: Optional start timestamp in ISO 8601 format (inclusive)
             time_end: Optional end timestamp in ISO 8601 format (inclusive)
             limit_per_location: Maximum number of images to return per location (default: 3)
+            species_filter: Optional species name filter (case-insensitive). If provided, only returns images with spottings matching this species.
 
         Returns:
             List of Image objects within the specified range (max limit_per_location per location)
@@ -312,7 +315,18 @@ class ImageService:
         all_images = []
         for location_id in locations_in_range:
             # Query images for this location
-            query = db.query(Image).filter(Image.location_id == location_id)
+            if species_filter:
+                # If species filter is provided, join with Spotting and filter by species
+                # This ensures we only get images that have spottings matching the species
+                query = (
+                    db.query(Image)
+                    .join(Spotting, Image.id == Spotting.image_id)
+                    .filter(Image.location_id == location_id)
+                    .filter(Spotting.species.ilike(f"%{species_filter}%"))
+                    .distinct()
+                )
+            else:
+                query = db.query(Image).filter(Image.location_id == location_id)
 
             # Apply time range filters if provided
             if time_start is not None:

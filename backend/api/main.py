@@ -770,6 +770,7 @@ def get_spottings(
         GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59&species=Wild%20boar
     """
     # Get images within range (limited to 3 per location)
+    # If species filter is provided, only get images that have spottings matching that species
     images = image_service.get_images_in_range(
         db=db,
         latitude=latitude,
@@ -778,6 +779,7 @@ def get_spottings(
         time_start=time_start,
         time_end=time_end,
         limit_per_location=3,
+        species_filter=species,
     )
 
     # Group images by location
@@ -794,20 +796,20 @@ def get_spottings(
                 location_map[location_id] = location
 
         # Get all spottings for this image
-        # Explicitly query spottings to ensure they're loaded
-        spottings_query = db.query(Spotting).filter(Spotting.image_id == image.id)
-
-        # Apply species filter if provided
-        if species:
-            spottings_query = spottings_query.filter(
-                Spotting.species.ilike(f"%{species}%")
-            )
-
-        spottings = spottings_query.all()
+        # Spottings are already loaded via eager loading in get_images_in_range
+        spottings = image.spottings
 
         # Convert spottings to detection responses
+        # If species filter was applied, images are already filtered to only include those with matching spottings
+        # But we still filter spottings here for display to show only matching spottings
         detections = []
         for spotting in spottings:
+            # Apply species filter for display if provided
+            if species:
+                # Use case-insensitive partial matching (same pattern as query filter)
+                if species.lower() not in spotting.species.lower():
+                    continue
+
             detection = DetectionResponse(
                 species=spotting.species,
                 confidence=spotting.confidence,
@@ -822,16 +824,15 @@ def get_spottings(
             )
             detections.append(detection)
 
-        # Only add image if it has detections (or if no species filter is applied)
-        if detections or not species:
-            images_by_location[location_id].append(
-                SpottingImageResponse(
-                    image_id=UUID(image.id),
-                    location_id=UUID(image.location_id),
-                    upload_timestamp=image.upload_timestamp,
-                    detections=detections,
-                )
+        # Add image (it's already filtered by the query if species filter was provided)
+        images_by_location[location_id].append(
+            SpottingImageResponse(
+                image_id=UUID(image.id),
+                location_id=UUID(image.location_id),
+                upload_timestamp=image.upload_timestamp,
+                detections=detections,
             )
+        )
 
     # Build response with locations and their images
     locations_response = []
