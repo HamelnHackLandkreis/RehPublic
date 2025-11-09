@@ -200,12 +200,8 @@ onMounted(async () => {
     const response = await fetch(`${API_BASE_URL}/locations`)
     if (response.ok) {
       const data = await response.json()
-<<<<<<< HEAD
-      cameraLocations.value = data.locations || []
-=======
       // Handle both response formats: { locations: [...] } or [...]
       cameraLocations.value = data.locations || data
->>>>>>> 994bf01 (fix)
     }
   } catch (error) {
     console.error('Failed to fetch camera locations:', error)
