@@ -173,11 +173,11 @@ const updateMarkers = async () => {
               
               return `
               <div class="popup-image-wrapper">
-                <a href="/match/${img.image_id}" class="image-link">${imageContent}</a>
+                <a href="#" data-nuxt-link="/match/${img.image_id}" class="image-link nuxt-link">${imageContent}</a>
                 <div class="image-info">
                   <small>${new Date(img.upload_timestamp).toLocaleString()}</small>
                   ${hasDetections ?
-            `<a href="/match/${img.image_id}" class="detection-badge-link">
+            `<a href="#" data-nuxt-link="/match/${img.image_id}" class="detection-badge-link nuxt-link">
               <span class="detection-badge">${img.detections.length} detection${img.detections.length !== 1 ? 's' : ''}</span>
             </a>`
             : `<span class="no-detection-badge">No detection</span>`}
@@ -194,7 +194,7 @@ const updateMarkers = async () => {
           <div class="marker-popup w-75">
             <div class="popup-header">
               <h3><strong>${location.name}</strong></h3>
-              <a href="/camera/${location.id}" class="camera-detail-button-inline">
+              <a href="#" data-nuxt-link="/camera/${location.id}" class="camera-detail-button-inline nuxt-link">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
                   <circle cx="12" cy="10" r="3"></circle>
@@ -243,6 +243,15 @@ watch(() => locationsWithNewImages.value.size, () => {
 })
 
 const mapCenter = computed((): [number, number] => {
+  // Check for lat/lng query parameters (from revealOnMap)
+  if (route.query.lat && route.query.lng) {
+    const lat = parseFloat(route.query.lat as string)
+    const lng = parseFloat(route.query.lng as string)
+    if (!isNaN(lat) && !isNaN(lng)) {
+      return [lat, lng]
+    }
+  }
+  
   if (!props.autoCenter || locations.value.length === 0) {
     return [props.defaultLatitude, props.defaultLongitude]
   }
@@ -346,6 +355,22 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
     if (!isPollingCall && props.autoCenter && locations.value.length > 1) {
       zoom.value = calculateZoomLevel()
     }
+    
+    // If lat/lng query params are present, center on that location with appropriate zoom
+    if (!isPollingCall && route.query.lat && route.query.lng) {
+      const lat = parseFloat(route.query.lat as string)
+      const lng = parseFloat(route.query.lng as string)
+      if (!isNaN(lat) && !isNaN(lng)) {
+        // Set zoom to a close level (15) to show the location clearly
+        zoom.value = 15
+        // Center the map on the location after a short delay to ensure map is ready
+        setTimeout(() => {
+          if (mapRef.value?.setCenter) {
+            mapRef.value.setCenter([lat, lng], 15)
+          }
+        }, 100)
+      }
+    }
 
     // Update markers with custom icons
     if (!isPollingCall) {
@@ -407,6 +432,19 @@ onUnmounted(() => {
 // Watch for route query changes and refetch
 watch(() => route.query, () => {
   fetchLocations()
+  // If lat/lng query params changed, center on the new location
+  if (route.query.lat && route.query.lng) {
+    const lat = parseFloat(route.query.lat as string)
+    const lng = parseFloat(route.query.lng as string)
+    if (!isNaN(lat) && !isNaN(lng)) {
+      zoom.value = 15
+      setTimeout(() => {
+        if (mapRef.value?.setCenter) {
+          mapRef.value.setCenter([lat, lng], 15)
+        }
+      }, 300)
+    }
+  }
 }, { deep: true })
 
 // Expose methods for parent components

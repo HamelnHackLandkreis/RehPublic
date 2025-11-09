@@ -37,7 +37,7 @@
             </svg>
           </button>
         </div>
-        <div v-show="showBarChart" class="chart-canvas-container">
+        <div class="chart-canvas-container" :class="{ collapsed: !showBarChart }">
           <canvas id="speciesChart"></canvas>
         </div>
       </div>
@@ -656,6 +656,14 @@ onUnmounted(() => {
 .chart-canvas-container {
   height: 360px;
   position: relative;
+  overflow: hidden;
+  transition: height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+}
+
+.chart-canvas-container.collapsed {
+  height: 0;
+  opacity: 0;
+  margin: 0;
 }
 
 .chart-canvas-container canvas {

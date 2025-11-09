@@ -6,6 +6,8 @@
 import type { LatLngExpression, Map, Marker } from 'leaflet'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
+const router = useRouter()
+
 interface Props {
   center?: [number, number]
   zoom?: number
@@ -93,6 +95,27 @@ const addMarkers = async () => {
 
     if (markerData.popup) {
       marker.bindPopup(markerData.popup)
+      
+      // Add click handler for Nuxt links in popup
+      marker.on('popupopen', () => {
+        const popup = marker.getPopup()
+        if (popup && popup.getElement()) {
+          const popupElement = popup.getElement()
+          const nuxtLinks = popupElement?.querySelectorAll('.nuxt-link')
+          nuxtLinks?.forEach((link: Element) => {
+            const anchor = link as HTMLAnchorElement
+            const routePath = anchor.getAttribute('data-nuxt-link')
+            if (routePath && !anchor.dataset.listenerAdded) {
+              anchor.dataset.listenerAdded = 'true'
+              anchor.addEventListener('click', (e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                router.push(routePath)
+              })
+            }
+          })
+        }
+      })
     }
 
     // Add click event listener
