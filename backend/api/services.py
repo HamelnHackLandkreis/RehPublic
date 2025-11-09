@@ -354,7 +354,10 @@ class SpottingService:
 
     @staticmethod
     def save_detections(
-        db: Session, image_id: UUID, detections: List[Dict]
+        db: Session,
+        image_id: UUID,
+        detections: List[Dict],
+        detection_timestamp: Optional[datetime] = None,
     ) -> List[Spotting]:
         """Store detection results.
 
@@ -379,6 +382,7 @@ class SpottingService:
                 bbox_height=bbox["height"],
                 classification_model=detection["classification_model"],
                 is_uncertain=detection["is_uncertain"],
+                detection_timestamp=detection_timestamp,
             )
             db.add(spotting)
             spottings.append(spotting)

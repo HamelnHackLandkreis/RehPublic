@@ -546,6 +546,7 @@ async def upload_image(
                 db,
                 UUID(image.id),
                 detections,
+                detection_timestamp=upload_timestamp,
             )
 
         # Mark image as processed - query fresh to avoid stale object issues
