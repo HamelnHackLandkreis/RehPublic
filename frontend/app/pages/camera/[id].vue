@@ -1,13 +1,13 @@
 <template>
   <div class="flex flex-grow bg-gradient-to-b from-gray-50 to-white px-4 py-6 overflow-x-hidden overflow-y-auto">
     <!-- Loading State -->
-    <div v-if="loading" class="flex flex-col items-center justify-center min-h-[400px] gap-4">
+    <div v-if="loading" class="flex flex-col items-center justify-center flex-1 gap-4">
       <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
       <p class="text-gray-600">Loading camera details...</p>
     </div>
 
     <!-- Error State -->
-    <div v-else-if="error" class="flex flex-col items-center justify-center min-h-[400px] gap-4 text-red-600">
+    <div v-else-if="error" class="flex flex-col items-center justify-center flex-1 gap-4 text-red-600">
       <p>{{ error }}</p>
       <button @click="fetchCameraData" class="px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium transition-colors hover:bg-blue-600">
         Retry
