@@ -1,4 +1,4 @@
-  services:
+services:
   # --- Frontend Service (Updated to point to Load Balancer) ---
   nuxt-frontend:
     build:
