@@ -3,7 +3,7 @@
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col justify-between">
+  <div class="min-h-screen flex flex-col justify-between pb-20">
     <main class="flex flex-grow flex-shrink">
       <NuxtPage />
     </main>
