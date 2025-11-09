@@ -107,21 +107,49 @@
             <span>FINISHED</span>
           </div>
           <div v-for="file in finishedFiles" :key="file.id" class="bg-white border border-gray-200 rounded-lg p-4 mb-3 shadow-sm">
-            <div class="flex items-center gap-4">
+            <div class="flex items-start gap-4">
               <div class="text-2xl flex-shrink-0">📄</div>
               <div class="flex-1 min-w-0">
                 <div class="flex justify-between items-center mb-2">
-                  <span class="text-gray-900 text-sm truncate">{{ file.name }}</span>
-                  <span class="text-gray-500 text-sm ml-4 flex-shrink-0">{{ file.progress }}%</span>
+                  <span class="text-gray-900 text-sm font-medium truncate">{{ file.name }}</span>
+                  <span class="text-gray-500 text-xs ml-4 flex-shrink-0">{{ file.progress }}%</span>
                 </div>
-                <div class="h-1 bg-gray-200 rounded-full overflow-hidden mb-2">
+                <div class="h-1 bg-gray-200 rounded-full overflow-hidden mb-3">
                   <div class="h-full bg-green-500 transition-all duration-300" :style="{ width: file.progress + '%' }"></div>
                 </div>
-                <div v-if="file.detectionCount !== undefined" class="text-xs text-green-600 font-semibold">
-                  ✓ {{ file.detectionCount }} animal(s) detected
-                </div>
-                <div v-if="file.imageId" class="text-xs text-gray-500 mt-1">
-                  Image ID: {{ file.imageId }}
+                
+                <!-- Upload Result Details -->
+                <div class="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <div v-if="file.detectedSpecies && file.detectedSpecies.length > 0" class="flex items-center gap-2">
+                    <svg class="text-green-600 flex-shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none">
+                      <path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <span class="text-sm font-semibold text-green-700 mb-1">Detected species:</span>
+                  </div>
+                  
+                  <div v-if="file.detectedSpecies && file.detectedSpecies.length > 0" class="ml-6">
+                    <div class="flex flex-wrap gap-1">
+                      <span 
+                        v-for="(species, idx) in file.detectedSpecies" 
+                        :key="idx"
+                        class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-medium"
+                      >
+                        {{ species }}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div v-if="file.detectionCount === 0 || (file.detectedSpecies && file.detectedSpecies.length === 0)" class="ml-6 text-xs text-gray-500 italic">
+                    No animals detected in this image
+                  </div>
+                  
+                  <div v-if="file.uploadTimestamp" class="ml-6 text-xs text-gray-500 mt-2">
+                    Uploaded: {{ formatTimestamp(file.uploadTimestamp) }}
+                  </div>
+                  
+                  <div v-if="file.imageId" class="ml-6 text-xs text-gray-500 mt-1">
+                    Image ID: <span class="font-mono">{{ file.imageId }}</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -150,6 +178,9 @@ interface UploadFile {
   file: File
   detectionCount?: number
   imageId?: string
+  locationId?: string
+  uploadTimestamp?: string
+  detectedSpecies?: string[]
 }
 
 const API_BASE_URL = useApiUrl()
@@ -169,7 +200,12 @@ onMounted(async () => {
     const response = await fetch(`${API_BASE_URL}/locations`)
     if (response.ok) {
       const data = await response.json()
+<<<<<<< HEAD
       cameraLocations.value = data.locations || []
+=======
+      // Handle both response formats: { locations: [...] } or [...]
+      cameraLocations.value = data.locations || data
+>>>>>>> 994bf01 (fix)
     }
   } catch (error) {
     console.error('Failed to fetch camera locations:', error)
@@ -265,8 +301,11 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
         try {
           const response = JSON.parse(xhr.responseText)
           uploadFile.progress = 100
-          uploadFile.detectionCount = response.detection_count
+          uploadFile.detectionCount = response.detections_count
           uploadFile.imageId = response.image_id
+          uploadFile.locationId = response.location_id
+          uploadFile.uploadTimestamp = response.upload_timestamp
+          uploadFile.detectedSpecies = response.detected_species || []
 
           // Move to finished after a short delay
           setTimeout(() => {
@@ -312,6 +351,21 @@ const handleUploadError = (uploadFile: UploadFile, message: string) => {
     uploadingFiles.value.splice(index, 1)
   }
   alert(`Failed to upload ${uploadFile.name}: ${message}`)
+}
+
+const formatTimestamp = (timestamp: string): string => {
+  try {
+    const date = new Date(timestamp)
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (e) {
+    return timestamp
+  }
 }
 </script>
 
