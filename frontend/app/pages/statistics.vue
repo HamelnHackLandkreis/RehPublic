@@ -15,7 +15,7 @@
     </div>
 
     <div v-if="loading" class="loading">
-      <div class="spinner"></div>
+      <LoadingSpinner size="md" />
       <p>Loading statistics...</p>
     </div>
 
@@ -390,20 +390,6 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-.spinner {
-  width: 48px;
-  height: 48px;
-  border: 4px solid #e5e7eb;
-  border-top-color: #3b82f6;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
 
 .error {
   color: #ef4444;

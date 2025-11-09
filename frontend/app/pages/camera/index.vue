@@ -2,8 +2,7 @@
   <div class="flex flex-grow bg-gradient-to-b from-gray-50 to-white px-4 sm:px-6 lg:px-8 py-6 overflow-x-hidden w-full overflow-y-auto">
     <!-- Loading State -->
     <div v-if="loading" class="flex flex-col items-center justify-center flex-1 gap-4">
-      <div class="w-12 h-12 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
-      <p class="text-gray-600">Loading cameras...</p>
+      <LoadingSpinner size="lg" />
     </div>
 
     <!-- Error State -->

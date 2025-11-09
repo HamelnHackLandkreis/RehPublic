@@ -1,7 +1,10 @@
 <template>
   <div class="wildlife-map-container">
     <div v-if="loading" class="loading-overlay">
-      <div class="loading-spinner">Loading locations...</div>
+      <div class="flex flex-col items-center gap-4">
+        <LoadingSpinner size="md" />
+        <div class="loading-spinner">Loading locations...</div>
+      </div>
     </div>
     <div v-else-if="error" class="error-message">
       <p>Error loading locations: {{ error }}</p>
