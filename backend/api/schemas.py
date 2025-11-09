@@ -193,3 +193,27 @@ class UserDetectionStatsResponse(BaseModel):
     user_detections: List[SpeciesCountResponse]
     total_user_detections: int
     automated_detections: List[str]
+
+
+# Animal Spotting schemas
+class AnimalSpottingResponse(BaseModel):
+    """Schema for individual animal spotting response."""
+
+    spotting_id: UUID
+    image_id: UUID
+    location_id: UUID
+    location_name: str
+    species: str
+    confidence: float
+    bounding_box: BoundingBoxResponse
+    classification_model: str
+    is_uncertain: bool
+    detection_timestamp: datetime
+    upload_timestamp: datetime
+
+
+class AnimalSpottingsResponse(BaseModel):
+    """Schema for list of animal spottings response."""
+
+    spottings: List[AnimalSpottingResponse]
+    total_count: int
