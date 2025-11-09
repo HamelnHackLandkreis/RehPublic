@@ -56,19 +56,18 @@
         </svg>
       </button>
 
-      <!-- Unknown button - top right -->
+      <div class="bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm absolute top-4 left-4">
+        <p class="text-sm font-medium">What animal do you see?</p>
+      </div>
+
       <button @click="submitUnknown"
-        class="absolute top-4 right-4 bg-black/30 hover:bg-black/50 text-white p-2.5 rounded-full transition-all duration-200 z-10"
+        class="hover:bg-white/20 text-white p-1.5 rounded-lg transition-all duration-200 absolute top-4 left-[230px] bg-black/60 backdrop-blur-sm shadow-lg hover:scale-110"
         title="Can't identify the animal">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
           <path stroke-linecap="round" stroke-linejoin="round"
             d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </button>
-
-      <div class="bg-black/60 text-white px-4 py-2 rounded-lg backdrop-blur-sm absolute top-4 left-4">
-        <p class="text-sm font-medium">What animal do you see?</p>
-      </div>
     </div>
 
     <!-- Loading/Error States -->
