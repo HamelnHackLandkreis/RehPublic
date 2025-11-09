@@ -845,7 +845,7 @@ def get_spottings(
 ):
     """Get images within a location and time range, grouped by location.
 
-    Returns up to 3 most recent images per location that are:
+    Returns up to 5 most recent images per location that are:
     - Within the specified distance range from the center location (distance_range in kilometers)
     - Within the optional time range (if provided, using ISO 8601 datetime format)
     - Matching the optional species filter (if provided)
@@ -870,14 +870,14 @@ def get_spottings(
                  Examples: "2024-12-31T23:59:59", "2024-12-31"
 
     Returns:
-        Response with locations array, each containing location data and images (max 3 per location),
+        Response with locations array, each containing location data and images (max 5 per location),
         plus total_unique_species and total_spottings counts
 
     Example:
         GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&species=Red%20deer
         GET /spottings?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59&species=Wild%20boar
     """
-    # Get images within range (limited to 3 per location)
+    # Get images within range (limited to 5 per location)
     # If species filter is provided, only get images that have spottings matching that species
     images = image_service.get_images_in_range(
         db=db,
@@ -886,7 +886,7 @@ def get_spottings(
         distance_range=distance_range,
         time_start=time_start,
         time_end=time_end,
-        limit_per_location=3,
+        limit_per_location=5,
         species_filter=species,
     )
 
