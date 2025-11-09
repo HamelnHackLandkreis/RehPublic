@@ -26,7 +26,20 @@
 
     <div v-else class="statistics-content">
       <div class="chart-section">
-        <canvas id="speciesChart"></canvas>
+        <div class="chart-header">
+          <h2>Timeline Overview</h2>
+          <button @click="showBarChart = !showBarChart" class="collapse-btn"
+            :title="showBarChart ? 'Collapse chart' : 'Expand chart'">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+              :class="{ rotated: !showBarChart }">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </button>
+        </div>
+        <div v-show="showBarChart" class="chart-canvas-container">
+          <canvas id="speciesChart"></canvas>
+        </div>
       </div>
 
       <div class="species-breakdown">
@@ -40,23 +53,39 @@
         </div>
         <div class="species-list">
           <div v-for="(species, index) in topSpecies" :key="species.name" v-show="showAllSpecies || index < 3"
-            class="species-item">
-            <div class="species-content">
-              <div class="species-info">
-                <span class="species-name">{{ species.name }}</span>
-                <span class="species-count">{{ species.count }} sightings</span>
+            class="species-item-wrapper">
+            <div class="species-item">
+              <div class="species-content">
+                <div class="species-info">
+                  <span class="species-name">{{ species.name }}</span>
+                  <span class="species-count">{{ species.count }} sightings</span>
+                </div>
+                <div class="species-bar">
+                  <div class="species-bar-fill" :style="{ width: `${(species.count / totalSpottings) * 100}%` }"></div>
+                </div>
               </div>
-              <div class="species-bar">
-                <div class="species-bar-fill" :style="{ width: `${(species.count / totalSpottings) * 100}%` }"></div>
+              <div class="species-actions">
+                <button @click="showInMap(species.name)" class="map-icon-btn" title="Show in map">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                </button>
+                <button @click="toggleSpeciesChart(species.name)" class="chart-icon-btn"
+                  :class="{ active: expandedSpecies === species.name }"
+                  :title="expandedSpecies === species.name ? 'Hide chart' : 'Show trend'">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                  </svg>
+                </button>
               </div>
             </div>
-            <button @click="showInMap(species.name)" class="map-icon-btn" title="Show in map">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-            </button>
+            <!-- Species trend chart -->
+            <div v-if="expandedSpecies === species.name" class="species-chart-container">
+              <canvas :id="`species-chart-${species.name.replace(/\s+/g, '-')}`"></canvas>
+            </div>
           </div>
         </div>
         <button v-if="topSpecies.length > 3" @click="showAllSpecies = !showAllSpecies" class="toggle-species-btn">
@@ -101,7 +130,10 @@ const statistics = ref<TimePeriodStatistics[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const showAllSpecies = ref(false)
+const expandedSpecies = ref<string | null>(null)
+const showBarChart = ref(true)
 let chartInstance: Chart | null = null
+const speciesChartInstances = new Map<string, Chart>()
 
 const granularity = computed(() => {
   // Auto-set granularity based on period
@@ -299,7 +331,166 @@ const renderChart = async () => {
   console.log('Chart created successfully:', chartInstance)
 }
 
+// Toggle species chart visibility
+const toggleSpeciesChart = async (speciesName: string) => {
+  if (expandedSpecies.value === speciesName) {
+    // Close chart
+    const chart = speciesChartInstances.get(speciesName)
+    if (chart) {
+      chart.destroy()
+      speciesChartInstances.delete(speciesName)
+    }
+    expandedSpecies.value = null
+  } else {
+    // Close any existing chart
+    if (expandedSpecies.value) {
+      const chart = speciesChartInstances.get(expandedSpecies.value)
+      if (chart) {
+        chart.destroy()
+        speciesChartInstances.delete(expandedSpecies.value)
+      }
+    }
+    // Open new chart
+    expandedSpecies.value = speciesName
+    await nextTick()
+    renderSpeciesChart(speciesName)
+  }
+}
+
+// Render line chart for individual species
+const renderSpeciesChart = async (speciesName: string) => {
+  const canvasId = `species-chart-${speciesName.replace(/\s+/g, '-')}`
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement
+
+  if (!canvas) {
+    console.error('Canvas not found for species:', speciesName)
+    return
+  }
+
+  const { Chart, registerables } = await import('chart.js')
+  Chart.register(...registerables)
+
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    console.error('Could not get 2D context')
+    return
+  }
+
+  // Prepare data for this species
+  let labels: string[]
+  let data: number[]
+
+  if (period.value === 'year') {
+    // Group by month for year view
+    const monthlyData = new Map<string, number>()
+
+    statistics.value.forEach(stat => {
+      const start = new Date(stat.start_time)
+      const monthKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
+      const monthLabel = start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+
+      const species = stat.species.find(s => s.name === speciesName)
+      const count = species ? species.count : 0
+
+      monthlyData.set(monthKey, (monthlyData.get(monthKey) || 0) + count)
+    })
+
+    // Sort by month key and extract labels and data
+    const sortedEntries = Array.from(monthlyData.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+    labels = sortedEntries.map(([key]) => {
+      const [year, month] = key.split('-')
+      if (year && month) {
+        const date = new Date(parseInt(year), parseInt(month) - 1, 1)
+        return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+      }
+      return key
+    })
+    data = sortedEntries.map(([, count]) => count)
+  } else {
+    // Use existing granularity for other periods
+    labels = statistics.value.map(stat => {
+      const start = new Date(stat.start_time)
+      if (granularity.value === 'hourly') {
+        return start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      } else {
+        return start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+      }
+    })
+
+    data = statistics.value.map(stat => {
+      const species = stat.species.find(s => s.name === speciesName)
+      return species ? species.count : 0
+    })
+  }
+
+  const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: speciesName,
+        data,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 3,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        pointBackgroundColor: '#3b82f6',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 3,
+      plugins: {
+        legend: {
+          display: false
+        },
+        tooltip: {
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          padding: 12,
+          titleFont: { size: 14 },
+          bodyFont: { size: 13 }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            display: false
+          }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: {
+            stepSize: 1
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)'
+          },
+          title: {
+            display: true,
+            text: 'Sightings'
+          }
+        }
+      }
+    }
+  })
+
+  speciesChartInstances.set(speciesName, chart)
+}
+
 watch(period, () => {
+  // Close all species charts when period changes
+  speciesChartInstances.forEach((chart) => {
+    chart.destroy()
+  })
+  speciesChartInstances.clear()
+  expandedSpecies.value = null
+
   fetchStatistics()
 })
 
@@ -418,8 +609,58 @@ onUnmounted(() => {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e5e7eb;
   margin-bottom: 24px;
-  height: 400px;
   position: relative;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.chart-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.collapse-btn {
+  padding: 8px;
+  background: transparent;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.collapse-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.collapse-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.collapse-btn svg.rotated {
+  transform: rotate(-90deg);
+}
+
+.chart-canvas-container {
+  height: 360px;
+  position: relative;
+}
+
+.chart-canvas-container canvas {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .chart-section canvas {
@@ -468,6 +709,12 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+.species-item-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .species-item {
   display: flex;
   align-items: center;
@@ -479,6 +726,12 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.species-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .species-info {
@@ -529,6 +782,44 @@ onUnmounted(() => {
   border-color: #3b82f6;
   color: #3b82f6;
   background: rgba(59, 130, 246, 0.05);
+}
+
+.chart-icon-btn {
+  padding: 8px;
+  background: transparent;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.chart-icon-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.chart-icon-btn.active {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.species-chart-container {
+  background: #f9fafb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.species-chart-container canvas {
+  width: 100% !important;
+  height: auto !important;
 }
 
 .toggle-species-btn {
