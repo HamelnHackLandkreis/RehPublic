@@ -117,31 +117,7 @@ class LocationWithImagesResponse(BaseModel):
     latitude: float
     description: Optional[str]
     images: List[SpottingImageResponse]
-    total_unique_species: int
-    total_spottings: int
-
-
-class AnimalSpottingResponse(BaseModel):
-    """Schema for animal spotting with image and location info."""
-
-    spotting_id: UUID
-    image_id: UUID
-    location_id: UUID
-    location_name: str
-    species: str
-    confidence: float
-    bounding_box: BoundingBoxResponse
-    classification_model: str
-    is_uncertain: bool
-    detection_timestamp: datetime
-    upload_timestamp: datetime
-
-
-class AnimalSpottingsResponse(BaseModel):
-    """Schema for animal spottings endpoint response."""
-
-    spottings: List[AnimalSpottingResponse]
-    total_count: int
+    total_images_with_animals: int
 
 
 class SpottingsResponse(BaseModel):
@@ -193,7 +169,7 @@ class StatisticsResponse(BaseModel):
 
 # User Detection schemas
 class UserDetectionCreate(BaseModel):
-    """Schema for creating a user detection (manual identification)."""
+    """Schema for creating a user detection."""
 
     image_id: UUID
     species: str
@@ -211,9 +187,9 @@ class UserDetectionResponse(BaseModel):
 
 
 class UserDetectionStatsResponse(BaseModel):
-    """Schema for user detection statistics for an image."""
+    """Schema for user detection statistics response."""
 
     image_id: UUID
     user_detections: List[SpeciesCountResponse]
     total_user_detections: int
-    automated_detections: List[str]  # List of species detected by AI
+    automated_detections: List[str]
