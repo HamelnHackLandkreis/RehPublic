@@ -19,7 +19,7 @@ jobs:
         # Der Kernschritt: Ein einfacher Shell-Befehl
         run: |
           echo "Sende Deployment-Signal an den Server..."
-          curl -X POST http://135.181.78.114:9002/hooks/push
+          curl -X POST http://135.181.78.114:9000/hooks/push
           echo "Signal gesendet. Deployment läuft jetzt auf dem Server."
         
         # Wichtig: Wird nur ausgeführt, wenn der Push erfolgreich ist
