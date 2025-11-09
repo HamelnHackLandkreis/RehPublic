@@ -8,9 +8,11 @@ Usage:
 import argparse
 import random
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from threading import Lock
+from typing import List, Optional, Tuple
 
 import requests
 
@@ -92,7 +94,7 @@ def get_image_files(directory: Path) -> List[Path]:
         directory: Directory path to search
 
     Returns:
-        List of image file paths
+        List of image file paths (randomly shuffled)
     """
     image_extensions = {".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp"}
     image_files = []
@@ -101,7 +103,9 @@ def get_image_files(directory: Path) -> List[Path]:
         if file_path.is_file() and file_path.suffix.lower() in image_extensions:
             image_files.append(file_path)
 
-    return sorted(image_files)
+    # Randomly shuffle the order of images
+    random.shuffle(image_files)
+    return image_files
 
 
 def main() -> None:
@@ -182,14 +186,26 @@ def main() -> None:
         )
         random_timestamps.append(random_time.isoformat())
 
-    print("=== Uploading images ===")
+    print("=== Uploading images (10 concurrent requests) ===")
     successful = 0
     failed = 0
     location_uploads = {
         loc["id"]: {"name": loc["name"], "count": 0} for loc in locations
     }
+    # Thread-safe counters
+    success_lock = Lock()
+    failed_lock = Lock()
+    location_lock = Lock()
+    completed_lock = Lock()
 
-    for i, image_path in enumerate(image_files, 1):
+    def upload_single_image(
+        image_path: Path, index: int, upload_timestamp: str
+    ) -> Tuple[bool, Optional[dict], str, str, str]:
+        """Upload a single image and return result.
+
+        Returns:
+            Tuple of (success, result_dict, location_name, location_id, image_name)
+        """
         if use_random:
             selected_location = random.choice(locations)
             selected_location_id = selected_location["id"]
@@ -198,15 +214,6 @@ def main() -> None:
             selected_location_id = location_id
             selected_location_name = location["name"]
 
-        # Use random timestamp for this image
-        upload_timestamp = random_timestamps[i - 1]
-
-        print(
-            f"[{i}/{len(image_files)}] Uploading {image_path.name} "
-            f"to {selected_location_name} (timestamp: {upload_timestamp})...",
-            end=" ",
-        )
-
         result = upload_image(
             args.api_base,
             selected_location_id,
@@ -214,17 +221,68 @@ def main() -> None:
             upload_timestamp=upload_timestamp,
         )
 
-        if result:
-            detections_count = result.get("detections_count", 0)
-            detected_species = result.get("detected_species", [])
-            print(
-                f"✓ Success (detections: {detections_count}, "
-                f"species: {', '.join(detected_species) if detected_species else 'none'})"
+        return (
+            result is not None,
+            result,
+            selected_location_name,
+            selected_location_id,
+            image_path.name,
+        )
+
+    # Use ThreadPoolExecutor with max 10 workers
+    max_workers = 10
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all upload tasks to the thread pool
+        future_to_image = {}
+        for i, image_path in enumerate(image_files, 1):
+            upload_timestamp = random_timestamps[i - 1]
+            future = executor.submit(
+                upload_single_image, image_path, i, upload_timestamp
             )
-            successful += 1
-            location_uploads[selected_location_id]["count"] += 1
-        else:
-            failed += 1
+            future_to_image[future] = (i, image_path, upload_timestamp)
+
+        # Process completed uploads as they finish
+        completed = 0
+        for future in as_completed(future_to_image):
+            i, image_path, upload_timestamp = future_to_image[future]
+            try:
+                success, result, location_name, location_id, image_name = (
+                    future.result()
+                )
+
+                with completed_lock:
+                    completed += 1
+
+                print(
+                    f"[{completed}/{len(image_files)}] {image_name} → {location_name}",
+                )
+                print(f"  Timestamp: {upload_timestamp}", end=" ... ")
+
+                if success:
+                    detections_count = result.get("detections_count", 0)
+                    detected_species = result.get("detected_species", [])
+                    print(
+                        f"✓ Success (detections: {detections_count}, "
+                        f"species: {', '.join(detected_species) if detected_species else 'none'})"
+                    )
+                    with success_lock:
+                        successful += 1
+                    with location_lock:
+                        location_uploads[location_id]["count"] += 1
+                else:
+                    print("✗ Failed")
+                    with failed_lock:
+                        failed += 1
+            except Exception as e:
+                with completed_lock:
+                    completed += 1
+                print(
+                    f"[{completed}/{len(image_files)}] {image_path.name}",
+                )
+                print(f"  Timestamp: {upload_timestamp}", end=" ... ")
+                print(f"✗ Error: {e}")
+                with failed_lock:
+                    failed += 1
 
     print()
     print("=== Upload Summary ===")

@@ -3,7 +3,17 @@
 from datetime import datetime
 from uuid import uuid4
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -22,7 +32,9 @@ class Location(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    images = relationship("Image", back_populates="location", cascade="all, delete-orphan")
+    images = relationship(
+        "Image", back_populates="location", cascade="all, delete-orphan"
+    )
 
 
 class Image(Base):
@@ -31,14 +43,18 @@ class Image(Base):
     __tablename__ = "images"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    location_id = Column(String, ForeignKey("locations.id", ondelete="CASCADE"), nullable=False)
+    location_id = Column(
+        String, ForeignKey("locations.id", ondelete="CASCADE"), nullable=False
+    )
     base64_data = Column(Text, nullable=False)
     upload_timestamp = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
 
     # Relationships
     location = relationship("Location", back_populates="images")
-    spottings = relationship("Spotting", back_populates="image", cascade="all, delete-orphan")
+    spottings = relationship(
+        "Spotting", back_populates="image", cascade="all, delete-orphan"
+    )
 
 
 class Spotting(Base):
@@ -47,7 +63,9 @@ class Spotting(Base):
     __tablename__ = "spottings"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    image_id = Column(String, ForeignKey("images.id", ondelete="CASCADE"), nullable=False)
+    image_id = Column(
+        String, ForeignKey("images.id", ondelete="CASCADE"), nullable=False
+    )
     species = Column(String, nullable=False, index=True)
     confidence = Column(Float, nullable=False)
     bbox_x = Column(Integer, nullable=False)
@@ -62,9 +80,7 @@ class Spotting(Base):
     image = relationship("Image", back_populates="spottings")
 
     # Indexes
-    __table_args__ = (
-        Index("idx_spottings_image_id", "image_id"),
-    )
+    __table_args__ = (Index("idx_spottings_image_id", "image_id"),)
 
 
 class UserDetection(Base):
@@ -73,7 +89,9 @@ class UserDetection(Base):
     __tablename__ = "user_detections"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid4()))
-    image_id = Column(String, ForeignKey("images.id", ondelete="CASCADE"), nullable=False)
+    image_id = Column(
+        String, ForeignKey("images.id", ondelete="CASCADE"), nullable=False
+    )
     species = Column(String, nullable=False, index=True)
     user_session_id = Column(String, nullable=True, index=True)
     detection_timestamp = Column(DateTime, default=datetime.utcnow)
