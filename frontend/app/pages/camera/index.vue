@@ -49,12 +49,21 @@
           <div class="flex-1 min-w-0 overflow-hidden">
             <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{{ camera.name }}</h3>
             <p v-if="camera.description" class="text-xs sm:text-sm text-gray-500 mb-2 leading-snug line-clamp-2">{{ camera.description }}</p>
-            <div class="flex items-center gap-1.5 text-xs text-gray-400 font-mono">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                <circle cx="12" cy="10" r="3"></circle>
-              </svg>
-              <span class="truncate">{{ camera.latitude.toFixed(4) }}, {{ camera.longitude.toFixed(4) }}</span>
+            <div class="flex items-center gap-3 text-xs text-gray-400">
+              <div class="flex items-center gap-1.5 font-mono">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span class="truncate">{{ camera.latitude.toFixed(4) }}, {{ camera.longitude.toFixed(4) }}</span>
+              </div>
+              <div class="flex items-center gap-1.5 font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                <span>{{ camera.total_images_with_animals }}</span>
+              </div>
             </div>
           </div>
           <div class="flex-shrink-0 text-gray-400 transition-all group-hover:text-blue-500 group-hover:translate-x-1">
@@ -77,6 +86,7 @@ interface CameraLocation {
   longitude: number
   latitude: number
   description: string
+  total_images_with_animals: number
   images?: Array<{
     image_id: string
     location_id: string
