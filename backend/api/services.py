@@ -463,9 +463,9 @@ class SpottingService:
 
         Args:
             db: Database session
-            period: Time period range - "day", "week", or "month"
+            period: Time period range - "day", "week", "month", or "year"
             granularity: Grouping granularity - "hourly", "daily", or "weekly".
-                         If None, defaults based on period (day=hourly, week/month=daily)
+                         If None, defaults based on period (day=hourly, week/month=daily, year=weekly)
 
         Returns:
             List of statistics dictionaries with time periods and species counts
@@ -483,15 +483,21 @@ class SpottingService:
             start_time = now - timedelta(days=30)
             start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
             end_time = now
+        elif period == "year":
+            start_time = now - timedelta(days=365)
+            start_time = start_time.replace(hour=0, minute=0, second=0, microsecond=0)
+            end_time = now
         else:
             raise ValueError(
-                f"Invalid period: {period}. Must be 'day', 'week', or 'month'"
+                f"Invalid period: {period}. Must be 'day', 'week', 'month', or 'year'"
             )
 
         # Determine granularity (default if not provided)
         if granularity is None:
             if period == "day":
                 granularity = "hourly"
+            elif period == "year":
+                granularity = "weekly"
             else:
                 granularity = "daily"
 

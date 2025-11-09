@@ -92,7 +92,8 @@ const apiUrl = useApiUrl()
 const periods = [
   { value: 'day', label: 'Today' },
   { value: 'week', label: 'Last 7 Days' },
-  { value: 'month', label: 'Last 30 Days' }
+  { value: 'month', label: 'Last 30 Days' },
+  { value: 'year', label: 'Last 365 Days' }
 ]
 
 const period = ref<string>('day')

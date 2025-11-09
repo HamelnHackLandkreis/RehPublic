@@ -952,12 +952,12 @@ async def get_wikipedia_articles(request: WikipediaArticlesRequest):
 def get_statistics(
     period: str = Query(
         "day",
-        description="Time period range: 'day' (current day), 'week' (last 7 days), or 'month' (last 30 days)",
-        regex="^(day|week|month)$",
+        description="Time period range: 'day' (current day), 'week' (last 7 days), 'month' (last 30 days), or 'year' (last 365 days)",
+        regex="^(day|week|month|year)$",
     ),
     granularity: Optional[str] = Query(
         None,
-        description="Grouping granularity: 'hourly', 'daily', or 'weekly'. If not provided, defaults based on period (day=hourly, week/month=daily)",
+        description="Grouping granularity: 'hourly', 'daily', or 'weekly'. If not provided, defaults based on period (day=hourly, week/month=daily, year=weekly)",
         regex="^(hourly|daily|weekly)$",
     ),
     db: Session = Depends(get_db),
@@ -968,6 +968,7 @@ def get_statistics(
     - period="day": Current day (00:00 to now)
     - period="week": Last 7 days
     - period="month": Last 30 days
+    - period="year": Last 365 days
 
     Granularity options:
     - "hourly": Group by hour
@@ -980,7 +981,7 @@ def get_statistics(
     - total_spottings count
 
     Query Parameters:
-        period: Time period range - "day", "week", or "month" (default: "day")
+        period: Time period range - "day", "week", "month", or "year" (default: "day")
         granularity: Grouping granularity - "hourly", "daily", or "weekly" (optional, auto-selected if not provided)
 
     Returns:
@@ -990,6 +991,7 @@ def get_statistics(
         GET /statistics?period=day&granularity=hourly
         GET /statistics?period=week&granularity=daily
         GET /statistics?period=month&granularity=weekly
+        GET /statistics?period=year&granularity=weekly
     """
     try:
         stats_data = spotting_service.get_statistics(
