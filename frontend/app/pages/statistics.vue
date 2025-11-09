@@ -125,7 +125,7 @@ const periods = [
   { value: 'year', label: 'Last 365 Days' }
 ]
 
-const period = ref<string>('day')
+const period = ref<string>('month')
 const statistics = ref<TimePeriodStatistics[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
@@ -175,6 +175,16 @@ const showInMap = (speciesName: string) => {
 
   // Add species parameter
   params.set('species', speciesName)
+
+  // Add time range from statistics data
+  if (statistics.value.length > 0) {
+    const firstStat = statistics.value[0]
+    const lastStat = statistics.value[statistics.value.length - 1]
+    if (firstStat && lastStat) {
+      params.set('time_start', firstStat.start_time)
+      params.set('time_end', lastStat.end_time)
+    }
+  }
 
   // Navigate to map page with query parameters
   navigateTo(`/map?${params.toString()}`)
