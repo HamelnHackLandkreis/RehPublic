@@ -1,5 +1,9 @@
 <script setup>
 // Main app layout
+useHead({
+  title: 'RehPublic',
+  titleTemplate: '%s - Wildlife Monitoring'
+})
 </script>
 
 <template>

@@ -5,6 +5,15 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ["./app/assets/css/main.css"],
   modules: ["@nuxt/image", "@nuxt/eslint", "@nuxt/ui", "@vite-pwa/nuxt"],
+  app: {
+    head: {
+      title: 'RehPublic',
+      link: [
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/png', href: '/favicon.png' }
+      ]
+    }
+  },
   runtimeConfig: {
     public: {
       apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:8000'
