@@ -112,22 +112,38 @@ const updateMarkers = async () => {
       if (location.images && location.images.length > 0) {
         imagesHtml = `
           <div class="popup-images">
-            ${location.images.map(img => `
+            ${location.images.map(img => {
+              const hasDetections = img.detections && img.detections.length > 0
+              const imageContent = `
+                <div class="image-container">
+                  <img 
+                    src="${apiUrl}/images/${img.image_id}/base64" 
+                    alt="Camera image"
+                    class="popup-image"
+                    onerror="this.style.display='none'"
+                  />
+                  <div class="click-overlay">
+                    <svg class="click-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                    </svg>
+                    <span class="click-text">Click to match</span>
+                  </div>
+                </div>
+              `
+              
+              return `
               <div class="popup-image-wrapper">
-                <img 
-                  src="${apiUrl}/images/${img.image_id}/base64" 
-                  alt="Camera image"
-                  class="popup-image"
-                  onerror="this.style.display='none'"
-                />
+                <a href="/match/${img.image_id}" class="image-link">${imageContent}</a>
                 <div class="image-info">
                   <small>${new Date(img.upload_timestamp).toLocaleString()}</small>
-                  ${img.detections && img.detections.length > 0 ?
-            `<span class="detection-badge">${img.detections.length} detection${img.detections.length !== 1 ? 's' : ''}</span>`
-            : ''}
+                  ${hasDetections ?
+            `<a href="/match/${img.image_id}" class="detection-badge-link">
+              <span class="detection-badge">${img.detections.length} detection${img.detections.length !== 1 ? 's' : ''}</span>
+            </a>`
+            : `<span class="no-detection-badge">No detection</span>`}
                 </div>
               </div>
-            `).join('')}
+            `}).join('')}
           </div>
         `
       }
@@ -334,18 +350,74 @@ defineExpose({
   gap: 6px;
 }
 
-:deep(.popup-image) {
+:deep(.image-container) {
+  position: relative;
   width: 100%;
   max-width: 300px;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+:deep(.popup-image) {
+  width: 100%;
   height: auto;
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, filter 0.3s;
+  display: block;
   cursor: pointer;
-  transition: transform 0.2s;
 }
 
-:deep(.popup-image:hover) {
-  transform: scale(1.02);
+:deep(.click-overlay) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  gap: 8px;
+}
+
+:deep(.click-icon) {
+  width: 40px;
+  height: 40px;
+  color: white;
+  stroke-width: 2.5;
+}
+
+:deep(.click-text) {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+:deep(.image-link) {
+  display: block;
+  text-decoration: none;
+  position: relative;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+}
+
+:deep(.image-link:hover) {
+  border-color: #3b82f6;
+}
+
+:deep(.image-link:hover .click-overlay) {
+  opacity: 1;
+}
+
+:deep(.image-link:hover .popup-image) {
+  transform: scale(1.05);
 }
 
 :deep(.image-info) {
@@ -363,6 +435,25 @@ defineExpose({
 
 :deep(.detection-badge) {
   background-color: #ef4444;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+:deep(.detection-badge-link) {
+  text-decoration: none;
+  display: inline-block;
+  transition: opacity 0.2s;
+}
+
+:deep(.detection-badge-link:hover) {
+  opacity: 0.85;
+}
+
+:deep(.no-detection-badge) {
+  background-color: #6b7280;
   color: white;
   padding: 2px 8px;
   border-radius: 12px;
