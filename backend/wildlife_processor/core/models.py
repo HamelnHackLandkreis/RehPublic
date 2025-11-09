@@ -193,19 +193,19 @@ class ModelManager:
 
         try:
             # Save image before classification for debugging
-            try:
-                output_dir = (
-                    Path(__file__).parent.parent.parent.parent
-                    / "processed_images"
-                    / "classification_input"
-                )
-                output_dir.mkdir(parents=True, exist_ok=True)
-                file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                output_path = output_dir / f"classification_input_{file_timestamp}.jpg"
-                Image.fromarray(image).save(output_path)
-                logger.debug(f"Saved classification input image to: {output_path}")
-            except Exception as e:
-                logger.warning(f"Failed to save classification input image: {e}")
+            # try:
+            #     output_dir = (
+            #         Path(__file__).parent.parent.parent.parent
+            #         / "processed_images"
+            #         / "classification_input"
+            #     )
+            #     output_dir.mkdir(parents=True, exist_ok=True)
+            #     file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            #     output_path = output_dir / f"classification_input_{file_timestamp}.jpg"
+            #     Image.fromarray(image).save(output_path)
+            #     logger.debug(f"Saved classification input image to: {output_path}")
+            # except Exception as e:
+            #     logger.warning(f"Failed to save classification input image: {e}")
 
             start_time = time.time()
             result = self.classification_model.single_image_classification(image)
@@ -328,9 +328,13 @@ class ModelManager:
             classifications = []
             if classification_result:
                 # Handle different classification result formats
-                class_name = classification_result.get("prediction") or classification_result.get("class_name") or classification_result.get("species")
+                class_name = (
+                    classification_result.get("prediction")
+                    or classification_result.get("class_name")
+                    or classification_result.get("species")
+                )
                 confidence = classification_result.get("confidence", 0.0)
-                
+
                 if class_name:
                     classifications = [
                         {
@@ -611,22 +615,22 @@ class ModelManager:
                     # Crop image to detection region
                     cropped_image = image[y1:y2, x1:x2]
 
-                    # Save cropped image locally for debugging
-                    try:
-                        output_dir = (
-                            Path(__file__).parent.parent.parent.parent
-                            / "processed_images"
-                            / "cropped_detections"
-                        )
-                        output_dir.mkdir(parents=True, exist_ok=True)
-                        file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                        output_path = output_dir / f"detection_{i}_{file_timestamp}.jpg"
-                        Image.fromarray(cropped_image).save(output_path)
-                        logger.debug(f"Saved cropped detection {i} to: {output_path}")
-                    except Exception as e:
-                        logger.warning(
-                            f"Failed to save cropped image for detection {i}: {e}"
-                        )
+                    # # Save cropped image locally for debugging
+                    # try:
+                    #     output_dir = (
+                    #         Path(__file__).parent.parent.parent.parent
+                    #         / "processed_images"
+                    #         / "cropped_detections"
+                    #     )
+                    #     output_dir.mkdir(parents=True, exist_ok=True)
+                    #     file_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                    #     output_path = output_dir / f"detection_{i}_{file_timestamp}.jpg"
+                    #     Image.fromarray(cropped_image).save(output_path)
+                    #     logger.debug(f"Saved cropped detection {i} to: {output_path}")
+                    # except Exception as e:
+                    #     logger.warning(
+                    #         f"Failed to save cropped image for detection {i}: {e}"
+                    #     )
 
                     # Skip if cropped region is too small
                     if (
