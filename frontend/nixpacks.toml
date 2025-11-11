@@ -1,0 +1,9 @@
+# nixpacks.toml
+buildImage = "ghcr.io/railwayapp/nixpacks:latest"
+
+[phases.setup]
+# Pin Nixpkgs commit that contains Node 22.13.x (example)
+nixpkgsArchive = "6ad174a6dc07c7742fc64005265addf87ad08615"
+
+[providers.node]
+version = "22"
