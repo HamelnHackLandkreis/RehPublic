@@ -61,7 +61,7 @@ def get_locations(
         description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59",
     ),
     db: Session = Depends(get_db),
-):
+) -> LocationsResponse:
     """Get camera locations with spotting statistics and images.
 
     Returns locations with:
@@ -96,10 +96,13 @@ def get_locations(
         locations_in_range = []
         for loc in all_locations:
             distance = image_service.haversine_distance(
-                latitude, longitude, loc.latitude, loc.longitude
+                latitude,
+                longitude,
+                loc.latitude,
+                loc.longitude,  # type: ignore[arg-type]
             )
             if distance <= distance_range:
-                locations_in_range.append(loc.id)
+                locations_in_range.append(loc.id)  # type: ignore[arg-type]
 
         if not locations_in_range:
             return LocationsResponse(
@@ -113,7 +116,7 @@ def get_locations(
         location_ids_for_global = []
 
         for loc_id in locations_in_range:
-            location = location_repository.get_by_id(db, UUID(loc_id))
+            location = location_repository.get_by_id(db, UUID(loc_id))  # type: ignore[arg-type]
             if not location:
                 continue
 
@@ -288,9 +291,9 @@ def get_locations(
 
             image_responses.append(
                 SpottingImageResponse(
-                    image_id=UUID(image.id),
-                    location_id=UUID(image.location_id),
-                    upload_timestamp=image.upload_timestamp,
+                    image_id=UUID(image.id),  # type: ignore[arg-type]
+                    location_id=UUID(image.location_id),  # type: ignore[arg-type]
+                    upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
                     detections=detections,
                 )
             )
@@ -346,7 +349,9 @@ def get_locations(
     status_code=status.HTTP_201_CREATED,
     tags=["locations"],
 )
-def create_location(location_data: LocationCreate, db: Session = Depends(get_db)):
+def create_location(
+    location_data: LocationCreate, db: Session = Depends(get_db)
+) -> LocationResponse:
     """Create a new camera location.
 
     Args:
@@ -401,7 +406,7 @@ def create_location(location_data: LocationCreate, db: Session = Depends(get_db)
     status_code=status.HTTP_200_OK,
     tags=["locations"],
 )
-def get_location(location_id: UUID, db: Session = Depends(get_db)):
+def get_location(location_id: UUID, db: Session = Depends(get_db)) -> LocationResponse:
     """Get specific location by ID with spotting statistics.
 
     Args:

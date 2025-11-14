@@ -182,7 +182,7 @@ class SpottingRepository:
         if limit is not None:
             query = query.limit(limit)
 
-        return query.all()
+        return query.all()  # type: ignore[return-value]
 
     @staticmethod
     def get_by_species(db: Session, species: str) -> List[Spotting]:
@@ -233,7 +233,7 @@ class SpottingRepository:
         if limit is not None:
             query = query.limit(limit)
 
-        return (query.all(), total_count)
+        return (query.all(), total_count)  # type: ignore[return-value]
 
     @staticmethod
     def get_location_statistics(

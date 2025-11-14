@@ -1,11 +1,12 @@
 """Service for image-related business logic."""
 
 from __future__ import annotations
+
 import base64
 import logging
 import math
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -14,6 +15,10 @@ from api.images.image_repository import ImageRepository
 from api.locations.location_repository import LocationRepository
 from api.images.image_models import Image
 from api.processor_integration import ProcessorClient
+
+if TYPE_CHECKING:
+    from api.spottings.spotting_repository import SpottingRepository
+    from api.spottings.spotting_service import SpottingService
 from api.schemas import (
     BoundingBoxResponse,
     DetectionResponse,
@@ -53,16 +58,16 @@ class ImageService:
         )
 
     @property
-    def spotting_repository(self):
+    def spotting_repository(self) -> SpottingRepository:
         """Lazy load spotting repository to avoid circular imports."""
         if self._spotting_repository is None:
             from api.spottings.spotting_repository import SpottingRepository
 
             self._spotting_repository = SpottingRepository()
-        return self._spotting_repository
+        return self._spotting_repository  # type: ignore[return-value]
 
     @property
-    def spotting_service(self):
+    def spotting_service(self) -> SpottingService:
         """Lazy load spotting service to avoid circular imports."""
         if self._spotting_service is None:
             from api.spottings.spotting_service import SpottingService
@@ -71,7 +76,7 @@ class ImageService:
                 image_service=self,
                 image_repository=self.repository,
             )
-        return self._spotting_service
+        return self._spotting_service  # type: ignore[return-value]
 
     @classmethod
     def factory(cls) -> ImageService:
@@ -143,24 +148,24 @@ class ImageService:
         detections = []
         for spotting in spottings:
             detection = DetectionResponse(
-                species=spotting.species,
-                confidence=spotting.confidence,
+                species=spotting.species,  # type: ignore[arg-type]
+                confidence=spotting.confidence,  # type: ignore[arg-type]
                 bounding_box=BoundingBoxResponse(
-                    x=spotting.bbox_x,
-                    y=spotting.bbox_y,
-                    width=spotting.bbox_width,
-                    height=spotting.bbox_height,
+                    x=spotting.bbox_x,  # type: ignore[arg-type]
+                    y=spotting.bbox_y,  # type: ignore[arg-type]
+                    width=spotting.bbox_width,  # type: ignore[arg-type]
+                    height=spotting.bbox_height,  # type: ignore[arg-type]
                 ),
-                classification_model=spotting.classification_model,
-                is_uncertain=spotting.is_uncertain,
+                classification_model=spotting.classification_model,  # type: ignore[arg-type]
+                is_uncertain=spotting.is_uncertain,  # type: ignore[arg-type]
             )
             detections.append(detection)
 
         return ImageDetailResponse(
-            image_id=UUID(image.id),
-            location_id=UUID(image.location_id),
-            raw=image.base64_data,
-            upload_timestamp=image.upload_timestamp,
+            image_id=UUID(image.id),  # type: ignore[arg-type]
+            location_id=UUID(image.location_id),  # type: ignore[arg-type]
+            raw=image.base64_data,  # type: ignore[arg-type]
+            upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
             detections=detections,
         )
 
@@ -233,7 +238,7 @@ class ImageService:
         detections = self.processor_client.process_image_data(
             image_bytes=image_bytes,
             location_name=location_name,
-            timestamp=image.upload_timestamp,
+            timestamp=image.upload_timestamp,  # type: ignore[arg-type]
         )
 
         return detections
@@ -265,17 +270,17 @@ class ImageService:
 
         image = self.save_image(db, location_id, file_bytes, upload_timestamp)
 
-        logger.info(f"Processing image {image.id} for location {location.name}")
-        detections = self.process_image(db, image, location.name)
+        logger.info(f"Processing image {image.id} for location {location.name}")  # type: ignore[str-bytes-safe, misc]
+        detections = self.process_image(db, image, location.name)  # type: ignore[arg-type, misc]
         if detections:
             self.spotting_service.save_detections(
                 db,
-                UUID(image.id),
+                UUID(image.id),  # type: ignore[arg-type]
                 detections,
                 detection_timestamp=upload_timestamp,
             )
 
-        self.mark_as_processed(db, UUID(image.id))
+        self.mark_as_processed(db, UUID(image.id))  # type: ignore[arg-type]
 
         logger.info(
             f"Successfully processed image {image.id}: "
@@ -283,9 +288,9 @@ class ImageService:
         )
 
         return ImageUploadResponse(
-            image_id=UUID(image.id),
-            location_id=UUID(image.location_id),
-            upload_timestamp=image.upload_timestamp,
+            image_id=UUID(image.id),  # type: ignore[arg-type]
+            location_id=UUID(image.location_id),  # type: ignore[arg-type]
+            upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
             detections_count=len(detections),
             detected_species=[detection["species"] for detection in detections],
         )
@@ -354,10 +359,13 @@ class ImageService:
         locations_in_range = []
         for location in all_locations:
             distance = self.haversine_distance(
-                latitude, longitude, location.latitude, location.longitude
+                latitude,
+                longitude,
+                location.latitude,
+                location.longitude,  # type: ignore[arg-type]
             )
             if distance <= distance_range:
-                locations_in_range.append(location.id)
+                locations_in_range.append(location.id)  # type: ignore[arg-type]
 
         if not locations_in_range:
             return []
@@ -366,7 +374,7 @@ class ImageService:
         for location_id in locations_in_range:
             location_images = self.repository.get_by_location_id(
                 db=db,
-                location_id=UUID(location_id),
+                location_id=UUID(location_id),  # type: ignore[arg-type]
                 time_start=time_start,
                 time_end=time_end,
                 limit=limit_per_location,

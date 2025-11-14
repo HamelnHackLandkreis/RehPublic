@@ -34,7 +34,7 @@ user_detection_repository = UserDetectionRepository()
 def create_user_detection(
     detection: UserDetectionCreate,
     db: Session = Depends(get_db),
-):
+) -> UserDetectionResponse:
     """Submit a manual user identification for an image.
 
     This endpoint allows users to record what species they think they see in an image.
@@ -79,11 +79,11 @@ def create_user_detection(
         )
 
         return UserDetectionResponse(
-            id=UUID(user_detection.id),
-            image_id=UUID(user_detection.image_id),
-            species=user_detection.species,
-            user_session_id=user_detection.user_session_id,
-            detection_timestamp=user_detection.detection_timestamp,
+            id=UUID(user_detection.id),  # type: ignore[arg-type]
+            image_id=UUID(user_detection.image_id),  # type: ignore[arg-type]
+            species=user_detection.species,  # type: ignore[arg-type]
+            user_session_id=user_detection.user_session_id,  # type: ignore[arg-type]
+            detection_timestamp=user_detection.detection_timestamp,  # type: ignore[arg-type]
         )
     except Exception as e:
         logger.error(f"Failed to create user detection: {e}")
@@ -102,7 +102,7 @@ def create_user_detection(
 def get_user_detection_stats(
     image_id: UUID,
     db: Session = Depends(get_db),
-):
+) -> UserDetectionStatsResponse:
     """Get user detection statistics for a specific image.
 
     Returns aggregated data showing:

@@ -50,7 +50,7 @@ def get_spottings(
     ),
     db: Session = Depends(get_db),
     spotting_service: SpottingService = Depends(SpottingService.factory),
-):
+) -> SpottingsResponse:
     """Get images within a location and time range, grouped by location.
 
     Returns up to 5 most recent images per location that are:
@@ -122,7 +122,7 @@ def get_animal_spottings(
     ),
     db: Session = Depends(get_db),
     spotting_service: SpottingService = Depends(SpottingService.factory),
-):
+) -> AnimalSpottingsResponse:
     """Get all spottings with species "animal".
 
     Returns all animal detections that were classified as generic "animal" species.

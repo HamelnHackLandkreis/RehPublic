@@ -22,7 +22,9 @@ wikipedia_service = WikipediaService()
     status_code=status.HTTP_200_OK,
     tags=["wikipedia"],
 )
-async def get_wikipedia_articles(request: WikipediaArticlesRequest):
+async def get_wikipedia_articles(
+    request: WikipediaArticlesRequest,
+) -> List[WikipediaArticleResponse]:
     """Fetch Wikipedia articles with main image, description, and link.
 
     This endpoint fetches data from the Wikipedia API for the provided article titles.
@@ -45,7 +47,10 @@ async def get_wikipedia_articles(request: WikipediaArticlesRequest):
         }
     """
     try:
-        articles = await wikipedia_service.fetch_articles(request.titles)
+        articles_data = await wikipedia_service.fetch_articles(request.titles)
+        articles = [
+            WikipediaArticleResponse(**article_data) for article_data in articles_data
+        ]
         return articles
     except Exception as e:
         logger.error(f"Failed to fetch Wikipedia articles: {e}")

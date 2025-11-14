@@ -5,12 +5,16 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from api.locations.location_repository import LocationRepository
+
+if TYPE_CHECKING:
+    from api.images.image_repository import ImageRepository
+    from api.images.image_service import ImageService
 from api.schemas import (
     AnimalSpottingResponse,
     AnimalSpottingsResponse,
@@ -49,7 +53,7 @@ class SpottingService:
         self.location_repository = location_repository or LocationRepository()
 
     @property
-    def image_service(self):
+    def image_service(self) -> ImageService:
         """Lazy load image service to avoid circular imports."""
         if self._image_service is None:
             from api.images.image_service import ImageService
@@ -58,16 +62,16 @@ class SpottingService:
                 spotting_service=self,
                 spotting_repository=self.repository,
             )
-        return self._image_service
+        return self._image_service  # type: ignore[return-value]
 
     @property
-    def image_repository(self):
+    def image_repository(self) -> ImageRepository:
         """Lazy load image repository to avoid circular imports."""
         if self._image_repository is None:
             from api.images.image_repository import ImageRepository
 
             self._image_repository = ImageRepository()
-        return self._image_repository
+        return self._image_repository  # type: ignore[return-value]
 
     @classmethod
     def factory(cls) -> SpottingService:
@@ -160,7 +164,7 @@ class SpottingService:
             location_id = image.location_id
 
             if location_id not in location_map:
-                location = self.location_repository.get_by_id(db, UUID(location_id))
+                location = self.location_repository.get_by_id(db, UUID(location_id))  # type: ignore[arg-type]
                 if location:
                     location_map[location_id] = location
 
@@ -188,9 +192,9 @@ class SpottingService:
 
             images_by_location[location_id].append(
                 SpottingImageResponse(
-                    image_id=UUID(image.id),
-                    location_id=UUID(image.location_id),
-                    upload_timestamp=image.upload_timestamp,
+                    image_id=UUID(image.id),  # type: ignore[arg-type]
+                    location_id=UUID(image.location_id),  # type: ignore[arg-type]
+                    upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
                     detections=detections,
                 )
             )
@@ -209,7 +213,7 @@ class SpottingService:
                     images_with_animals_count,
                 ) = self.repository.get_location_statistics(
                     db,
-                    location_id,
+                    location_id,  # type: ignore[arg-type]
                     species_filter=species_filter,
                     time_start=time_start,
                     time_end=time_end,
@@ -217,11 +221,11 @@ class SpottingService:
 
                 locations_response.append(
                     LocationWithImagesResponse(
-                        id=UUID(location.id),
-                        name=location.name,
-                        longitude=location.longitude,
-                        latitude=location.latitude,
-                        description=location.description,
+                        id=UUID(location.id),  # type: ignore[arg-type]
+                        name=location.name,  # type: ignore[arg-type]
+                        longitude=location.longitude,  # type: ignore[arg-type]
+                        latitude=location.latitude,  # type: ignore[arg-type]
+                        description=location.description,  # type: ignore[arg-type]
                         images=location_images,
                         total_images=total_images_count,
                         total_unique_species=unique_species_count,
@@ -235,7 +239,7 @@ class SpottingService:
             global_total_spottings_count,
         ) = self.repository.get_global_statistics(
             db,
-            location_ids_list,
+            location_ids_list,  # type: ignore[arg-type]
             species_filter=species_filter,
             time_start=time_start,
             time_end=time_end,
@@ -271,22 +275,22 @@ class SpottingService:
         for spotting, image, location in results:
             spottings.append(
                 AnimalSpottingResponse(
-                    spotting_id=UUID(spotting.id),
-                    image_id=UUID(image.id),
-                    location_id=UUID(location.id),
-                    location_name=location.name,
-                    species=spotting.species,
-                    confidence=spotting.confidence,
+                    spotting_id=UUID(spotting.id),  # type: ignore[arg-type]
+                    image_id=UUID(image.id),  # type: ignore[arg-type]
+                    location_id=UUID(location.id),  # type: ignore[arg-type]
+                    location_name=location.name,  # type: ignore[arg-type]
+                    species=spotting.species,  # type: ignore[arg-type]
+                    confidence=spotting.confidence,  # type: ignore[arg-type]
                     bounding_box=BoundingBoxResponse(
-                        x=spotting.bbox_x,
-                        y=spotting.bbox_y,
-                        width=spotting.bbox_width,
-                        height=spotting.bbox_height,
+                        x=spotting.bbox_x,  # type: ignore[arg-type]
+                        y=spotting.bbox_y,  # type: ignore[arg-type]
+                        width=spotting.bbox_width,  # type: ignore[arg-type]
+                        height=spotting.bbox_height,  # type: ignore[arg-type]
                     ),
-                    classification_model=spotting.classification_model,
-                    is_uncertain=spotting.is_uncertain,
-                    detection_timestamp=spotting.detection_timestamp,
-                    upload_timestamp=image.upload_timestamp,
+                    classification_model=spotting.classification_model,  # type: ignore[arg-type]
+                    is_uncertain=spotting.is_uncertain,  # type: ignore[arg-type]
+                    detection_timestamp=spotting.detection_timestamp,  # type: ignore[arg-type]
+                    upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
                 )
             )
 
@@ -312,10 +316,11 @@ class SpottingService:
 
         aggregated_spottings = []
         for result in results:
-            location_id = result.id
+            location_id = result.id  # type: ignore[assignment]
 
             animals = self.repository.get_unique_species_by_location(
-                db, UUID(location_id)
+                db,
+                UUID(location_id),  # type: ignore[arg-type]
             )
 
             most_recent_images = self.image_repository.get_by_location_id(

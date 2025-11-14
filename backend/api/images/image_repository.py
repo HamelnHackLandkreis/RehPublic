@@ -136,5 +136,5 @@ class ImageRepository:
         """
         image = db.query(Image).filter(Image.id == str(image_id)).first()
         if image:
-            image.processed = processed
+            image.processed = processed  # type: ignore[assignment]
             db.commit()

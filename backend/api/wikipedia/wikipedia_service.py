@@ -2,7 +2,7 @@
 
 import logging
 from functools import lru_cache
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 
@@ -15,9 +15,9 @@ class WikipediaService:
     WIKIPEDIA_API_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/"
     WIKIPEDIA_BASE_URL = "https://en.wikipedia.org/wiki/"
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize Wikipedia service with LRU cache."""
-        self._cache = {}  # Manual cache for async function
+        self._cache: Dict[str, Dict[str, Any]] = {}  # Manual cache for async function
 
     @lru_cache(maxsize=128)
     def _get_cached_article(self, title: str) -> Optional[Dict]:
@@ -41,7 +41,7 @@ class WikipediaService:
             title: Article title
             data: Article data to cache
         """
-        self._cache[title] = data
+        self._cache[title] = data  # type: ignore[assignment]
         # Trigger the lru_cache to register this key
         self._get_cached_article(title)
 

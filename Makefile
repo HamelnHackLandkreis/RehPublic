@@ -1,7 +1,7 @@
 .PHONY: backend-sync backend-run backend-run-workers backend-test backend-download-models frontend-prep frontend-run run pre-commit-install pre-commit-run pre-commit-update lint lint-fix types
 
 backend-sync:
-	cd backend && uv sync
+	cd backend && uv sync --extra dev
 
 backend-run:
 	cd backend && uv run uvicorn api.main:app --reload --port 8000

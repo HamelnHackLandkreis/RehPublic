@@ -1,12 +1,14 @@
 """Controller for root endpoint."""
 
+from typing import Dict
+
 from fastapi import APIRouter, status
 
 router = APIRouter()
 
 
 @router.get("/", status_code=status.HTTP_200_OK)
-def root():
+def root() -> Dict[str, str | Dict[str, str]]:
     """Root endpoint with API information."""
     return {
         "name": "Wildlife Camera API",

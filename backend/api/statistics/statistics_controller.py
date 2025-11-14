@@ -49,7 +49,7 @@ def get_statistics(
         description="Optional location ID to filter statistics by a specific location.",
     ),
     db: Session = Depends(get_db),
-):
+) -> StatisticsResponse:
     """Get statistics for animal spottings grouped by time period.
 
     Returns statistics grouped by time intervals:
