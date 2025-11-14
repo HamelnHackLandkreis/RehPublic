@@ -1,4 +1,4 @@
-.PHONY: backend-sync backend-run backend-run-workers backend-test backend-download-models frontend-prep frontend-run run
+.PHONY: backend-sync backend-run backend-run-workers backend-test backend-download-models frontend-prep frontend-run run pre-commit-install pre-commit-run pre-commit-update
 
 backend-sync:
 	cd backend && uv sync
@@ -20,6 +20,16 @@ frontend-prep:
 
 frontend-run:
 	cd frontend && npm run dev
+
+pre-commit-install:
+	cd backend && uv sync --extra dev
+	cd backend && uv run pre-commit install
+
+pre-commit-run:
+	cd backend && uv run pre-commit run --all-files
+
+pre-commit-update:
+	cd backend && uv run pre-commit autoupdate
 
 run: backend-sync frontend-prep
 	@echo "Starting backend and frontend..."
