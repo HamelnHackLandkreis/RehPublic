@@ -25,7 +25,7 @@ jobs:
         version: "latest"
 
     - name: Sync backend dependencies
-      run: make backend-sync
+      run: cd backend && uv sync --extra dev
 
     - name: Run tests
       run: make backend-test

@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy import func
@@ -139,7 +139,7 @@ class SpottingRepository:
         species_list = (
             db.query(Spotting.species)
             .join(Image, Spotting.image_id == Image.id)
-            .filter(Image.location_id == location_id)
+            .filter(Image.location_id == str(location_id))
             .distinct()
             .all()
         )
@@ -152,7 +152,7 @@ class SpottingRepository:
         end_time: datetime,
         location_id: Optional[str] = None,
         limit: Optional[int] = None,
-    ) -> List:
+    ) -> List[Tuple[str, datetime]]:
         """Get spottings within a time range.
 
         Args:
@@ -199,3 +199,163 @@ class SpottingRepository:
             .order_by(Spotting.detection_timestamp.desc())
             .all()
         )
+
+    @staticmethod
+    def get_animal_spottings_with_location(
+        db: Session,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> Tuple[List[Tuple[Spotting, Image, Location]], int]:
+        """Get spottings with species "animal" joined with Image and Location.
+
+        Args:
+            db: Database session
+            limit: Optional limit on number of results
+            offset: Optional offset for pagination
+
+        Returns:
+            Tuple of (list of (Spotting, Image, Location) tuples, total count)
+        """
+        query = (
+            db.query(Spotting, Image, Location)
+            .join(Image, Spotting.image_id == Image.id)
+            .join(Location, Image.location_id == Location.id)
+            .filter(Spotting.species == "animal")
+            .order_by(Spotting.detection_timestamp.desc())
+        )
+
+        total_count = query.count()
+
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
+
+        return (query.all(), total_count)
+
+    @staticmethod
+    def get_location_statistics(
+        db: Session,
+        location_id: str,
+        species_filter: Optional[str] = None,
+        time_start: Optional[datetime] = None,
+        time_end: Optional[datetime] = None,
+    ) -> Tuple[int, int, int, int]:
+        """Get statistics for a specific location.
+
+        Args:
+            db: Database session
+            location_id: Location ID
+            species_filter: Optional species filter (case-insensitive)
+            time_start: Optional start timestamp filter
+            time_end: Optional end timestamp filter
+
+        Returns:
+            Tuple of (unique_species_count, total_spottings_count, total_images_count, images_with_animals_count)
+        """
+        base_query = (
+            db.query(Spotting)
+            .join(Image, Spotting.image_id == Image.id)
+            .filter(Image.location_id == location_id)
+        )
+
+        if species_filter:
+            base_query = base_query.filter(
+                Spotting.species.ilike(f"%{species_filter}%")
+            )
+
+        if time_start is not None:
+            base_query = base_query.filter(Image.upload_timestamp >= time_start)
+        if time_end is not None:
+            base_query = base_query.filter(Image.upload_timestamp <= time_end)
+
+        unique_species_count = (
+            base_query.with_entities(Spotting.species).distinct().count()
+        )
+        total_spottings_count = base_query.count()
+
+        images_query = db.query(Image).filter(Image.location_id == location_id)
+        if time_start is not None:
+            images_query = images_query.filter(Image.upload_timestamp >= time_start)
+        if time_end is not None:
+            images_query = images_query.filter(Image.upload_timestamp <= time_end)
+        total_images_count = images_query.count()
+
+        images_with_animals_query = (
+            db.query(Image.id)
+            .join(Spotting, Spotting.image_id == Image.id)
+            .filter(Image.location_id == location_id)
+        )
+
+        if species_filter:
+            images_with_animals_query = images_with_animals_query.filter(
+                Spotting.species.ilike(f"%{species_filter}%")
+            )
+
+        if time_start is not None:
+            images_with_animals_query = images_with_animals_query.filter(
+                Image.upload_timestamp >= time_start
+            )
+        if time_end is not None:
+            images_with_animals_query = images_with_animals_query.filter(
+                Image.upload_timestamp <= time_end
+            )
+
+        images_with_animals_count = images_with_animals_query.distinct().count()
+
+        return (
+            unique_species_count,
+            total_spottings_count,
+            total_images_count,
+            images_with_animals_count,
+        )
+
+    @staticmethod
+    def get_global_statistics(
+        db: Session,
+        location_ids: List[str],
+        species_filter: Optional[str] = None,
+        time_start: Optional[datetime] = None,
+        time_end: Optional[datetime] = None,
+    ) -> Tuple[int, int]:
+        """Get global statistics across multiple locations.
+
+        Args:
+            db: Database session
+            location_ids: List of location IDs
+            species_filter: Optional species filter (case-insensitive)
+            time_start: Optional start timestamp filter
+            time_end: Optional end timestamp filter
+
+        Returns:
+            Tuple of (unique_species_count, total_spottings_count)
+        """
+        if not location_ids:
+            return (0, 0)
+
+        global_base_query = (
+            db.query(Spotting)
+            .join(Image, Spotting.image_id == Image.id)
+            .filter(Image.location_id.in_(location_ids))
+        )
+
+        if species_filter:
+            global_base_query = global_base_query.filter(
+                Spotting.species.ilike(f"%{species_filter}%")
+            )
+
+        if time_start is not None:
+            global_base_query = global_base_query.filter(
+                Image.upload_timestamp >= time_start
+            )
+        if time_end is not None:
+            global_base_query = global_base_query.filter(
+                Image.upload_timestamp <= time_end
+            )
+
+        unique_species_count = (
+            global_base_query.with_entities(Spotting.species).distinct().count()
+        )
+        total_spottings_count = global_base_query.count()
+
+        return (unique_species_count, total_spottings_count)

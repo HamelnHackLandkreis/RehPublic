@@ -20,8 +20,6 @@ from api.schemas import (
     ImageDetailResponse,
     ImageUploadResponse,
 )
-from api.spottings.spotting_repository import SpottingRepository
-from api.spottings.spotting_service import SpottingService
 
 logger = logging.getLogger(__name__)
 
@@ -33,8 +31,8 @@ class ImageService:
         self,
         repository: Optional[ImageRepository] = None,
         location_repository: Optional[LocationRepository] = None,
-        spotting_repository: Optional[SpottingRepository] = None,
-        spotting_service: Optional[SpottingService] = None,
+        spotting_repository: Optional[object] = None,
+        spotting_service: Optional[object] = None,
         processor_client: Optional[ProcessorClient] = None,
     ) -> None:
         """Initialize image service.
@@ -48,11 +46,32 @@ class ImageService:
         """
         self.repository = repository or ImageRepository()
         self.location_repository = location_repository or LocationRepository()
-        self.spotting_repository = spotting_repository or SpottingRepository()
-        self.spotting_service = spotting_service or SpottingService()
+        self._spotting_repository = spotting_repository
+        self._spotting_service = spotting_service
         self.processor_client = processor_client or ProcessorClient(
             model_region="europe"
         )
+
+    @property
+    def spotting_repository(self):
+        """Lazy load spotting repository to avoid circular imports."""
+        if self._spotting_repository is None:
+            from api.spottings.spotting_repository import SpottingRepository
+
+            self._spotting_repository = SpottingRepository()
+        return self._spotting_repository
+
+    @property
+    def spotting_service(self):
+        """Lazy load spotting service to avoid circular imports."""
+        if self._spotting_service is None:
+            from api.spottings.spotting_service import SpottingService
+
+            self._spotting_service = SpottingService(
+                image_service=self,
+                image_repository=self.repository,
+            )
+        return self._spotting_service
 
     @classmethod
     def factory(cls) -> ImageService:
