@@ -1,0 +1,1 @@
+"""Image controller integration tests."""

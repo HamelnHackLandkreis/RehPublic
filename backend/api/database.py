@@ -10,9 +10,9 @@ from api.models import Base
 # Format: postgresql://user:password@host:port/database
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://rehpublic:hamelnhack2025@135.181.78.114:5432/rehpublic",
+    "sqlite:///./wildlife_camera.db",
 )
-# DATABASE_URL = "sqlite:///./wildlife_camera.db"
+
 # Create engine
 engine = create_engine(
     DATABASE_URL,

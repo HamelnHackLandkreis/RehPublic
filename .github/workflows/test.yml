@@ -25,9 +25,7 @@ jobs:
         version: "latest"
 
     - name: Sync backend dependencies
-      working-directory: backend
-      run: uv sync
+      run: make backend-sync
 
     - name: Run tests
-      working-directory: backend
-      run: uv run pytest tests/ -v
+      run: make backend-test
