@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from api.images.image_repository import ImageRepository
 from api.locations.location_repository import LocationRepository
-from api.models import Image
+from api.images.image_models import Image
 from api.processor_integration import ProcessorClient
 from api.schemas import (
     BoundingBoxResponse,

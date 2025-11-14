@@ -13,7 +13,10 @@ import httpx
 from sqlalchemy import func
 from sqlalchemy.orm import Session, selectinload
 
-from api.models import Image, Location, Spotting, UserDetection
+from api.images.image_models import Image
+from api.locations.location_models import Location
+from api.spottings.spotting_models import Spotting
+from api.user_detections.user_detection_models import UserDetection
 from api.processor_integration import ProcessorClient
 
 logger = logging.getLogger(__name__)

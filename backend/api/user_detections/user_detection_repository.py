@@ -7,7 +7,8 @@ from uuid import UUID
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from api.models import Spotting, UserDetection
+from api.spottings.spotting_models import Spotting
+from api.user_detections.user_detection_models import UserDetection
 
 logger = logging.getLogger(__name__)
 

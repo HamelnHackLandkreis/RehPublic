@@ -6,6 +6,12 @@ from sqlalchemy.orm import sessionmaker
 
 from api.models import Base
 
+# Import all models to ensure they're registered with Base.metadata
+from api.images.image_models import Image  # noqa: F401
+from api.locations.location_models import Location  # noqa: F401
+from api.spottings.spotting_models import Spotting  # noqa: F401
+from api.user_detections.user_detection_models import UserDetection  # noqa: F401
+
 # PostgreSQL database URL
 # Format: postgresql://user:password@host:port/database
 DATABASE_URL = os.getenv(
