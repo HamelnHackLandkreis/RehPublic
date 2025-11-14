@@ -2,7 +2,7 @@
 # 1. BUILD-STAGE (Nuxt Static Build)
 # Erzeugt die statischen Dateien.
 # ------------------------------------
-FROM node:20-alpine AS builder
+FROM node:24-alpine AS builder
 
 # Build argument for API URL
 ARG NUXT_PUBLIC_API_URL=http://135.181.78.114:9002
@@ -24,8 +24,8 @@ COPY . .
 
 # Führe den Nuxt-Build aus
 # WICHTIG: Verwende 'npm run build' (oder 'npm run generate' für eine reine SPA/Static Site)
-# Für diesen Nginx-Ansatz ist es oft ratsam, den 'generate' Befehl zu verwenden, 
-# der alle statischen Seiten erstellt und sie im 'dist' Ordner ablegt (Nuxt 2) oder 
+# Für diesen Nginx-Ansatz ist es oft ratsam, den 'generate' Befehl zu verwenden,
+# der alle statischen Seiten erstellt und sie im 'dist' Ordner ablegt (Nuxt 2) oder
 # im '.output/public' Ordner (Nuxt 3 bei statischer Konfiguration).
 # Da du 'npm build' verwenden wolltest, lassen wir es dabei und gehen davon aus,
 # dass dein Build-Prozess statische Assets in den '.output/public' Ordner legt.

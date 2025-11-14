@@ -1,6 +1,5 @@
 """Integration with wildlife_processor core for image processing."""
 
-import base64
 import io
 import logging
 from datetime import datetime
@@ -27,7 +26,7 @@ class ProcessorClient:
         self.model_region = model_region
         self.model_manager: Optional[ModelManager] = None
 
-    def _ensure_model_loaded(self):
+    def _ensure_model_loaded(self) -> None:
         """Ensure model manager is initialized and models are loaded."""
         if self.model_manager is None:
             logger.info(f"Initializing ModelManager with region: {self.model_region}")
@@ -70,7 +69,9 @@ class ProcessorClient:
             # Convert timestamp to string if provided
             timestamp_str = timestamp.isoformat() if timestamp else None
 
-            # # Process image
+            # Process image
+            if self.model_manager is None:
+                raise RuntimeError("Model manager not initialized")
             detections, processing_time = self.model_manager.process_image(
                 processed_image, timestamp_str
             )

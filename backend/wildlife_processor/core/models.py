@@ -3,11 +3,9 @@
 import logging
 from pathlib import Path
 import time
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-from PIL import Image
 
 # Optional PyTorch Wildlife imports
 try:
@@ -47,7 +45,7 @@ try:
 
     DEEPFAUNE_V4_AVAILABLE = True
 except ImportError:
-    DeepfauneV4Classifier = None
+    DeepfauneV4Classifier = None  # type: ignore[assignment,misc]
     DEEPFAUNE_V4_AVAILABLE = False
 
 
@@ -174,7 +172,7 @@ class ModelManager:
             processing_time = time.time() - start_time
 
             logger.debug(f"Detection completed in {processing_time:.2f}s")
-            return result
+            return result  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Detection failed: {e}")
             raise RuntimeError(f"Detection inference failed: {e}")
@@ -212,7 +210,7 @@ class ModelManager:
             processing_time = time.time() - start_time
 
             logger.debug(f"Classification completed in {processing_time:.2f}5s")
-            return result
+            return result  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(f"Classification failed: {e}")
             raise RuntimeError(f"Classification inference failed: {e}")
@@ -360,10 +358,14 @@ class ModelManager:
                     class_names = {1: "animal", 2: "person", 3: "vehicle"}
 
                     # If class_id is 0 but we have a detection with reasonable confidence, assume it's an animal
-                    if class_id == 0 and detection.get("confidence", 0.0) > 0.3:
+                    confidence_val: Any = detection.get("confidence", 0.0)
+                    if class_id == 0 and confidence_val > 0.3:
                         species_name = "animal"
                     else:
-                        species_name = class_names.get(class_id, "unknown")
+                        class_id_int = (
+                            int(class_id) if isinstance(class_id, (int, float)) else 0
+                        )
+                        species_name = class_names.get(class_id_int, "unknown")
 
                     classification = {
                         "class_name": species_name,
@@ -371,7 +373,7 @@ class ModelManager:
                     }
 
                 # Extract bounding box
-                bbox_data = detection["bbox"]
+                bbox_data: Any = detection["bbox"]
                 bbox = BoundingBox(
                     x=int(bbox_data[0]),
                     y=int(bbox_data[1]),
@@ -419,10 +421,12 @@ class ModelManager:
                         "enhancement_factors": classification.get(
                             "enhancement_factors", {}
                         ),
-                        "confidence_multiplier": classification.get("confidence", 0.0)
-                        / detection.get("confidence", 1.0)
-                        if detection.get("confidence", 0.0) > 0
-                        else 1.0,
+                        "confidence_multiplier": (
+                            classification.get("confidence", 0.0)
+                            / detection.get("confidence", 1.0)
+                            if (float(detection.get("confidence", 0.0) or 0)) > 0  # type: ignore[arg-type]
+                            else 1.0
+                        ),
                     }
 
                 animal_detection = AnimalDetection(
@@ -597,7 +601,7 @@ class ModelManager:
             for i, detection in enumerate(det_boxes):
                 try:
                     # Extract bounding box coordinates [x1, y1, x2, y2]
-                    bbox = detection["bbox"]
+                    bbox: Any = detection["bbox"]
                     x1, y1, x2, y2 = (
                         int(bbox[0]),
                         int(bbox[1]),

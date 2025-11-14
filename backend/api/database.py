@@ -1,18 +1,26 @@
 """Database connection and session management."""
 
 import os
+from typing import Generator
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 from api.models import Base
+
+# Import all models to ensure they're registered with Base.metadata
+from api.images.image_models import Image  # noqa: F401
+from api.locations.location_models import Location  # noqa: F401
+from api.spottings.spotting_models import Spotting  # noqa: F401
+from api.user_detections.user_detection_models import UserDetection  # noqa: F401
 
 # PostgreSQL database URL
 # Format: postgresql://user:password@host:port/database
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://rehpublic:hamelnhack2025@135.181.78.114:5432/rehpublic",
+    "sqlite:///./wildlife_camera.db",
 )
-# DATABASE_URL = "sqlite:///./wildlife_camera.db"
+
 # Create engine
 engine = create_engine(
     DATABASE_URL,
@@ -26,12 +34,12 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
-def init_db():
+def init_db() -> None:
     """Initialize database by creating all tables."""
     Base.metadata.create_all(bind=engine)
 
 
-def get_db():
+def get_db() -> Generator[Session, None, None]:
     """Dependency for getting database session."""
     db = SessionLocal()
     try:

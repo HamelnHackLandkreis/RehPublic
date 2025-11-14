@@ -1,0 +1,1 @@
+"""Spotting controller integration tests."""

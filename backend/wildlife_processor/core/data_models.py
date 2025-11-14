@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 @dataclass
 class BoundingBox:
     """Bounding box coordinates for detected animals."""
+
     x: int
     y: int
     width: int
@@ -18,6 +19,7 @@ class BoundingBox:
 @dataclass
 class AnimalDetection:
     """Individual animal detection result."""
+
     species: str
     confidence: float
     bounding_box: BoundingBox
@@ -30,6 +32,7 @@ class AnimalDetection:
 @dataclass
 class DetectionResult:
     """Complete detection result for a single image."""
+
     image_path: Path
     camera_reference: str
     timestamp: datetime
@@ -41,6 +44,7 @@ class DetectionResult:
 @dataclass
 class ModelInfo:
     """Information about the models used for processing."""
+
     detection_model: str
     classification_model: str
     region: str
@@ -50,6 +54,7 @@ class ModelInfo:
 @dataclass
 class ProcessingResults:
     """Complete results from processing a directory of images."""
+
     total_images: int
     successful_detections: int
     failed_images: List[str]
@@ -61,6 +66,7 @@ class ProcessingResults:
 @dataclass
 class ImageMetadata:
     """Metadata extracted from image file and directory structure."""
+
     file_path: Path
     location: str
     timestamp: datetime
@@ -70,6 +76,7 @@ class ImageMetadata:
 @dataclass
 class ModelConfig:
     """Configuration for regional models."""
+
     region: str
     classification_model_class: str
     model_name: str
