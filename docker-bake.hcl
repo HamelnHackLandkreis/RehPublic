@@ -1,3 +1,7 @@
+variable "IMAGE_TAG" {
+  default = "latest"
+}
+
 group "default" {
   targets = ["backend", "frontend"]
 }

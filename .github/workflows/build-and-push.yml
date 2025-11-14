@@ -41,12 +41,10 @@ jobs:
           set: |
             backend.tags=backend:${{ steps.tag.outputs.tag }},backend:latest
             frontend.tags=frontend:${{ steps.tag.outputs.tag }},frontend:latest
+            IMAGE_TAG=${{ steps.tag.outputs.tag }}
           cache-from: |
             type=gha,scope=backend
             type=gha,scope=frontend
           cache-to: |
             type=gha,scope=backend,mode=max
             type=gha,scope=frontend,mode=max
-        env:
-          IMAGE: ""
-          IMAGE_TAG: ${{ steps.tag.outputs.tag }}
