@@ -1,6 +1,5 @@
 """Integration with wildlife_processor core for image processing."""
 
-import base64
 import io
 import logging
 from datetime import datetime
@@ -70,7 +69,9 @@ class ProcessorClient:
             # Convert timestamp to string if provided
             timestamp_str = timestamp.isoformat() if timestamp else None
 
-            # # Process image
+            # Process image
+            if self.model_manager is None:
+                raise RuntimeError("Model manager not initialized")
             detections, processing_time = self.model_manager.process_image(
                 processed_image, timestamp_str
             )

@@ -1,6 +1,5 @@
 """Tests for wildlife image classification."""
 
-import os
 from pathlib import Path
 
 import pytest
@@ -63,7 +62,7 @@ def test_roe_deer_classification(processor_client):
     assert roe_deer_detection["classification_model"] is not None
 
     # Log detection details for debugging
-    print(f"\nDetection results:")
+    print("\nDetection results:")
     print(f"  Species: {roe_deer_detection['species']}")
     print(f"  Confidence: {roe_deer_detection['confidence']:.3f}")
     print(f"  Bounding box: {bbox}")

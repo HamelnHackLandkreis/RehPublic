@@ -1,4 +1,4 @@
-.PHONY: backend-sync backend-run backend-run-workers backend-test backend-download-models frontend-prep frontend-run run pre-commit-install pre-commit-run pre-commit-update
+.PHONY: backend-sync backend-run backend-run-workers backend-test backend-download-models frontend-prep frontend-run run pre-commit-install pre-commit-run pre-commit-update lint lint-fix types
 
 backend-sync:
 	cd backend && uv sync
@@ -30,6 +30,17 @@ pre-commit-run:
 
 pre-commit-update:
 	cd backend && uv run pre-commit autoupdate
+
+lint:
+	cd backend && uv run ruff check .
+	cd backend && uv run ruff format --check .
+
+lint-fix:
+	cd backend && uv run ruff check --fix .
+	cd backend && uv run ruff format .
+
+types:
+	cd backend && uv run mypy api/ --ignore-missing-imports
 
 run: backend-sync frontend-prep
 	@echo "Starting backend and frontend..."

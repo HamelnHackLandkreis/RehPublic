@@ -16,8 +16,7 @@ os.environ["TESTING"] = "1"
 # Create test database
 TEST_DATABASE_URL = "sqlite:///./test_wildlife_camera.db"
 test_engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False}
+    TEST_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 TestSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
@@ -53,12 +52,13 @@ def client():
     try:
         # Delete all records from tables (in correct order due to foreign keys)
         from api.models import Spotting, Image, Location
+
         db.query(Spotting).delete()
         db.query(Image).delete()
         db.query(Location).delete()
         db.commit()
     finally:
         db.close()
-    
+
     with TestClient(app) as test_client:
         yield test_client

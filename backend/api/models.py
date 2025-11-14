@@ -16,10 +16,10 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()
+Base = declarative_base()  # type: ignore[valid-type,misc]
 
 
-class Location(Base):
+class Location(Base):  # type: ignore[valid-type,misc]
     """Location model representing a wildlife camera location."""
 
     __tablename__ = "locations"
@@ -37,7 +37,7 @@ class Location(Base):
     )
 
 
-class Image(Base):
+class Image(Base):  # type: ignore[valid-type,misc]
     """Image model representing an uploaded wildlife camera image."""
 
     __tablename__ = "images"
@@ -57,7 +57,7 @@ class Image(Base):
     )
 
 
-class Spotting(Base):
+class Spotting(Base):  # type: ignore[valid-type,misc]
     """Spotting model representing a detected animal in an image."""
 
     __tablename__ = "spottings"
@@ -83,7 +83,7 @@ class Spotting(Base):
     __table_args__ = (Index("idx_spottings_image_id", "image_id"),)
 
 
-class UserDetection(Base):
+class UserDetection(Base):  # type: ignore[valid-type,misc]
     """UserDetection model representing manual user identifications of animals in images."""
 
     __tablename__ = "user_detections"
@@ -101,4 +101,3 @@ class UserDetection(Base):
         Index("idx_user_detections_image_id", "image_id"),
         Index("idx_user_detections_species", "species"),
     )
-

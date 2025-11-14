@@ -26,6 +26,7 @@ except ImportError:
 
 # Only define the class if PytorchWildlife is available
 if PYTORCH_WILDLIFE_AVAILABLE:
+
     class DeepfauneV4Classifier(TIMM_BaseClassifierInference):
         """DeepFaune v4 classifier with 38 classes support.
 
@@ -104,7 +105,7 @@ if PYTORCH_WILDLIFE_AVAILABLE:
             # Convert class names to dict format BEFORE calling super().__init__()
             # The base class uses len(self.CLASS_NAMES) to determine num_classes
             class_names_list = self.CLASS_NAMES[class_name_lang]
-            self.CLASS_NAMES = {i: c for i, c in enumerate(class_names_list)}
+            self.CLASS_NAMES = {str(i): [c] for i, c in enumerate(class_names_list)}  # type: ignore[assignment]
 
             # Verify we have 38 classes
             if len(self.CLASS_NAMES) != 38:
@@ -131,9 +132,9 @@ if PYTORCH_WILDLIFE_AVAILABLE:
             )
 else:
     # Dummy class when PytorchWildlife is not available
-    class DeepfauneV4Classifier:
+    class DeepfauneV4Classifier:  # type: ignore[no-redef]
         """Dummy DeepFaune v4 classifier when PytorchWildlife is not available."""
-        
+
         def __init__(self, *args, **kwargs):
             raise RuntimeError(
                 "PyTorch Wildlife is not installed. Install with: uv add PytorchWildlife"

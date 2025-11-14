@@ -1,13 +1,13 @@
-name: BE - Run Tests
+name: Lint
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main ]
 
 jobs:
-  test:
+  lint:
     runs-on: ubuntu-latest
 
     steps:
@@ -26,8 +26,12 @@ jobs:
 
     - name: Sync backend dependencies
       working-directory: backend
-      run: uv sync
+      run: uv sync --extra dev
 
-    - name: Run tests
+    - name: Run ruff check
       working-directory: backend
-      run: uv run pytest tests/ -v
+      run: uv run ruff check .
+
+    - name: Run ruff format check
+      working-directory: backend
+      run: uv run ruff format --check .
