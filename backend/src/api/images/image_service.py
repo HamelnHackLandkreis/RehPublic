@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 from api.images.image_repository import ImageRepository
 from api.locations.location_repository import LocationRepository
 from api.images.image_models import Image
-from api.processor_integration import ProcessorClient
+from adapters.processor_adapter import ProcessorClient
 
 if TYPE_CHECKING:
     from api.locations.location_repository import SpottingRepository

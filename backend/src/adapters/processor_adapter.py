@@ -1,4 +1,4 @@
-"""Integration with wildlife_processor core for image processing."""
+"""Adapter for wildlife_processor core image processing."""
 
 import io
 import logging

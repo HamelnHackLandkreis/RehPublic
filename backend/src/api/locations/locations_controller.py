@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 from api.database import get_db
 from api.images.image_service import ImageService
 from api.locations.location_repository import LocationRepository
-from api.locations.location_service import SpottingService
+from api.locations.locations_service import SpottingService
 from api.images.image_models import Image
 from api.images.images_schemas import (
     BoundingBoxResponse,

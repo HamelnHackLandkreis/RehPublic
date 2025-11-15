@@ -12,7 +12,7 @@ from api.statistics.statistics_schemas import (
     StatisticsResponse,
     TimePeriodStatisticsResponse,
 )
-from api.locations.location_service import SpottingService
+from api.locations.locations_service import SpottingService
 
 logger = logging.getLogger(__name__)
 

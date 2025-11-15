@@ -1,16 +1,17 @@
-"""Service for spotting-related business logic."""
+"""Service for location and spotting-related business logic."""
 
 from __future__ import annotations
 
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from api.locations.location_repository import LocationRepository
+from api.locations.location_models import Location
+from api.locations.location_repository import LocationRepository, SpottingRepository
 
 if TYPE_CHECKING:
     from api.images.image_repository import ImageRepository
@@ -26,9 +27,114 @@ from api.locations.locations_schemas import (
     LocationWithImagesResponse,
     SpottingsResponse,
 )
-from api.locations.location_repository import SpottingRepository
 
 logger = logging.getLogger(__name__)
+
+
+class LocationService:
+    """Service for location-related operations."""
+
+    def __init__(self, repository: Optional[LocationRepository] = None) -> None:
+        """Initialize location service.
+
+        Args:
+            repository: Optional location repository (will create default if not provided)
+        """
+        self.repository = repository or LocationRepository()
+
+    @classmethod
+    def factory(cls) -> "LocationService":
+        """Factory method to create LocationService instance.
+
+        Returns:
+            LocationService instance
+        """
+        return cls()
+
+    def get_all_locations(self, db: Session) -> List[Location]:
+        """Retrieve all locations.
+
+        Args:
+            db: Database session
+
+        Returns:
+            List of all locations
+        """
+        return self.repository.get_all(db)
+
+    def get_all_locations_with_statistics(
+        self,
+        db: Session,
+    ) -> Tuple[List[Tuple[Location, int, int]], int, int]:
+        """Retrieve all locations with spotting statistics.
+
+        Args:
+            db: Database session
+
+        Returns:
+            Tuple containing:
+            - List of tuples (location, unique_species_count, spottings_count) for each location
+            - Total number of unique species detected across all locations
+            - Total number of animal detections across all locations
+        """
+        return self.repository.get_all_with_statistics(db)
+
+    def get_location_by_id(self, db: Session, location_id: UUID) -> Optional[Location]:
+        """Get specific location by ID.
+
+        Args:
+            db: Database session
+            location_id: UUID of the location
+
+        Returns:
+            Location object or None if not found
+        """
+        return self.repository.get_by_id(db, location_id)
+
+    def get_location_by_id_with_statistics(
+        self, db: Session, location_id: UUID
+    ) -> Optional[Tuple[Location, int, int]]:
+        """Get specific location by ID with spotting statistics.
+
+        Args:
+            db: Database session
+            location_id: UUID of the location
+
+        Returns:
+            Tuple containing:
+            - Location object or None if not found
+            - Total number of unique species detected at this location
+            - Total number of animal detections at this location
+        """
+        return self.repository.get_by_id_with_statistics(db, location_id)
+
+    def create_location(
+        self,
+        db: Session,
+        name: str,
+        longitude: float,
+        latitude: float,
+        description: Optional[str] = None,
+    ) -> Location:
+        """Create new location.
+
+        Args:
+            db: Database session
+            name: Location name
+            longitude: Longitude coordinate
+            latitude: Latitude coordinate
+            description: Optional description
+
+        Returns:
+            Created Location object
+        """
+        return self.repository.create(
+            db=db,
+            name=name,
+            longitude=longitude,
+            latitude=latitude,
+            description=description,
+        )
 
 
 class SpottingService:
