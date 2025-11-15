@@ -13,12 +13,14 @@ from api.images.image_service import ImageService
 from api.locations.location_repository import LocationRepository
 from api.locations.location_service import SpottingService
 from api.images.image_models import Image
-from api.schemas import (
+from api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
+    SpottingImageResponse,
+)
+from api.locations.locations_schemas import (
     LocationCreate,
     LocationResponse,
-    SpottingImageResponse,
     SpottingsResponse,
 )
 

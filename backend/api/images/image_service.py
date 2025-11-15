@@ -19,7 +19,7 @@ from api.processor_integration import ProcessorClient
 if TYPE_CHECKING:
     from api.locations.location_repository import SpottingRepository
     from api.locations.location_service import SpottingService
-from api.schemas import (
+from api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
     ImageDetailResponse,

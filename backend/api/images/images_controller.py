@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from api.database import get_db
 from api.images.image_service import ImageService
-from api.schemas import ImageDetailResponse, ImageUploadResponse
+from api.images.images_schemas import ImageDetailResponse, ImageUploadResponse
 
 logger = logging.getLogger(__name__)
 

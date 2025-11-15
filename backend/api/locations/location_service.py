@@ -15,13 +15,15 @@ from api.locations.location_repository import LocationRepository
 if TYPE_CHECKING:
     from api.images.image_repository import ImageRepository
     from api.images.image_service import ImageService
-from api.schemas import (
-    AnimalSpottingResponse,
-    AnimalSpottingsResponse,
+from api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
-    LocationWithImagesResponse,
     SpottingImageResponse,
+)
+from api.locations.locations_schemas import (
+    AnimalSpottingResponse,
+    AnimalSpottingsResponse,
+    LocationWithImagesResponse,
     SpottingsResponse,
 )
 from api.locations.location_repository import SpottingRepository

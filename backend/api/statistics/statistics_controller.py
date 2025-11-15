@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from api.database import get_db
-from api.schemas import (
+from api.statistics.statistics_schemas import (
     SpeciesCountResponse,
     StatisticsResponse,
     TimePeriodStatisticsResponse,

@@ -8,8 +8,7 @@ from sqlalchemy.orm import Session
 
 from api.database import get_db
 from api.images.image_service import ImageService
-from api.schemas import (
-    SpeciesCountResponse,
+from api.user_detections.user_detections_schemas import (
     UserDetectionCreate,
     UserDetectionResponse,
     UserDetectionStatsResponse,
@@ -146,6 +145,8 @@ def get_user_detection_stats(
 
     try:
         stats = user_detection_repository.get_stats_for_image(db, image_id)
+
+        from api.statistics.statistics_schemas import SpeciesCountResponse
 
         return UserDetectionStatsResponse(
             image_id=image_id,
