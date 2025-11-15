@@ -4,6 +4,7 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from api.database import init_db
 from api.images.images_controller import (
@@ -88,6 +89,13 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+# Add middleware to handle proxy headers correctly
+# This ensures FastAPI uses X-Forwarded-Proto for scheme detection
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=["*"]  # Adjust to your specific domains in production
 )
 
 # Include routers

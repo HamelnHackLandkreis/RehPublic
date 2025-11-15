@@ -50,4 +50,5 @@ EXPOSE 8000
 # Run the application
 # Use 0.0.0.0 to make it accessible from outside the container
 # --reload is removed for production
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --proxy-headers enables X-Forwarded-* header support for HTTPS redirect handling
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
