@@ -32,6 +32,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "python-multipart>=0.0.6",
     "httpx>=0.25.0",
+    "huggingface-hub>=1.1.2",
 ]
 
 [project.optional-dependencies]
