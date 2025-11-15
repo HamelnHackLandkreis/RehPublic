@@ -113,7 +113,7 @@ const fetchCameras = async () => {
       distance_range: '100000000000'
     })
 
-    const response = await fetch(`${apiUrl}/spottings?${params.toString()}`)
+    const response = await fetch(`${apiUrl}/locations?${params.toString()}`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -142,4 +142,3 @@ onMounted(() => {
   fetchCameras()
 })
 </script>
-

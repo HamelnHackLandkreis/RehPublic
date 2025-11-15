@@ -49,9 +49,9 @@ const error = ref<string | null>(null)
 // Fetch random image and redirect
 const fetchRandomImageAndRedirect = async () => {
   try {
-    // Fetch spottings with very large distance range to get all images
+    // Fetch locations with very large distance range to get all images
     const response = await fetch(
-      `${apiUrl}/spottings?latitude=50.123&longitude=10.456&distance_range=100000000000`,
+      `${apiUrl}/locations?latitude=50.123&longitude=10.456&distance_range=100000000000`,
       {
         method: 'GET',
         headers: {
@@ -65,7 +65,7 @@ const fetchRandomImageAndRedirect = async () => {
     }
 
     const data: SpottingsResponse = await response.json()
-    
+
     // Collect all image IDs from all locations
     const allImageIds: string[] = []
     for (const location of data.locations) {
@@ -98,4 +98,3 @@ onMounted(() => {
   fetchRandomImageAndRedirect()
 })
 </script>
-

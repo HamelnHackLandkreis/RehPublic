@@ -24,7 +24,7 @@ from api.schemas import (
     SpottingImageResponse,
     SpottingsResponse,
 )
-from api.spottings.spotting_repository import SpottingRepository
+from api.locations.location_repository import SpottingRepository
 
 logger = logging.getLogger(__name__)
 
