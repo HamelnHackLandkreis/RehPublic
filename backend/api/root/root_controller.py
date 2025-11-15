@@ -26,3 +26,9 @@ def root() -> Dict[str, str | Dict[str, str]]:
             "wikipedia_articles": "/wikipedia/articles",
         },
     }
+
+
+@router.get("/health", status_code=status.HTTP_200_OK)
+def health() -> Dict[str, str]:
+    """Health endpoint."""
+    return {"status": "ok"}

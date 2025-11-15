@@ -4,10 +4,10 @@
       <!-- Camera Selection Section -->
       <div class="mb-4">
         <h2 class="text-2xl font-bold mb-4">Select Camera Location</h2>
-        
+
         <!-- Map for camera selection -->
         <div class="relative h-[25vh] min-h-[200px] mb-4 rounded-xl overflow-hidden border-2 border-gray-300">
-          <WildlifeMap 
+          <WildlifeMap
             ref="mapRef"
             height="100%"
             :auto-center="!selectedLocation"
@@ -31,8 +31,8 @@
         <!-- Location Dropdown (always visible) -->
         <div v-if="cameraLocations.length > 0" class="mb-4">
           <label class="block text-sm font-medium text-gray-700 mb-2">Select Camera:</label>
-          <select 
-            v-model="selectedLocationId" 
+          <select
+            v-model="selectedLocationId"
             @change="handleDropdownSelect"
             class="w-full p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-gray-400 bg-white"
           >
@@ -47,7 +47,7 @@
       <!-- Drop Zone -->
       <div
         class="flex-shrink-0 bg-gray-50 border-2 border-dashed rounded-xl py-6 px-8 text-center cursor-pointer transition-all duration-300 mb-6"
-        :class="{ 
+        :class="{
           'border-gray-400 bg-gray-100': isDragging,
           'opacity-50 cursor-not-allowed': !selectedLocation,
           'hover:border-gray-400 hover:bg-gray-100': selectedLocation && !isDragging
@@ -115,18 +115,18 @@
                 <div class="h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
                   <div class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300" :style="{ width: file.progress + '%' }"></div>
                 </div>
-                
+
                 <!-- Detected Species -->
                 <div v-if="file.detectedSpecies && file.detectedSpecies.length > 0" class="flex flex-wrap gap-3 mt-4">
-                  <span 
-                    v-for="(species, idx) in file.detectedSpecies" 
+                  <span
+                    v-for="(species, idx) in file.detectedSpecies"
                     :key="idx"
                     class="inline-block bg-gradient-to-r from-green-500 to-green-600 text-white text-base font-bold px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transition-shadow"
                   >
                     {{ species }}
                   </span>
                 </div>
-                
+
                 <div v-if="file.detectionCount === 0 || (file.detectedSpecies && file.detectedSpecies.length === 0)" class="text-base text-gray-600 italic bg-gray-50 p-4 rounded-lg mt-4">
                   No animals detected in this image
                 </div>
@@ -176,11 +176,16 @@ const selectedLocationId = ref<string>('')
 // Fetch available camera locations on mount
 onMounted(async () => {
   try {
-    const response = await fetch(`${API_BASE_URL}/locations`)
+    // Use locations endpoint with wide range to get all locations
+    const params = new URLSearchParams({
+      latitude: '51.9607',
+      longitude: '9.7085',
+      distance_range: '1000'
+    })
+    const response = await fetch(`${API_BASE_URL}/locations?${params.toString()}`)
     if (response.ok) {
       const data = await response.json()
-      // Handle both response formats: { locations: [...] } or [...]
-      cameraLocations.value = data.locations || data
+      cameraLocations.value = data.locations || []
     }
   } catch (error) {
     console.error('Failed to fetch camera locations:', error)

@@ -13,7 +13,6 @@ from api.images.images_controller import (
 )
 from api.locations.locations_controller import router as locations_router
 from api.root.root_controller import router as root_router
-from api.spottings.spottings_controller import router as spottings_router
 from api.statistics.statistics_controller import router as statistics_router
 from api.user_detections.user_detections_controller import (
     router as user_detections_router,
@@ -32,10 +31,9 @@ app = FastAPI(
 
     ## Features
 
-    * **Location Management**: Create and retrieve camera locations with GPS coordinates
+    * **Location Management**: Create and retrieve camera locations with GPS coordinates, search within geographic and time ranges
     * **Image Upload**: Upload images to specific locations with automatic animal detection
     * **Detection Results**: Retrieve images with detected animals, species, and bounding boxes
-    * **Spotting Search**: Search for images within geographic and time ranges
     * **Wikipedia Integration**: Fetch Wikipedia articles for animal species
 
     ## API Documentation
@@ -62,10 +60,6 @@ app = FastAPI(
         {
             "name": "images",
             "description": "Operations for uploading and retrieving images with animal detections.",
-        },
-        {
-            "name": "spottings",
-            "description": "Search for images within geographic and time ranges.",
         },
         {
             "name": "user-detections",
@@ -95,7 +89,7 @@ app.add_middleware(
 # This ensures FastAPI uses X-Forwarded-Proto for scheme detection
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"]  # Adjust to your specific domains in production
+    allowed_hosts=["*"],  # Adjust to your specific domains in production
 )
 
 # Include routers
@@ -104,7 +98,6 @@ app.include_router(images_router, prefix="/images", tags=["images"])
 app.include_router(
     image_upload_router, prefix="/locations", tags=["images"]
 )  # For /locations/{id}/image endpoint
-app.include_router(spottings_router, prefix="/spottings", tags=["spottings"])
 app.include_router(statistics_router, prefix="/statistics", tags=["statistics"])
 app.include_router(
     user_detections_router, prefix="/user-detections", tags=["user-detections"]

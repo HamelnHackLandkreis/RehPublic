@@ -18,7 +18,7 @@
       <!-- Map Section -->
       <div class="bg-white p-8 md:p-5 rounded-xl shadow-sm border border-gray-200 mb-6">
         <div class="relative h-[30vh] min-h-[250px] mb-4 rounded-xl overflow-hidden border-2 border-gray-300">
-          <WildlifeMap 
+          <WildlifeMap
             v-if="location"
             ref="mapRef"
             height="100%"
@@ -122,8 +122,8 @@
               <div v-for="image in location.images" :key="image.image_id" class="flex flex-col gap-3">
                 <div @click="() => router.push(`/match/${image.image_id}`)" class="group block relative rounded-lg overflow-hidden border-2 border-transparent transition-all hover:border-blue-500 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
                   <div class="relative w-full aspect-[4/3] overflow-hidden bg-gray-100">
-                    <img 
-                      :src="`${apiUrl}/images/${image.image_id}/base64`" 
+                    <img
+                      :src="`${apiUrl}/images/${image.image_id}/base64`"
                       :alt="`Image from ${new Date(image.upload_timestamp).toLocaleString()}`"
                       class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                       @error="handleImageError"
@@ -139,7 +139,7 @@
                 <div class="flex justify-between items-center gap-2">
                   <small class="text-xs text-gray-500">{{ new Date(image.upload_timestamp).toLocaleString() }}</small>
                   <div class="flex gap-2">
-                    <div 
+                    <div
                       v-if="image.detections && image.detections.length > 0"
                       @click="() => router.push(`/match/${image.image_id}`)"
                       class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold transition-opacity hover:opacity-85 cursor-pointer"
@@ -162,7 +162,7 @@
           <!-- Drop Zone -->
           <div
             class="flex-shrink-0 bg-gray-50 border-2 border-dashed rounded-xl py-6 px-8 text-center cursor-pointer transition-all duration-300 mb-6"
-            :class="{ 
+            :class="{
               'border-gray-400 bg-gray-100': isDragging,
               'hover:border-gray-400 hover:bg-gray-100': !isDragging
             }"
@@ -228,18 +228,18 @@
                     <div class="h-2 bg-gray-200 rounded-full overflow-hidden mb-4">
                       <div class="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-300" :style="{ width: file.progress + '%' }"></div>
                     </div>
-                    
+
                     <!-- Detected Species -->
                     <div v-if="file.detectedSpecies && file.detectedSpecies.length > 0" class="flex flex-wrap gap-3 mt-4">
-                      <span 
-                        v-for="(species, idx) in file.detectedSpecies" 
+                      <span
+                        v-for="(species, idx) in file.detectedSpecies"
                         :key="idx"
                         class="inline-block bg-gradient-to-r from-green-500 to-green-600 text-white text-base font-bold px-5 py-2.5 rounded-lg shadow-md hover:shadow-lg transition-shadow"
                       >
                         {{ species }}
                       </span>
                     </div>
-                    
+
                     <div v-if="file.detectionCount === 0 || (file.detectedSpecies && file.detectedSpecies.length === 0)" class="text-base text-gray-600 italic bg-gray-50 p-4 rounded-lg mt-4">
                       No animals detected in this image
                     </div>
@@ -353,22 +353,22 @@ const speciesBreakdown = computed(() => {
   // Use statistics from API if available (complete data)
   if (statistics.value.length > 0) {
     const speciesMap = new Map<string, number>()
-    
+
     statistics.value.forEach(stat => {
       stat.species.forEach((s: { name: string; count: number }) => {
         const currentCount = speciesMap.get(s.name) || 0
         speciesMap.set(s.name, currentCount + s.count)
       })
     })
-    
+
     return Array.from(speciesMap.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
   }
-  
+
   // Fallback to calculating from images (limited data)
   const speciesMap = new Map<string, number>()
-  
+
   if (location.value?.images) {
     location.value.images.forEach(img => {
       img.detections?.forEach(detection => {
@@ -377,7 +377,7 @@ const speciesBreakdown = computed(() => {
       })
     })
   }
-  
+
   return Array.from(speciesMap.entries())
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count)
@@ -394,7 +394,7 @@ const fetchCameraData = async () => {
       distance_range: '100000000000'
     })
 
-    const response = await fetch(`${apiUrl}/spottings?${params.toString()}`)
+    const response = await fetch(`${apiUrl}/locations?${params.toString()}`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -417,7 +417,7 @@ const fetchCameraData = async () => {
         location_id: cameraId.value
       })
       const statsResponse = await fetch(`${apiUrl}/statistics?${statsParams.toString()}`)
-      
+
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
         statistics.value = statsData.statistics || []

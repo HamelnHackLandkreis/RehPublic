@@ -51,7 +51,7 @@ def client():
     db = TestSessionLocal()
     try:
         # Delete all records from tables (in correct order due to foreign keys)
-        from api.spottings.spotting_models import Spotting
+        from api.locations.location_models import Spotting
         from api.images.image_models import Image
         from api.locations.location_models import Location
 

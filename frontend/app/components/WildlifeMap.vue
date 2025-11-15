@@ -87,8 +87,8 @@ const createCustomIcon = async (name: string, imageUrl?: string, hasNewImages: b
   const iconHtml = `
     <div class="avatar-marker">
       <div class="${wrapperClass}">
-        <img 
-          src="${imageSrc}" 
+        <img
+          src="${imageSrc}"
           alt="${name}"
           class="avatar-image"
           onerror="this.src='/fallback.JPG'"
@@ -122,7 +122,7 @@ const handleMarkerClick = (markerData: any) => {
   if (props.noMarkerPopup && markerData.location) {
     // In noMarkerPopup mode, emit the location and center the map
     emit('locationSelected', markerData.location)
-    
+
     // Center the map on the clicked location
     if (mapRef.value?.setCenter) {
       mapRef.value.setCenter([markerData.location.latitude, markerData.location.longitude], 15)
@@ -156,8 +156,8 @@ const updateMarkers = async () => {
               const hasDetections = img.detections && img.detections.length > 0
               const imageContent = `
                 <div class="image-container">
-                  <img 
-                    src="${apiUrl}/images/${img.image_id}/base64" 
+                  <img
+                    src="${apiUrl}/images/${img.image_id}/base64"
                     alt="Camera image"
                     class="popup-image"
                     onerror="this.style.display='none'"
@@ -170,7 +170,7 @@ const updateMarkers = async () => {
                   </div>
                 </div>
               `
-              
+
               return `
               <div class="popup-image-wrapper">
                 <a href="#" data-nuxt-link="/match/${img.image_id}" class="image-link nuxt-link">${imageContent}</a>
@@ -251,7 +251,7 @@ const mapCenter = computed((): [number, number] => {
       return [lat, lng]
     }
   }
-  
+
   if (!props.autoCenter || locations.value.length === 0) {
     return [props.defaultLatitude, props.defaultLongitude]
   }
@@ -296,7 +296,7 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
       params.set('time_end', route.query.time_end)
     }
 
-    const spottingsUrl = `${apiUrl}/spottings?${params.toString()}`
+    const spottingsUrl = `${apiUrl}/locations?${params.toString()}`
     const response = await fetch(spottingsUrl)
 
     if (!response.ok) {
@@ -355,7 +355,7 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
     if (!isPollingCall && props.autoCenter && locations.value.length > 1) {
       zoom.value = calculateZoomLevel()
     }
-    
+
     // If lat/lng query params are present, center on that location with appropriate zoom
     if (!isPollingCall && route.query.lat && route.query.lng) {
       const lat = parseFloat(route.query.lat as string)
@@ -415,7 +415,7 @@ const calculateZoomLevel = (): number => {
 
 onMounted(() => {
   fetchLocations()
-  
+
   // Start polling every 15 seconds
   pollingInterval = setInterval(() => {
     fetchLocations(true)

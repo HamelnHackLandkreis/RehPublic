@@ -17,8 +17,8 @@ from api.images.image_models import Image
 from api.processor_integration import ProcessorClient
 
 if TYPE_CHECKING:
-    from api.spottings.spotting_repository import SpottingRepository
-    from api.spottings.spotting_service import SpottingService
+    from api.locations.location_repository import SpottingRepository
+    from api.locations.location_service import SpottingService
 from api.schemas import (
     BoundingBoxResponse,
     DetectionResponse,
@@ -61,7 +61,7 @@ class ImageService:
     def spotting_repository(self) -> SpottingRepository:
         """Lazy load spotting repository to avoid circular imports."""
         if self._spotting_repository is None:
-            from api.spottings.spotting_repository import SpottingRepository
+            from api.locations.location_repository import SpottingRepository
 
             self._spotting_repository = SpottingRepository()
         return self._spotting_repository  # type: ignore[return-value]
@@ -70,7 +70,7 @@ class ImageService:
     def spotting_service(self) -> SpottingService:
         """Lazy load spotting service to avoid circular imports."""
         if self._spotting_service is None:
-            from api.spottings.spotting_service import SpottingService
+            from api.locations.location_service import SpottingService
 
             self._spotting_service = SpottingService(
                 image_service=self,
