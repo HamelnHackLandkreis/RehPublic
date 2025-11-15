@@ -1,0 +1,1 @@
+"""Wildlife Camera API Backend."""

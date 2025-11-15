@@ -4,6 +4,7 @@ FROM python:3.13-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app/src
 ENV MODEL_PATH=/app/models/deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt
 
 # Install system dependencies required for PyTorch and PyTorch Wildlife
@@ -28,8 +29,8 @@ WORKDIR /app
 # Copy dependency files and minimal project structure for installation
 # These files change less frequently than application code
 COPY pyproject.toml uv.lock* README.md ./
-COPY wildlife_processor/__init__.py wildlife_processor/
-COPY api/__init__.py api/
+COPY src/wildlife_processor/__init__.py src/wildlife_processor/
+COPY src/api/__init__.py src/api/
 
 # Install dependencies and project
 # This layer is cached unless dependency files or package structure changes
@@ -56,4 +57,4 @@ EXPOSE 8000
 # Use 0.0.0.0 to make it accessible from outside the container
 # --reload is removed for production
 # --proxy-headers enables X-Forwarded-* header support for HTTPS redirect handling
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--app-dir", "/app/src"]

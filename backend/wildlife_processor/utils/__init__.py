@@ -1,1 +1,0 @@
-"""Utility modules for wildlife camera processor."""
