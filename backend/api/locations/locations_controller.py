@@ -33,7 +33,7 @@ image_service = ImageService()
 
 
 @router.get(
-    "/",
+    "",
     response_model=LocationsResponse,
     status_code=status.HTTP_200_OK,
     tags=["locations"],

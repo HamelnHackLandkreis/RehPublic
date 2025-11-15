@@ -23,7 +23,7 @@ spotting_service = SpottingService()
 
 
 @router.get(
-    "/",
+    "",
     response_model=StatisticsResponse,
     status_code=status.HTTP_200_OK,
     tags=["statistics"],

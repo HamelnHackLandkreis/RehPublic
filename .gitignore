@@ -227,3 +227,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Large AI/ML model files (downloaded at runtime)
+backend/models/*.pt
+backend/models/*.pth
+backend/models/*.onnx
+backend/models/*.h5
+backend/models/*.pb

@@ -26,7 +26,7 @@ user_detection_repository = UserDetectionRepository()
 
 
 @router.post(
-    "/",
+    "",
     response_model=UserDetectionResponse,
     status_code=status.HTTP_201_CREATED,
     tags=["user-detections"],

@@ -17,7 +17,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/",
+    "",
     response_model=SpottingsResponse,
     status_code=status.HTTP_200_OK,
     tags=["spottings"],

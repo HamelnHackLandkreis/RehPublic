@@ -44,6 +44,11 @@ RUN python -c "import PytorchWildlife; print('PyTorch Wildlife installed success
 # Use .dockerignore to exclude unnecessary files (node_modules, __pycache__, etc.)
 COPY . .
 
+# Download the DeepFaune v4 model during build
+# This ensures the model is available when the container starts
+RUN python download_deepfaune_model.py || \
+    (echo "WARNING: Failed to download model. It will be attempted at runtime." && exit 0)
+
 # Expose the port the app runs on
 EXPOSE 8000
 
