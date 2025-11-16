@@ -221,7 +221,7 @@ class ImageService:
         return content_type
 
     def process_image(self, db: Session, image: Image) -> List[Dict]:
-        """Trigger wildlife processor on image.
+        """Trigger wildlife processor on image synchronously.
 
         Args:
             db: Database session
@@ -242,6 +242,7 @@ class ImageService:
         location_id: UUID,
         file_bytes: bytes,
         upload_timestamp: Optional[datetime] = None,
+        async_processing: bool = True,
     ) -> ImageUploadResponse:
         """Upload and process an image.
 
@@ -250,6 +251,7 @@ class ImageService:
             location_id: UUID of the location
             file_bytes: Raw image bytes
             upload_timestamp: Optional timestamp to use for upload
+            async_processing: If True, process image asynchronously with Celery (default: True)
 
         Returns:
             ImageUploadResponse with upload results
@@ -263,7 +265,30 @@ class ImageService:
 
         image = self.save_image(db, location_id, file_bytes, upload_timestamp)
 
-        logger.info(f"Processing image {image.id} for location {location.name}")
+        if async_processing:
+            logger.info(
+                f"Queuing async processing for image {image.id} at location {location.name}"
+            )
+            # Use adapter to dispatch async task
+            task_id = self.processor_client.process_image_async(
+                image_id=UUID(image.id),  # type: ignore[arg-type]
+                image_base64=image.base64_data,  # type: ignore[arg-type]
+                model_region="europe",
+                timestamp=upload_timestamp,
+            )
+
+            return ImageUploadResponse(
+                image_id=UUID(image.id),  # type: ignore[arg-type]
+                location_id=UUID(image.location_id),  # type: ignore[arg-type]
+                upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
+                detections_count=0,
+                detected_species=[],
+                task_id=task_id,
+            )
+
+        logger.info(
+            f"Processing image {image.id} synchronously for location {location.name}"
+        )
         detections = self.process_image(db, image)
         if detections:
             self.spotting_service.save_detections(

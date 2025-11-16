@@ -10,7 +10,7 @@ services:
       - "9001:80"
     restart: always
     container_name: rehpublic-frontend
-  
+
   # --- Load Balancer Service (New) ---
   loadbalancer:
     image: nginx:stable-alpine
@@ -20,8 +20,8 @@ services:
       # This exposes port 9002 on the host, which will distribute traffic to the backends
       - "9002:80"
     volumes:
-      # FIX: Mount the custom NGINX configuration to the main config file path 
-      # (/etc/nginx/nginx.conf) to avoid permission conflicts 
+      # FIX: Mount the custom NGINX configuration to the main config file path
+      # (/etc/nginx/nginx.conf) to avoid permission conflicts
       # with the default includes path (/etc/nginx/conf.d/default.conf).
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     # Ensure the load balancer starts only after the backends are running
@@ -39,33 +39,45 @@ services:
     # We do not expose 8000 here as only the load balancer needs to reach it
     container_name: rehpublic-backend-1
     restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     # Wait for the database to be ready before starting
     depends_on:
       - db
+      - redis
 
   backend-2:
     build:
       context: ./backend
     container_name: rehpublic-backend-2
     restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - db
+      - redis
 
   backend-3:
     build:
       context: ./backend
     container_name: rehpublic-backend-3
     restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - db
+      - redis
 
   backend-4:
     build:
       context: ./backend
     container_name: rehpublic-backend-4
     restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379/0
     depends_on:
       - db
+      - redis
 
   # --- Database Service (Unchanged) ---
   db:
@@ -80,5 +92,32 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # --- Redis Service (New) ---
+  redis:
+    image: redis:7-alpine
+    container_name: rehpublic-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # --- Celery Worker Service (New) ---
+  celery-worker:
+    build:
+      context: ./backend
+    container_name: rehpublic-celery-worker
+    command: celery -A src.celery_app worker --loglevel=info --concurrency=2
+    restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./backend/models:/app/models
+
 volumes:
   postgres_data:
+  redis_data:

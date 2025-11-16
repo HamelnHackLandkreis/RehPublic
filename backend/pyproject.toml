@@ -32,6 +32,8 @@ dependencies = [
     "python-multipart>=0.0.6",
     "httpx>=0.25.0",
     "huggingface-hub>=1.1.2",
+    "celery>=5.3.0",
+    "redis>=5.0.0",
 ]
 
 [project.optional-dependencies]

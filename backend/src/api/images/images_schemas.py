@@ -53,6 +53,7 @@ class ImageUploadResponse(BaseModel):
     upload_timestamp: datetime
     detections_count: int
     detected_species: List[str]
+    task_id: str | None = None
 
 
 class ImageBase64Response(BaseModel):
