@@ -92,8 +92,9 @@ class DeepfauneV4Classifier(TIMM_BaseClassifierInference):
 
         # Convert class names to dict format BEFORE calling super().__init__()
         # The base class uses len(self.CLASS_NAMES) to determine num_classes
+        # Use integer keys (not strings) as the base class accesses with integer indices
         class_names_list = self.CLASS_NAMES[class_name_lang]
-        self.CLASS_NAMES = {str(i): [c] for i, c in enumerate(class_names_list)}
+        self.CLASS_NAMES = {i: [c] for i, c in enumerate(class_names_list)}  # type: ignore
 
         # Verify we have 38 classes
         if len(self.CLASS_NAMES) != 38:
