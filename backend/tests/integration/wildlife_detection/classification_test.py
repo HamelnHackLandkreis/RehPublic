@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from api.processor_integration import ProcessorClient
+from src.adapters.processor_adapter import ProcessorClient
 
 
 def test_classify_wildlife_image():

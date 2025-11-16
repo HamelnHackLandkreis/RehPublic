@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from api.processor_integration import ProcessorClient
+from src.adapters.processor_adapter import ProcessorClient
 
 
 @pytest.fixture
