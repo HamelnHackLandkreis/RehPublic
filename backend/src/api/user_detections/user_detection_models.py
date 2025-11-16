@@ -8,7 +8,7 @@ from sqlalchemy import Column, DateTime, ForeignKey, Index, String
 from api.models import Base
 
 
-class UserDetection(Base):  # type: ignore[valid-type,misc]
+class UserDetection(Base):
     """UserDetection model representing manual user identifications of animals in images."""
 
     __tablename__ = "user_detections"

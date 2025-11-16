@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.adapters.processor_adapter import ProcessorClient
+from src.adapters.image_processor_adapter import ProcessorClient
 
 
 @pytest.fixture
@@ -34,38 +34,27 @@ def test_roe_deer_classification(processor_client):
         image_bytes = f.read()
 
     # Process image
-    detections = processor_client.process_image_data(
-        image_bytes=image_bytes, location_name="Test Location"
-    )
+    detections = processor_client.process_image_data(image_bytes=image_bytes)
 
     # Assert we got detections
     assert len(detections) > 0, "No detections found in image"
 
     # Assert roe deer was detected
     species_detected = [d["species"] for d in detections]
-    assert "roe_deer" in species_detected, f"Expected roe_deer, got: {species_detected}"
+    assert "roe deer" in species_detected, f"Expected roe deer, got: {species_detected}"
 
     # Get the roe deer detection
-    roe_deer_detection = next(d for d in detections if d["species"] == "roe_deer")
+    roe_deer_detection = next(d for d in detections if d["species"] == "roe deer")
 
     # Assert confidence is reasonable (above 0.5)
     assert roe_deer_detection["confidence"] > 0.5, (
         f"Low confidence: {roe_deer_detection['confidence']}"
     )
 
-    # Assert bounding box exists and has valid dimensions
     bbox = roe_deer_detection["bounding_box"]
     assert bbox["width"] > 0, "Invalid bounding box width"
     assert bbox["height"] > 0, "Invalid bounding box height"
     assert bbox["x"] >= 0, "Invalid bounding box x coordinate"
     assert bbox["y"] >= 0, "Invalid bounding box y coordinate"
 
-    # Assert classification model is set
     assert roe_deer_detection["classification_model"] is not None
-
-    # Log detection details for debugging
-    print("\nDetection results:")
-    print(f"  Species: {roe_deer_detection['species']}")
-    print(f"  Confidence: {roe_deer_detection['confidence']:.3f}")
-    print(f"  Bounding box: {bbox}")
-    print(f"  Model: {roe_deer_detection['classification_model']}")

@@ -146,11 +146,11 @@ def create_location(
             description=location_data.description,
         )
         return LocationResponse(
-            id=UUID(location.id),
-            name=location.name,
-            longitude=location.longitude,
-            latitude=location.latitude,
-            description=location.description,
+            id=UUID(str(location.id)),
+            name=str(location.name),
+            longitude=float(location.longitude),
+            latitude=float(location.latitude),
+            description=str(location.description) if location.description else None,
             total_unique_species=0,
             total_spottings=0,
             images=[],
@@ -239,9 +239,9 @@ def get_location(location_id: UUID, db: Session = Depends(get_db)) -> LocationRe
 
         image_responses.append(
             SpottingImageResponse(
-                image_id=UUID(image.id),
-                location_id=UUID(image.location_id),
-                upload_timestamp=image.upload_timestamp,
+                image_id=UUID(str(image.id)),
+                location_id=UUID(str(image.location_id)),
+                upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
                 detections=detections,
             )
         )
@@ -252,11 +252,11 @@ def get_location(location_id: UUID, db: Session = Depends(get_db)) -> LocationRe
     )
 
     return LocationResponse(
-        id=UUID(location.id),
-        name=location.name,
-        longitude=location.longitude,
-        latitude=location.latitude,
-        description=location.description,
+        id=UUID(str(location.id)),
+        name=str(location.name),
+        longitude=float(location.longitude),
+        latitude=float(location.latitude),
+        description=str(location.description) if location.description else None,
         total_unique_species=total_unique_species,
         total_spottings=total_spottings,
         images=image_responses,

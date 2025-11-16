@@ -107,7 +107,7 @@ app.include_router(root_router, tags=["root"])
 
 
 @app.on_event("startup")
-def startup_event():
+def startup_event() -> None:
     """Initialize database on startup."""
     logger.info("Initializing database...")
     init_db()

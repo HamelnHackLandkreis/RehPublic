@@ -43,7 +43,7 @@ async def upload_image(
     ),
     db: Session = Depends(get_db),
     image_service: ImageService = Depends(ImageService.factory),
-):
+) -> ImageUploadResponse:
     """Upload an image to a specific location and process it for animal detection.
 
     This endpoint:
@@ -98,7 +98,7 @@ def get_image(
     image_id: UUID,
     db: Session = Depends(get_db),
     image_service: ImageService = Depends(ImageService.factory),
-):
+) -> ImageDetailResponse:
     """Get image with detection data.
 
     Returns the base64-encoded image along with all detected animals
@@ -134,7 +134,7 @@ def get_image_base64(
     image_id: UUID,
     db: Session = Depends(get_db),
     image_service: ImageService = Depends(ImageService.factory),
-):
+) -> Response:
     """Get image directly by image ID for use in img src tags.
 
     Returns the image as raw bytes with proper content-type headers.

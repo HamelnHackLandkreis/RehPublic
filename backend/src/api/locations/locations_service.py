@@ -321,7 +321,7 @@ class SpottingService:
                     images_with_animals_count,
                 ) = self.repository.get_location_statistics(
                     db,
-                    location_id,  # type: ignore[arg-type]
+                    str(location_id),
                     species_filter=species_filter,
                     time_start=time_start,
                     time_end=time_end,
@@ -347,7 +347,7 @@ class SpottingService:
             global_total_spottings_count,
         ) = self.repository.get_global_statistics(
             db,
-            location_ids_list,  # type: ignore[arg-type]
+            [str(loc_id) for loc_id in location_ids_list],
             species_filter=species_filter,
             time_start=time_start,
             time_end=time_end,
@@ -424,15 +424,17 @@ class SpottingService:
 
         aggregated_spottings = []
         for result in results:
-            location_id = result.id  # type: ignore[assignment]
+            location_id = result.id
 
             animals = self.repository.get_unique_species_by_location(
                 db,
-                UUID(location_id),  # type: ignore[arg-type]
+                UUID(str(location_id)),
             )
 
             most_recent_images = self.image_repository.get_by_location_id(
-                db, UUID(location_id), limit=1
+                db,
+                UUID(str(location_id)),
+                limit=1,
             )
 
             spotting_data = {

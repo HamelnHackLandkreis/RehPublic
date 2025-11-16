@@ -18,7 +18,7 @@ from sqlalchemy.orm import relationship
 from api.models import Base
 
 
-class Location(Base):  # type: ignore[valid-type,misc]
+class Location(Base):
     """Location model representing a wildlife camera location."""
 
     __tablename__ = "locations"
@@ -36,7 +36,7 @@ class Location(Base):  # type: ignore[valid-type,misc]
     )
 
 
-class Spotting(Base):  # type: ignore[valid-type,misc]
+class Spotting(Base):
     """Spotting model representing a detected animal in an image."""
 
     __tablename__ = "spottings"

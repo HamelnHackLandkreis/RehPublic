@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class DirectoryScanner:
     """Scans directories for wildlife camera images and extracts metadata."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize directory scanner."""
         self.failed_files: List[str] = []
         self.skipped_files: List[str] = []
@@ -334,13 +334,13 @@ class DirectoryScanner:
                         if tag == "DateTime":
                             # EXIF DateTime format: "YYYY:MM:DD HH:MM:SS"
                             try:
-                                timestamp = datetime.strptime(
+                                timestamp_parsed: datetime = datetime.strptime(
                                     value, "%Y:%m:%d %H:%M:%S"
                                 )
                                 logger.debug(
-                                    f"Extracted timestamp from EXIF: {timestamp}"
+                                    f"Extracted timestamp from EXIF: {timestamp_parsed}"
                                 )
-                                return timestamp
+                                return timestamp_parsed
                             except ValueError:
                                 pass
         except Exception as e:

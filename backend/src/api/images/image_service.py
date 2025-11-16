@@ -14,11 +14,11 @@ from sqlalchemy.orm import Session
 from api.images.image_repository import ImageRepository
 from api.locations.location_repository import LocationRepository
 from api.images.image_models import Image
-from adapters.processor_adapter import ProcessorClient
+from adapters.image_processor_adapter import ProcessorClient
 
 if TYPE_CHECKING:
     from api.locations.location_repository import SpottingRepository
-    from api.locations.location_service import SpottingService
+    from api.locations.locations_service import SpottingService
 from api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
@@ -70,7 +70,7 @@ class ImageService:
     def spotting_service(self) -> SpottingService:
         """Lazy load spotting service to avoid circular imports."""
         if self._spotting_service is None:
-            from api.locations.location_service import SpottingService
+            from api.locations.locations_service import SpottingService
 
             self._spotting_service = SpottingService(
                 image_service=self,
@@ -220,26 +220,19 @@ class ImageService:
 
         return content_type
 
-    def process_image(
-        self, db: Session, image: Image, location_name: str
-    ) -> List[Dict]:
+    def process_image(self, db: Session, image: Image) -> List[Dict]:
         """Trigger wildlife processor on image.
 
         Args:
             db: Database session
             image: Image object to process
-            location_name: Name of the location
 
         Returns:
             List of detection dictionaries
         """
         image_bytes = base64.b64decode(image.base64_data)
 
-        detections = self.processor_client.process_image_data(
-            image_bytes=image_bytes,
-            location_name=location_name,
-            timestamp=image.upload_timestamp,  # type: ignore[arg-type]
-        )
+        detections = self.processor_client.process_image_data(image_bytes=image_bytes)
 
         return detections
 
@@ -270,8 +263,8 @@ class ImageService:
 
         image = self.save_image(db, location_id, file_bytes, upload_timestamp)
 
-        logger.info(f"Processing image {image.id} for location {location.name}")  # type: ignore[str-bytes-safe, misc]
-        detections = self.process_image(db, image, location.name)  # type: ignore[arg-type, misc]
+        logger.info(f"Processing image {image.id} for location {location.name}")
+        detections = self.process_image(db, image)
         if detections:
             self.spotting_service.save_detections(
                 db,
@@ -361,11 +354,11 @@ class ImageService:
             distance = self.haversine_distance(
                 latitude,
                 longitude,
-                location.latitude,
-                location.longitude,  # type: ignore[arg-type]
+                float(location.latitude),
+                float(location.longitude),
             )
             if distance <= distance_range:
-                locations_in_range.append(location.id)  # type: ignore[arg-type]
+                locations_in_range.append(location.id)
 
         if not locations_in_range:
             return []
@@ -374,7 +367,7 @@ class ImageService:
         for location_id in locations_in_range:
             location_images = self.repository.get_by_location_id(
                 db=db,
-                location_id=UUID(location_id),  # type: ignore[arg-type]
+                location_id=UUID(str(location_id)),
                 time_start=time_start,
                 time_end=time_end,
                 limit=limit_per_location,

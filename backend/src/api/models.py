@@ -2,4 +2,4 @@
 
 from sqlalchemy.orm import declarative_base
 
-Base = declarative_base()  # type: ignore[valid-type,misc]
+Base = declarative_base()

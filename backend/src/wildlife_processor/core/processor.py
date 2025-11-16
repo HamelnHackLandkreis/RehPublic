@@ -3,10 +3,8 @@
 import logging
 import time
 from collections import defaultdict
-from pathlib import Path
 from typing import Dict, List, Optional
 
-from rich.progress import Progress
 
 from wildlife_processor.core.data_models import (
     DetectionResult,
@@ -15,7 +13,6 @@ from wildlife_processor.core.data_models import (
 )
 from wildlife_processor.core.directory_scanner import DirectoryScanner
 from wildlife_processor.core.models import ModelManager
-from wildlife_processor.postprocessing.location_enricher import LocationEnricher
 from wildlife_processor.utils.image_utils import (
     load_image,
     preprocess_image_for_pytorch_wildlife,
@@ -40,84 +37,9 @@ class WildlifeProcessor:
         # Initialize components
         self.model_manager = ModelManager(model_region)
         self.directory_scanner = DirectoryScanner()
-        self.location_enricher = LocationEnricher()
 
         # Processing statistics
         self.failed_images: List[str] = []
-        self.processing_times: List[float] = []
-
-    def process_directory(
-        self, directory_path: Path, show_progress: bool = True
-    ) -> ProcessingResults:
-        """Process a directory of wildlife camera images.
-
-        Args:
-            directory_path: Path to directory containing images
-            show_progress: Whether to show progress indicators
-
-        Returns:
-            ProcessingResults object with all detection results and metadata
-        """
-        start_time = time.time()
-
-        logger.info(f"Starting processing of directory: {directory_path}")
-
-        # Validate models before processing
-        if not self.model_manager.validate_models():
-            raise RuntimeError(
-                "Model validation failed. Please check PyTorch Wildlife installation."
-            )
-
-        # Scan directory for images
-        logger.info("Scanning directory for images...")
-        image_metadata_list = self.directory_scanner.scan_directory(directory_path)
-
-        if not image_metadata_list:
-            logger.warning("No valid images found in directory")
-            return self._create_empty_results()
-
-        logger.info(f"Found {len(image_metadata_list)} images to process")
-
-        # Process images with progress tracking
-        detection_results = []
-        self.failed_images = []
-        self.processing_times = []
-
-        if show_progress:
-            with Progress() as progress:
-                task = progress.add_task(
-                    "Processing images...", total=len(image_metadata_list)
-                )
-
-                for metadata in image_metadata_list:
-                    result = self._process_single_image_with_timeout(metadata)
-                    if result:
-                        detection_results.append(result)
-
-                    progress.update(task, advance=1)
-        else:
-            for metadata in image_metadata_list:
-                result = self._process_single_image_with_timeout(metadata)
-                if result:
-                    detection_results.append(result)
-
-        # Enrich results with location metadata
-        logger.info("Enriching results with location metadata...")
-        enriched_results = self.location_enricher.enrich_results(detection_results)
-
-        # Compile final results
-        total_time = time.time() - start_time
-        results = self._compile_results(
-            enriched_results, len(image_metadata_list), total_time
-        )
-
-        logger.info(
-            f"Processing completed in {total_time:.2f}s. "
-            f"Successful: {results.successful_detections}, "
-            f"Failed: {len(results.failed_images)}"
-        )
-
-        return results
 
     def _process_single_image_with_timeout(
         self, metadata: ImageMetadata
@@ -144,13 +66,7 @@ class WildlifeProcessor:
             processed_image = preprocess_image_for_pytorch_wildlife(image)
 
             # Run detection and classification with timeout check
-            # Convert timestamp to string for species enhancement
-            timestamp_str = (
-                metadata.timestamp.isoformat() if metadata.timestamp else None
-            )
-            detections, processing_time = self.model_manager.process_image(
-                processed_image, timestamp_str
-            )
+            detections = self.model_manager.process_image(processed_image)
 
             total_time = time.time() - start_time
 
@@ -168,13 +84,7 @@ class WildlifeProcessor:
                 camera_reference=metadata.camera_reference,
                 timestamp=metadata.timestamp,
                 detections=detections,
-                processing_time=total_time,
                 model_version=self.model_manager.get_model_info().detection_model,
-            )
-
-            self.processing_times.append(total_time)
-            logger.debug(
-                f"Processed {metadata.file_path} in {total_time:.2f}s, found {len(detections)} detections"
             )
 
             return result
@@ -247,18 +157,6 @@ class WildlifeProcessor:
         Returns:
             Dictionary with processing statistics
         """
-        if not self.processing_times:
-            return {
-                "average_time_per_image": 0.0,
-                "min_time": 0.0,
-                "max_time": 0.0,
-                "total_images_processed": 0,
-            }
-
         return {
-            "average_time_per_image": sum(self.processing_times)
-            / len(self.processing_times),
-            "min_time": min(self.processing_times),
-            "max_time": max(self.processing_times),
-            "total_images_processed": len(self.processing_times),
+            "total_images_processed": 0,
         }

@@ -63,7 +63,14 @@ def test_upload_image_to_location(
     assert location["total_unique_species"] > 0
     assert location["total_spottings"] > 0
 
-    response = client.get("/locations")
+    response = client.get(
+        "/locations",
+        params={
+            "latitude": location_data["latitude"],
+            "longitude": location_data["longitude"],
+            "distance_range": 10.0,
+        },
+    )
     assert response.status_code == 200
     locations_data: Dict[str, Any] = response.json()
     assert "locations" in locations_data
@@ -122,8 +129,8 @@ def test_get_image_with_detections(
     species_detected: list[str] = [
         detection["species"] for detection in image_data["detections"]
     ]
-    assert "red_deer" in species_detected, (
-        f"Expected red_deer to be detected, but found: {species_detected}"
+    assert "roe deer" in species_detected, (
+        f"Expected roe deer to be detected, but found: {species_detected}"
     )
 
 

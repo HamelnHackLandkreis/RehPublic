@@ -9,7 +9,7 @@ from sqlalchemy.orm import relationship
 from api.models import Base
 
 
-class Image(Base):  # type: ignore[valid-type,misc]
+class Image(Base):
     """Image model representing an uploaded wildlife camera image."""
 
     __tablename__ = "images"
