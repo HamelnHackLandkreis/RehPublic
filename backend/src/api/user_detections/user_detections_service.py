@@ -6,8 +6,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from api.user_detections.user_detection_models import UserDetection
-from api.user_detections.user_detection_repository import UserDetectionRepository
+from src.api.user_detections.user_detection_models import UserDetection
+from src.api.user_detections.user_detection_repository import UserDetectionRepository
 
 logger = logging.getLogger(__name__)
 

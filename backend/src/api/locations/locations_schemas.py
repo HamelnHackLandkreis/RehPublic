@@ -6,7 +6,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-from api.images.images_schemas import BoundingBoxResponse, SpottingImageResponse
+from src.api.images.images_schemas import BoundingBoxResponse, SpottingImageResponse
 
 if TYPE_CHECKING:
     pass

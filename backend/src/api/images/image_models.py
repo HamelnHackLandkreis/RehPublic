@@ -6,7 +6,7 @@ from uuid import uuid4
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import relationship
 
-from api.models import Base
+from src.api.models import Base
 
 
 class Image(Base):

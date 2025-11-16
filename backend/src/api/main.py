@@ -6,18 +6,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from api.database import init_db
-from api.images.images_controller import (
+from src.api.database import init_db
+from src.api.images.images_controller import (
     router as images_router,
     upload_router as image_upload_router,
 )
-from api.locations.locations_controller import router as locations_router
-from api.root.root_controller import router as root_router
-from api.statistics.statistics_controller import router as statistics_router
-from api.user_detections.user_detections_controller import (
+from src.api.locations.locations_controller import router as locations_router
+from src.api.root.root_controller import router as root_router
+from src.api.statistics.statistics_controller import router as statistics_router
+from src.api.user_detections.user_detections_controller import (
     router as user_detections_router,
 )
-from api.wikipedia.wikipedia_controller import router as wikipedia_router
+from src.api.wikipedia.wikipedia_controller import router as wikipedia_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

@@ -10,18 +10,18 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from api.locations.location_models import Location
-from api.locations.location_repository import LocationRepository, SpottingRepository
+from src.api.locations.location_models import Location
+from src.api.locations.location_repository import LocationRepository, SpottingRepository
 
 if TYPE_CHECKING:
-    from api.images.image_repository import ImageRepository
-    from api.images.image_service import ImageService
-from api.images.images_schemas import (
+    from src.api.images.image_repository import ImageRepository
+    from src.api.images.image_service import ImageService
+from src.api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
     SpottingImageResponse,
 )
-from api.locations.locations_schemas import (
+from src.api.locations.locations_schemas import (
     AnimalSpottingResponse,
     AnimalSpottingsResponse,
     LocationWithImagesResponse,
@@ -164,7 +164,7 @@ class SpottingService:
     def image_service(self) -> ImageService:
         """Lazy load image service to avoid circular imports."""
         if self._image_service is None:
-            from api.images.image_service import ImageService
+            from src.api.images.image_service import ImageService
 
             self._image_service = ImageService(
                 spotting_service=self,
@@ -176,7 +176,7 @@ class SpottingService:
     def image_repository(self) -> ImageRepository:
         """Lazy load image repository to avoid circular imports."""
         if self._image_repository is None:
-            from api.images.image_repository import ImageRepository
+            from src.api.images.image_repository import ImageRepository
 
             self._image_repository = ImageRepository()
         return self._image_repository  # type: ignore[return-value]

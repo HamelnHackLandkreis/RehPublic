@@ -6,14 +6,14 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from api.database import get_db
-from api.images.image_service import ImageService
-from api.user_detections.user_detections_schemas import (
+from src.api.database import get_db
+from src.api.images.image_service import ImageService
+from src.api.user_detections.user_detections_schemas import (
     UserDetectionCreate,
     UserDetectionResponse,
     UserDetectionStatsResponse,
 )
-from api.user_detections.user_detection_repository import UserDetectionRepository
+from src.api.user_detections.user_detection_repository import UserDetectionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +146,7 @@ def get_user_detection_stats(
     try:
         stats = user_detection_repository.get_stats_for_image(db, image_id)
 
-        from api.statistics.statistics_schemas import SpeciesCountResponse
+        from src.api.statistics.statistics_schemas import SpeciesCountResponse
 
         return UserDetectionStatsResponse(
             image_id=image_id,

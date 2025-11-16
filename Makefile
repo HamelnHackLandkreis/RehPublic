@@ -5,11 +5,11 @@ backend-sync:
 
 backend-run:
 	cd backend && uv run python download_deepfaune_model.py
-	cd backend && uv run uvicorn api.main:app --reload --port 8000
+	cd backend && PYTHONPATH=src uv run uvicorn api.main:app --reload --port 8000
 
 backend-run-workers:
 	cd backend && uv run python download_deepfaune_model.py
-	cd backend && uv run uvicorn api.main:app --port 8000 --workers 4
+	cd backend && PYTHONPATH=src uv run uvicorn api.main:app --port 8000 --workers 4
 
 backend-test:
 	cd backend && uv run pytest tests/ -v
@@ -48,5 +48,5 @@ run: backend-sync frontend-prep
 	@echo "Starting backend and frontend..."
 	@echo "Backend: http://127.0.0.1:8000"
 	@echo "Frontend: Check terminal output for URL"
-	@cd backend && uv run python download_deepfaune_model.py && uv run uvicorn api.main:app --reload --port 8000 & \
+	@cd backend && uv run python download_deepfaune_model.py && PYTHONPATH=src uv run uvicorn api.main:app --reload --port 8000 & \
 	cd frontend && npm run dev

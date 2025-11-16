@@ -7,8 +7,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session, selectinload
 
-from api.images.image_models import Image
-from api.locations.location_models import Location, Spotting
+from src.api.images.image_models import Image
+from src.api.locations.location_models import Location, Spotting
 
 logger = logging.getLogger(__name__)
 

@@ -6,12 +6,12 @@ from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
-from api.models import Base
+from src.api.models import Base
 
 # Import all models to ensure they're registered with Base.metadata
-from api.images.image_models import Image  # noqa: F401
-from api.locations.location_models import Location, Spotting  # noqa: F401
-from api.user_detections.user_detection_models import UserDetection  # noqa: F401
+from src.api.images.image_models import Image  # noqa: F401
+from src.api.locations.location_models import Location, Spotting  # noqa: F401
+from src.api.user_detections.user_detection_models import UserDetection  # noqa: F401
 
 # PostgreSQL database URL
 # Format: postgresql://user:password@host:port/database

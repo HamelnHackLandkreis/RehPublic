@@ -8,17 +8,17 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session, selectinload
 
-from api.database import get_db
-from api.images.image_service import ImageService
-from api.locations.location_repository import LocationRepository
-from api.locations.locations_service import SpottingService
-from api.images.image_models import Image
-from api.images.images_schemas import (
+from src.api.database import get_db
+from src.api.images.image_service import ImageService
+from src.api.locations.location_repository import LocationRepository
+from src.api.locations.locations_service import SpottingService
+from src.api.images.image_models import Image
+from src.api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
     SpottingImageResponse,
 )
-from api.locations.locations_schemas import (
+from src.api.locations.locations_schemas import (
     LocationCreate,
     LocationResponse,
     SpottingsResponse,

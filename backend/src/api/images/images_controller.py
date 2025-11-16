@@ -17,9 +17,9 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
-from api.database import get_db
-from api.images.image_service import ImageService
-from api.images.images_schemas import ImageDetailResponse, ImageUploadResponse
+from src.api.database import get_db
+from src.api.images.image_service import ImageService
+from src.api.images.images_schemas import ImageDetailResponse, ImageUploadResponse
 
 logger = logging.getLogger(__name__)
 

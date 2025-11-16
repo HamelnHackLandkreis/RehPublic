@@ -5,11 +5,11 @@ from typing import List
 
 from fastapi import APIRouter, HTTPException, status
 
-from api.wikipedia.wikipedia_schemas import (
+from src.api.wikipedia.wikipedia_schemas import (
     WikipediaArticleResponse,
     WikipediaArticlesRequest,
 )
-from api.wikipedia.wikipedia_service import WikipediaService
+from src.api.wikipedia.wikipedia_service import WikipediaService
 
 logger = logging.getLogger(__name__)
 

@@ -6,9 +6,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
 
-from api.models import Base
-from api.database import get_db
-from api.main import app
+from src.api.models import Base
+from src.api.database import get_db
+from src.api.main import app
 
 # Set TESTING environment variable to skip production DB initialization
 os.environ["TESTING"] = "1"
@@ -51,9 +51,9 @@ def client():
     db = TestSessionLocal()
     try:
         # Delete all records from tables (in correct order due to foreign keys)
-        from api.locations.location_models import Spotting
-        from api.images.image_models import Image
-        from api.locations.location_models import Location
+        from src.api.locations.location_models import Spotting
+        from src.api.images.image_models import Image
+        from src.api.locations.location_models import Location
 
         db.query(Spotting).delete()
         db.query(Image).delete()

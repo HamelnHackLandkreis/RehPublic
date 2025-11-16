@@ -7,7 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel
 
 if TYPE_CHECKING:
-    from api.statistics.statistics_schemas import SpeciesCountResponse
+    from src.api.statistics.statistics_schemas import SpeciesCountResponse
 
 
 class UserDetectionCreate(BaseModel):

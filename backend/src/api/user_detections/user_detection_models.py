@@ -5,7 +5,7 @@ from uuid import uuid4
 
 from sqlalchemy import Column, DateTime, ForeignKey, Index, String
 
-from api.models import Base
+from src.api.models import Base
 
 
 class UserDetection(Base):

@@ -6,13 +6,13 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from api.database import get_db
-from api.statistics.statistics_schemas import (
+from src.api.database import get_db
+from src.api.statistics.statistics_schemas import (
     SpeciesCountResponse,
     StatisticsResponse,
     TimePeriodStatisticsResponse,
 )
-from api.locations.locations_service import SpottingService
+from src.api.locations.locations_service import SpottingService
 
 logger = logging.getLogger(__name__)
 

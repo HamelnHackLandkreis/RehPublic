@@ -13,7 +13,7 @@ Please import schemas from their respective domain modules:
 import warnings
 
 # Re-export all schemas for backward compatibility
-from api.images.images_schemas import (
+from src.api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
     ImageBase64Response,
@@ -21,7 +21,7 @@ from api.images.images_schemas import (
     ImageUploadResponse,
     SpottingImageResponse,
 )
-from api.locations.locations_schemas import (
+from src.api.locations.locations_schemas import (
     AnimalSpottingResponse,
     AnimalSpottingsResponse,
     LocationCreate,
@@ -31,24 +31,24 @@ from api.locations.locations_schemas import (
     SpottingLocationResponse,
     SpottingsResponse,
 )
-from api.statistics.statistics_schemas import (
+from src.api.statistics.statistics_schemas import (
     SpeciesCountResponse,
     StatisticsResponse,
     TimePeriodStatisticsResponse,
 )
-from api.user_detections.user_detections_schemas import (
+from src.api.user_detections.user_detections_schemas import (
     UserDetectionCreate,
     UserDetectionResponse,
     UserDetectionStatsResponse,
 )
-from api.wikipedia.wikipedia_schemas import (
+from src.api.wikipedia.wikipedia_schemas import (
     WikipediaArticleResponse,
     WikipediaArticlesRequest,
 )
 
 # Emit deprecation warning when this module is imported
 warnings.warn(
-    "Importing from api.schemas is deprecated. "
+    "Importing from src.api.schemas is deprecated. "
     "Please import from domain-specific schema modules instead: "
     "api.images.images_schemas, api.locations.locations_schemas, "
     "api.statistics.statistics_schemas, api.user_detections.user_detections_schemas, "
