@@ -12,7 +12,6 @@ from PIL.Image import Image as ImageType
 
 from wildlife_processor.core.models import ModelManager
 from wildlife_processor.utils.image_utils import preprocess_image_for_pytorch_wildlife
-from src.api.images.images_tasks import process_image_task
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +89,8 @@ class ProcessorClient:
         Returns:
             Celery task ID
         """
+        # avoid cyclic import
+        from src.api.images.images_tasks import process_image_task
 
         timestamp_str = timestamp.isoformat() if timestamp else None
 
