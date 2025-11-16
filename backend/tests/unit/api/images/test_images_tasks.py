@@ -2,13 +2,11 @@
 
 from datetime import datetime
 from typing import Dict, List
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from celery.exceptions import Retry
-
-from src.api.images.images_tasks import process_image_task
 
 
 @pytest.fixture
@@ -69,7 +67,6 @@ class TestProcessImageTask:
 
     def test_process_image_task_success(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mock_session: Mock,
         mock_image_service: Mock,
         sample_detections: List[Dict],
@@ -77,40 +74,38 @@ class TestProcessImageTask:
         """Test successful image processing task execution.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture
             mock_session: Mock database session
             mock_image_service: Mock ImageService
             sample_detections: Sample detection results
         """
+        from src.api.images import images_tasks
+
         image_id = str(uuid4())
         image_base64 = "base64encodedimagedata"
         model_region = "europe"
         timestamp = "2024-01-15T10:30:00"
 
-        # Mock SessionLocal
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.SessionLocal",
-            Mock(return_value=mock_session),
-        )
-
-        # Mock ImageService.factory
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.ImageService.factory",
-            Mock(return_value=mock_image_service),
-        )
-
         # Configure mock service to return detections
         mock_image_service.process_image.return_value = sample_detections
 
-        # Execute task (call run method directly to bypass Celery)
-        mock_self = Mock(request=Mock(retries=0))
-        result = process_image_task.run(
-            mock_self,
-            image_id=image_id,
-            image_base64=image_base64,
-            model_region=model_region,
-            timestamp=timestamp,
-        )
+        # Mock dependencies
+        with patch.object(images_tasks, "SessionLocal", return_value=mock_session):
+            with patch.object(
+                images_tasks.ImageService, "factory", return_value=mock_image_service
+            ):
+                # Create mock self for bound task
+                mock_self = Mock()
+                mock_self.request = Mock(retries=0)
+                mock_self.retry = Mock()
+
+                # Call the task function directly
+                result = images_tasks.process_image_task(
+                    mock_self,
+                    image_id=image_id,
+                    image_base64=image_base64,
+                    model_region=model_region,
+                    timestamp=timestamp,
+                )
 
         # Verify process_image was called with correct image
         assert mock_image_service.process_image.called
@@ -149,42 +144,37 @@ class TestProcessImageTask:
 
     def test_process_image_task_no_detections(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mock_session: Mock,
         mock_image_service: Mock,
     ) -> None:
         """Test task execution when no animals are detected.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture
             mock_session: Mock database session
             mock_image_service: Mock ImageService
         """
+        from src.api.images import images_tasks
+
         image_id = str(uuid4())
         image_base64 = "base64encodedimagedata"
-
-        # Mock SessionLocal
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.SessionLocal",
-            Mock(return_value=mock_session),
-        )
-
-        # Mock ImageService.factory
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.ImageService.factory",
-            Mock(return_value=mock_image_service),
-        )
 
         # Configure mock service to return empty detections
         mock_image_service.process_image.return_value = []
 
-        # Execute task (call run method directly to bypass Celery)
-        mock_self = Mock(request=Mock(retries=0))
-        result = process_image_task.run(
-            mock_self,
-            image_id=image_id,
-            image_base64=image_base64,
-        )
+        # Mock dependencies
+        with patch.object(images_tasks, "SessionLocal", return_value=mock_session):
+            with patch.object(
+                images_tasks.ImageService, "factory", return_value=mock_image_service
+            ):
+                mock_self = Mock()
+                mock_self.request = Mock(retries=0)
+
+                # Execute task
+                result = images_tasks.process_image_task(
+                    mock_self,
+                    image_id=image_id,
+                    image_base64=image_base64,
+                )
 
         # Verify save_detections was not called (no detections)
         assert not mock_image_service.spotting_service.save_detections.called
@@ -199,7 +189,6 @@ class TestProcessImageTask:
 
     def test_process_image_task_without_timestamp(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mock_session: Mock,
         mock_image_service: Mock,
         sample_detections: List[Dict],
@@ -207,37 +196,33 @@ class TestProcessImageTask:
         """Test task execution without timestamp parameter.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture
             mock_session: Mock database session
             mock_image_service: Mock ImageService
             sample_detections: Sample detection results
         """
+        from src.api.images import images_tasks
+
         image_id = str(uuid4())
         image_base64 = "base64encodedimagedata"
-
-        # Mock SessionLocal
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.SessionLocal",
-            Mock(return_value=mock_session),
-        )
-
-        # Mock ImageService.factory
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.ImageService.factory",
-            Mock(return_value=mock_image_service),
-        )
 
         # Configure mock service
         mock_image_service.process_image.return_value = sample_detections
 
-        # Execute task without timestamp (call run method directly to bypass Celery)
-        mock_self = Mock(request=Mock(retries=0))
-        result = process_image_task.run(
-            mock_self,
-            image_id=image_id,
-            image_base64=image_base64,
-            timestamp=None,
-        )
+        # Mock dependencies
+        with patch.object(images_tasks, "SessionLocal", return_value=mock_session):
+            with patch.object(
+                images_tasks.ImageService, "factory", return_value=mock_image_service
+            ):
+                mock_self = Mock()
+                mock_self.request = Mock(retries=0)
+
+                # Execute task without timestamp
+                result = images_tasks.process_image_task(
+                    mock_self,
+                    image_id=image_id,
+                    image_base64=image_base64,
+                    timestamp=None,
+                )
 
         # Verify save_detections was called with None timestamp
         save_call_args = mock_image_service.spotting_service.save_detections.call_args
@@ -248,52 +233,45 @@ class TestProcessImageTask:
 
     def test_process_image_task_retry_on_error(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mock_session: Mock,
         mock_image_service: Mock,
     ) -> None:
         """Test task retry mechanism on processing error.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture
             mock_session: Mock database session
             mock_image_service: Mock ImageService
         """
+        from src.api.images import images_tasks
+
         image_id = str(uuid4())
         image_base64 = "base64encodedimagedata"
-
-        # Mock SessionLocal
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.SessionLocal",
-            Mock(return_value=mock_session),
-        )
-
-        # Mock ImageService.factory
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.ImageService.factory",
-            Mock(return_value=mock_image_service),
-        )
 
         # Configure mock service to raise exception
         processing_error = ValueError("Model loading failed")
         mock_image_service.process_image.side_effect = processing_error
 
         # Create mock task with retry method
-        mock_task = Mock()
-        mock_task.request = Mock(retries=0)
-        mock_task.retry = Mock(side_effect=Retry())
+        mock_self = Mock()
+        mock_self.request = Mock(retries=0)
+        mock_self.retry = Mock(side_effect=Retry())
 
-        # Execute task and expect Retry exception (call run method directly)
-        with pytest.raises(Retry):
-            process_image_task.run(
-                mock_task,
-                image_id=image_id,
-                image_base64=image_base64,
-            )
+        # Mock dependencies
+        with patch.object(images_tasks, "SessionLocal", return_value=mock_session):
+            with patch.object(
+                images_tasks.ImageService, "factory", return_value=mock_image_service
+            ):
+                # Execute task and expect Retry exception
+                with pytest.raises(Retry):
+                    images_tasks.process_image_task(
+                        mock_self,
+                        image_id=image_id,
+                        image_base64=image_base64,
+                    )
 
         # Verify retry was called with correct parameters
-        mock_task.retry.assert_called_once()
-        retry_call_args = mock_task.retry.call_args
+        mock_self.retry.assert_called_once()
+        retry_call_args = mock_self.retry.call_args
         assert retry_call_args.kwargs["exc"] == processing_error
         assert retry_call_args.kwargs["countdown"] == 1  # 2^0
 
@@ -302,96 +280,83 @@ class TestProcessImageTask:
 
     def test_process_image_task_exponential_backoff(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mock_session: Mock,
         mock_image_service: Mock,
     ) -> None:
         """Test exponential backoff on retries.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture
             mock_session: Mock database session
             mock_image_service: Mock ImageService
         """
+        from src.api.images import images_tasks
+
         image_id = str(uuid4())
         image_base64 = "base64encodedimagedata"
-
-        # Mock SessionLocal
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.SessionLocal",
-            Mock(return_value=mock_session),
-        )
-
-        # Mock ImageService.factory
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.ImageService.factory",
-            Mock(return_value=mock_image_service),
-        )
 
         # Configure mock service to raise exception
         mock_image_service.process_image.side_effect = ValueError("Error")
 
         # Test different retry counts
         for retry_count in [0, 1, 2]:
-            mock_task = Mock()
-            mock_task.request = Mock(retries=retry_count)
-            mock_task.retry = Mock(side_effect=Retry())
+            mock_self = Mock()
+            mock_self.request = Mock(retries=retry_count)
+            mock_self.retry = Mock(side_effect=Retry())
 
-            with pytest.raises(Retry):
-                process_image_task.run(
-                    mock_task,
-                    image_id=image_id,
-                    image_base64=image_base64,
-                )
+            with patch.object(images_tasks, "SessionLocal", return_value=mock_session):
+                with patch.object(
+                    images_tasks.ImageService,
+                    "factory",
+                    return_value=mock_image_service,
+                ):
+                    with pytest.raises(Retry):
+                        images_tasks.process_image_task(
+                            mock_self,
+                            image_id=image_id,
+                            image_base64=image_base64,
+                        )
 
             # Verify countdown follows exponential backoff: 2^retries
-            retry_call_args = mock_task.retry.call_args
+            retry_call_args = mock_self.retry.call_args
             expected_countdown = 2**retry_count
             assert retry_call_args.kwargs["countdown"] == expected_countdown
 
     def test_process_image_task_session_cleanup_on_error(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mock_session: Mock,
         mock_image_service: Mock,
     ) -> None:
         """Test database session is properly closed on error.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture
             mock_session: Mock database session
             mock_image_service: Mock ImageService
         """
+        from src.api.images import images_tasks
+
         image_id = str(uuid4())
         image_base64 = "base64encodedimagedata"
-
-        # Mock SessionLocal
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.SessionLocal",
-            Mock(return_value=mock_session),
-        )
-
-        # Mock ImageService.factory
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.ImageService.factory",
-            Mock(return_value=mock_image_service),
-        )
 
         # Configure mock service to raise exception
         mock_image_service.process_image.side_effect = RuntimeError("DB error")
 
         # Create mock task
-        mock_task = Mock()
-        mock_task.request = Mock(retries=0)
-        mock_task.retry = Mock(side_effect=Retry())
+        mock_self = Mock()
+        mock_self.request = Mock(retries=0)
+        mock_self.retry = Mock(side_effect=Retry())
 
-        # Execute task (call run method directly)
-        with pytest.raises(Retry):
-            process_image_task.run(
-                mock_task,
-                image_id=image_id,
-                image_base64=image_base64,
-            )
+        # Mock dependencies
+        with patch.object(images_tasks, "SessionLocal", return_value=mock_session):
+            with patch.object(
+                images_tasks.ImageService, "factory", return_value=mock_image_service
+            ):
+                # Execute task
+                with pytest.raises(Retry):
+                    images_tasks.process_image_task(
+                        mock_self,
+                        image_id=image_id,
+                        image_base64=image_base64,
+                    )
 
         # Verify session was closed despite error
         mock_session.close.assert_called_once()
@@ -401,7 +366,6 @@ class TestProcessImageTask:
 
     def test_process_image_task_different_regions(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         mock_session: Mock,
         mock_image_service: Mock,
         sample_detections: List[Dict],
@@ -409,36 +373,33 @@ class TestProcessImageTask:
         """Test task execution with different model regions.
 
         Args:
-            monkeypatch: Pytest monkeypatch fixture
             mock_session: Mock database session
             mock_image_service: Mock ImageService
             sample_detections: Sample detection results
         """
+        from src.api.images import images_tasks
+
         image_id = str(uuid4())
         image_base64 = "base64encodedimagedata"
-
-        # Mock SessionLocal
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.SessionLocal",
-            Mock(return_value=mock_session),
-        )
-
-        # Mock ImageService.factory
-        monkeypatch.setattr(
-            "src.api.images.images_tasks.ImageService.factory",
-            Mock(return_value=mock_image_service),
-        )
 
         mock_image_service.process_image.return_value = sample_detections
 
         # Test with different regions
         for region in ["europe", "amazon", "hamelin"]:
-            mock_self = Mock(request=Mock(retries=0))
-            result = process_image_task.run(
-                mock_self,
-                image_id=image_id,
-                image_base64=image_base64,
-                model_region=region,
-            )
+            with patch.object(images_tasks, "SessionLocal", return_value=mock_session):
+                with patch.object(
+                    images_tasks.ImageService,
+                    "factory",
+                    return_value=mock_image_service,
+                ):
+                    mock_self = Mock()
+                    mock_self.request = Mock(retries=0)
 
-            assert result["success"] is True
+                    result = images_tasks.process_image_task(
+                        mock_self,
+                        image_id=image_id,
+                        image_base64=image_base64,
+                        model_region=region,
+                    )
+
+                    assert result["success"] is True
