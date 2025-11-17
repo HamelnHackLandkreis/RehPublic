@@ -3,45 +3,49 @@ import { computed } from 'vue'
 
 const route = useRoute()
 
-const isCameraPage = computed(() => {
-  return route.path.startsWith('/camera')
-})
+const isMapPage = computed(() => route.path.startsWith('/map'))
+const isCameraPage = computed(() => route.path.startsWith('/camera'))
+const isStatisticsPage = computed(() => route.path.startsWith('/statistics'))
+const isMatchPage = computed(() => route.path.startsWith('/match'))
 </script>
 
 <template>
-  <nav class="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 shadow-2xl">
-    <ul class="flex items-center justify-around list-none p-0 m-0 max-w-screen-xl mx-auto">
+  <nav
+    class="fixed bottom-0 left-0 right-0 z-50 bg-slate-900 border-t border-slate-700 shadow-2xl md:top-0 md:bottom-auto md:right-auto md:w-auto md:h-screen md:border-t-0 md:border-r">
+    <ul
+      class="flex items-center justify-around md:flex-col md:justify-center md:gap-1 md:pt-0 list-none p-0 m-0 max-w-screen-xl md:max-w-none mx-auto md:h-full">
       <li>
-        <NuxtLink to="/map"
-          class="flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white [&.router-link-active]:text-indigo-400 group">
+        <NuxtLink to="/map" :class="[
+          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
+          isMapPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+        ]">
           <Icon name="mdi:map-marker" class="text-2xl" />
           <span class="text-xs font-medium">Map</span>
         </NuxtLink>
       </li>
       <li>
-        <NuxtLink
-          to="/camera"
-          :class="[
-            'flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white group',
-            isCameraPage && 'text-indigo-400'
-          ]"
-        >
+        <NuxtLink to="/camera" :class="[
+          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
+          isCameraPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+        ]">
           <Icon name="mdi:camera" class="text-2xl" />
           <span class="text-xs font-medium">Cams</span>
         </NuxtLink>
       </li>
       <li>
-        <NuxtLink to="/statistics"
-          class="flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white [&.router-link-active]:text-indigo-400 group">
+        <NuxtLink to="/statistics" :class="[
+          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
+          isStatisticsPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+        ]">
           <Icon name="mdi:chart-bar" class="text-2xl" />
           <span class="text-xs font-medium">Statistics</span>
         </NuxtLink>
       </li>
       <li>
-        <NuxtLink
-          to="/match"
-          class="flex flex-col items-center gap-1 py-4 px-6 no-underline text-slate-400 transition-all hover:text-white [&.router-link-active]:text-indigo-400 group"
-        >
+        <NuxtLink to="/match" :class="[
+          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
+          isMatchPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+        ]">
           <Icon name="mdi:image-search" class="text-2xl" />
           <span class="text-xs font-medium">Match</span>
         </NuxtLink>

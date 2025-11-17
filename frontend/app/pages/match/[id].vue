@@ -1,7 +1,7 @@
 <template>
   <div class="flex-1 bg-gradient-to-b overflow-hidden flex flex-col">
     <!-- Full Size Image - Border to Border -->
-    <div class="w-full h-[60vh] overflow-hidden mb-2 relative bg-gray-100 flex-shrink-0">
+    <div class="w-full h-[60vh] overflow-hidden mb-2 relative flex-shrink-0">
       <!-- Skeleton loader for main image -->
       <div v-if="!mainImageSrc"
         class="absolute inset-0 bg-gradient-to-br from-gray-200 via-gray-300 to-gray-200 animate-pulse flex items-center justify-center">
@@ -55,7 +55,7 @@
             d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
         </svg>
       </button>
-      
+
       <!-- Zoom Button Tooltip -->
       <div v-if="showZoomTooltip && croppedImageSrc"
         class="absolute top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 max-w-xs animate-bounce">
@@ -75,7 +75,7 @@
             d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       </button>
-      
+
       <!-- Unknown Button Tooltip -->
       <div v-if="showUnknownTooltip"
         class="absolute top-16 left-[230px] bg-blue-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 max-w-xs animate-bounce">
@@ -132,7 +132,7 @@
                   d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10s-4.477 10-10 10S2 17.523 2 12 6.477 2 12 2zm-1 4v2h2V6h-2zm0 4v8h2v-8h-2z" />
               </svg>
             </a>
-            
+
             <!-- Wikipedia Button Tooltip -->
             <div v-if="showWikipediaTooltip"
               class="absolute top-20 right-4 bg-blue-600 text-white px-4 py-3 rounded-lg shadow-2xl z-50 max-w-xs animate-bounce">
@@ -176,7 +176,8 @@
             </div>
 
             <!-- Swipe Hints -->
-            <div class="absolute bottom-[11rem] left-0 right-0 flex justify-between px-8 text-white z-10 pointer-events-none">
+            <div
+              class="absolute bottom-[11rem] left-0 right-0 flex justify-between px-8 text-white z-10 pointer-events-none">
               <!-- Left: Incorrect -->
               <div class="text-center">
                 <div class="animate-pulse">
@@ -548,7 +549,7 @@ const fetchUserStats = async () => {
 onMounted(() => {
   fetchImageData()
   fetchUserStats() // Fetch stats automatically when page loads
-  
+
   // Check if user has seen tooltips before
   if (typeof window !== 'undefined') {
     const hasSeenTooltips = localStorage.getItem('hasSeenMatchTooltips')
