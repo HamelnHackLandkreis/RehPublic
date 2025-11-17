@@ -58,6 +58,7 @@ class TestImageServiceProcessingLogic:
         Returns:
             None
         """
+        import base64
         from src.api.images.image_service import ImageService
         from src.api.images.image_models import Image
 
@@ -73,10 +74,11 @@ class TestImageServiceProcessingLogic:
 
         service = ImageService(processor_client=mock_processor)
 
-        # Create test image
+        # Create test image with valid base64 data
         test_image = Image()
         test_image.id = str(uuid4())
-        test_image.base64_data = "base64encodeddata"
+        # Use valid base64 encoded data
+        test_image.base64_data = base64.b64encode(b"fake_image_data").decode("utf-8")
 
         mock_db = Mock()
 
