@@ -48,12 +48,23 @@ class ModelManager:
 
     def load_detection_model(self) -> None:
         """Load MegaDetectorV6 for animal detection."""
+        import sys
+
         logger.info("Loading MegaDetectorV6...")
-        self.detection_model = pw_detection.MegaDetectorV6(
-            weights=None, device="cpu", pretrained=True, version="MDV6-yolov9-c"
-        )
-        self._model_versions["detection"] = "MegaDetectorV6-yolov9c"
-        logger.info("MegaDetectorV6 loaded successfully")
+
+        # Fix for Celery: wget library needs sys.stdout.fileno() which LoggingProxy doesn't have
+        original_stdout = sys.stdout
+        if not hasattr(sys.stdout, "fileno"):
+            sys.stdout = sys.__stdout__
+
+        try:
+            self.detection_model = pw_detection.MegaDetectorV6(
+                weights=None, device="cpu", pretrained=True, version="MDV6-yolov9-c"
+            )
+            self._model_versions["detection"] = "MegaDetectorV6-yolov9c"
+            logger.info("MegaDetectorV6 loaded successfully")
+        finally:
+            sys.stdout = original_stdout
 
     def load_classification_model(self) -> None:
         """Load DeepFaune v4 classification model for European wildlife."""

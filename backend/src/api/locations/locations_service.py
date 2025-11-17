@@ -252,6 +252,15 @@ class SpottingService:
         Returns:
             SpottingsResponse with locations and statistics
         """
+        # Get all locations within range (including those without images)
+        all_locations_in_range = self.location_repository.get_locations_in_range(
+            db=db,
+            latitude=latitude,
+            longitude=longitude,
+            distance_range=distance_range,
+        )
+
+        # Get images with spottings
         images = self.image_service.get_images_in_range(
             db=db,
             latitude=latitude,
@@ -266,16 +275,9 @@ class SpottingService:
         from collections import defaultdict
 
         images_by_location = defaultdict(list)
-        location_map = {}
 
         for image in images:
             location_id = image.location_id
-
-            if location_id not in location_map:
-                location = self.location_repository.get_by_id(db, UUID(location_id))  # type: ignore[arg-type]
-                if location:
-                    location_map[location_id] = location
-
             spottings = image.spottings
 
             detections = []
@@ -307,47 +309,49 @@ class SpottingService:
                 )
             )
 
+        # Build response for all locations in range
         locations_response = []
-        location_ids_list = list(location_map.keys())
+        location_ids_list = []
 
-        for location_id, location_images in images_by_location.items():
-            if location_id in location_map:
-                location = location_map[location_id]
+        for location in all_locations_in_range:
+            location_id = str(location.id)
+            location_ids_list.append(location_id)
+            location_images = images_by_location.get(location_id, [])
 
-                (
-                    unique_species_count,
-                    total_spottings_count,
-                    total_images_count,
-                    images_with_animals_count,
-                ) = self.repository.get_location_statistics(
-                    db,
-                    str(location_id),
-                    species_filter=species_filter,
-                    time_start=time_start,
-                    time_end=time_end,
+            (
+                unique_species_count,
+                total_spottings_count,
+                total_images_count,
+                images_with_animals_count,
+            ) = self.repository.get_location_statistics(
+                db,
+                location_id,
+                species_filter=species_filter,
+                time_start=time_start,
+                time_end=time_end,
+            )
+
+            locations_response.append(
+                LocationWithImagesResponse(
+                    id=UUID(location.id),  # type: ignore[arg-type]
+                    name=location.name,  # type: ignore[arg-type]
+                    longitude=location.longitude,  # type: ignore[arg-type]
+                    latitude=location.latitude,  # type: ignore[arg-type]
+                    description=location.description,  # type: ignore[arg-type]
+                    images=location_images,
+                    total_images=total_images_count,
+                    total_unique_species=unique_species_count,
+                    total_spottings=total_spottings_count,
+                    total_images_with_animals=images_with_animals_count,
                 )
-
-                locations_response.append(
-                    LocationWithImagesResponse(
-                        id=UUID(location.id),  # type: ignore[arg-type]
-                        name=location.name,  # type: ignore[arg-type]
-                        longitude=location.longitude,  # type: ignore[arg-type]
-                        latitude=location.latitude,  # type: ignore[arg-type]
-                        description=location.description,  # type: ignore[arg-type]
-                        images=location_images,
-                        total_images=total_images_count,
-                        total_unique_species=unique_species_count,
-                        total_spottings=total_spottings_count,
-                        total_images_with_animals=images_with_animals_count,
-                    )
-                )
+            )
 
         (
             global_unique_species_count,
             global_total_spottings_count,
         ) = self.repository.get_global_statistics(
             db,
-            [str(loc_id) for loc_id in location_ids_list],
+            location_ids_list,
             species_filter=species_filter,
             time_start=time_start,
             time_end=time_end,

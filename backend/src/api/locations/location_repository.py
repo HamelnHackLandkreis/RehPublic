@@ -156,6 +156,48 @@ class LocationRepository:
 
         return location, len(unique_species), total_spottings_count
 
+    @staticmethod
+    def get_locations_in_range(
+        db: Session,
+        latitude: float,
+        longitude: float,
+        distance_range: float,
+    ) -> List[Location]:
+        """Get all locations within a distance range from a center point.
+
+        Uses Haversine formula to calculate distance.
+
+        Args:
+            db: Database session
+            latitude: Center latitude
+            longitude: Center longitude
+            distance_range: Maximum distance in kilometers
+
+        Returns:
+            List of Location objects within range
+        """
+        from math import asin, cos, radians, sin, sqrt
+
+        all_locations = db.query(Location).all()
+        locations_in_range = []
+
+        for location in all_locations:
+            # Haversine formula
+            lat1, lon1 = radians(latitude), radians(longitude)
+            lat2, lon2 = radians(location.latitude), radians(location.longitude)
+
+            dlat = lat2 - lat1
+            dlon = lon2 - lon1
+
+            a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+            c = 2 * asin(sqrt(a))
+            distance_km = 6371 * c  # Earth radius in km
+
+            if distance_km <= distance_range:
+                locations_in_range.append(location)
+
+        return locations_in_range
+
 
 class SpottingRepository:
     """Repository for spotting data access operations."""
