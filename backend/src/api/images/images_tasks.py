@@ -48,8 +48,16 @@ def process_image_task(
         # Create database session
         db = SessionLocal()
         try:
-            # Get image service
+            # Get image service and repository
             image_service = ImageService.factory()
+
+            # Update status to detecting
+            image_service.repository.update_status(
+                db=db,
+                image_id=UUID(image_id),
+                processing_status="detecting",
+                processed=False,
+            )
 
             # Process image using service (synchronous processing within task)
 
@@ -69,8 +77,13 @@ def process_image_task(
                     detection_timestamp=detection_timestamp,
                 )
 
-            # Mark image as processed
-            image_service.mark_as_processed(db=db, image_id=UUID(image_id))
+            # Mark image as processed and update status to completed
+            image_service.repository.update_status(
+                db=db,
+                image_id=UUID(image_id),
+                processing_status="completed",
+                processed=True,
+            )
 
             db.commit()
 
@@ -91,5 +104,22 @@ def process_image_task(
 
     except Exception as exc:
         logger.error(f"Error processing image {image_id}: {exc}", exc_info=True)
+
+        # Update status to failed
+        db = SessionLocal()
+        try:
+            image_service = ImageService.factory()
+            image_service.repository.update_status(
+                db=db,
+                image_id=UUID(image_id),
+                processing_status="failed",
+                processed=False,
+            )
+            db.commit()
+        except Exception as update_exc:
+            logger.error(f"Failed to update status to failed: {update_exc}")
+        finally:
+            db.close()
+
         # Retry with exponential backoff
         raise self.retry(exc=exc, countdown=2**self.request.retries)

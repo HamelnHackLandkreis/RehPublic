@@ -43,6 +43,8 @@ class ImageDetailResponse(BaseModel):
     raw: str  # base64 encoded image
     upload_timestamp: datetime
     detections: List[DetectionResponse]
+    processing_status: str  # uploading, detecting, completed, failed
+    processed: bool
 
 
 class ImageUploadResponse(BaseModel):
@@ -54,6 +56,18 @@ class ImageUploadResponse(BaseModel):
     detections_count: int
     detected_species: List[str]
     task_id: str | None = None
+    processing_status: str  # uploading, detecting, completed, failed
+
+
+class ImageStatusResponse(BaseModel):
+    """Schema for image processing status response."""
+
+    image_id: UUID
+    processing_status: str  # uploading, detecting, completed, failed
+    processed: bool
+    detections_count: int
+    detected_species: List[str]
+    upload_timestamp: datetime
 
 
 class ImageBase64Response(BaseModel):

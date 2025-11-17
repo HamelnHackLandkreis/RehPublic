@@ -21,6 +21,10 @@ class Image(Base):
     base64_data = Column(Text, nullable=False)
     upload_timestamp = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
+    processing_status = Column(
+        String, default="uploading"
+    )  # uploading, detecting, completed, failed
+    celery_task_id = Column(String, nullable=True)
 
     # Relationships
     location = relationship("Location", back_populates="images")

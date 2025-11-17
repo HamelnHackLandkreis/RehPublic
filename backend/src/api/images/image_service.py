@@ -93,6 +93,7 @@ class ImageService:
         location_id: UUID,
         file_bytes: bytes,
         upload_timestamp: Optional[datetime] = None,
+        celery_task_id: Optional[str] = None,
     ) -> Image:
         """Save uploaded image as base64.
 
@@ -101,6 +102,7 @@ class ImageService:
             location_id: UUID of the location
             file_bytes: Raw image bytes
             upload_timestamp: Optional timestamp to use for upload (defaults to current time)
+            celery_task_id: Optional Celery task ID for async processing
 
         Returns:
             Created Image object
@@ -113,6 +115,8 @@ class ImageService:
             base64_data=base64_data,
             upload_timestamp=upload_timestamp,
             processed=False,
+            processing_status="uploading",
+            celery_task_id=celery_task_id,
         )
 
     def get_image_by_id(self, db: Session, image_id: UUID) -> Optional[Image]:
@@ -167,6 +171,8 @@ class ImageService:
             raw=image.base64_data,  # type: ignore[arg-type]
             upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
             detections=detections,
+            processing_status=image.processing_status or "completed",  # type: ignore[arg-type]
+            processed=image.processed,  # type: ignore[arg-type]
         )
 
     def get_image_bytes(
@@ -263,9 +269,10 @@ class ImageService:
         if not location:
             raise ValueError(f"Location with id {location_id} not found")
 
-        image = self.save_image(db, location_id, file_bytes, upload_timestamp)
-
         if async_processing:
+            # Create image first without task_id
+            image = self.save_image(db, location_id, file_bytes, upload_timestamp)
+
             logger.info(
                 f"Queuing async processing for image {image.id} at location {location.name}"
             )
@@ -277,6 +284,12 @@ class ImageService:
                 timestamp=upload_timestamp,
             )
 
+            # Update image with task_id and set status to detecting
+            image.celery_task_id = task_id
+            image.processing_status = "detecting"
+            db.commit()
+            db.refresh(image)
+
             return ImageUploadResponse(
                 image_id=UUID(image.id),  # type: ignore[arg-type]
                 location_id=UUID(image.location_id),  # type: ignore[arg-type]
@@ -284,7 +297,10 @@ class ImageService:
                 detections_count=0,
                 detected_species=[],
                 task_id=task_id,
+                processing_status="detecting",
             )
+
+        image = self.save_image(db, location_id, file_bytes, upload_timestamp)
 
         logger.info(
             f"Processing image {image.id} synchronously for location {location.name}"
@@ -311,6 +327,7 @@ class ImageService:
             upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
             detections_count=len(detections),
             detected_species=[detection["species"] for detection in detections],
+            processing_status="detecting",
         )
 
     @staticmethod

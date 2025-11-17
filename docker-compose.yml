@@ -84,12 +84,6 @@ services:
       - db
     volumes:
       - ./backend/models:/app/models
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-        reservations:
-          memory: 2G
 
   # --- Celery Flower Service (Monitoring) ---
   celery-flower:
