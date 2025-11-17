@@ -2,6 +2,7 @@
   <div class="statistics-page">
     <div class="header">
       <h1>Wildlife Statistics</h1>
+      <p class="header-description">View and analyze wildlife detection data across different time periods</p>
       <div class="controls">
         <div class="control-group">
           <label for="time-range">Time Range</label>
@@ -524,9 +525,21 @@ onUnmounted(() => {
 
 <style scoped>
 .statistics-page {
-  padding: 24px;
+  padding: 1.5rem 1rem;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .statistics-page {
+    padding: 1.5rem 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .statistics-page {
+    padding: 1.5rem 2rem;
+  }
 }
 
 .header {
@@ -536,8 +549,16 @@ onUnmounted(() => {
 .header h1 {
   font-size: 32px;
   font-weight: 700;
-  color: #1f2937;
+  color: #ffffff;
+  margin-bottom: 8px;
+  text-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.header-description {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .controls {
@@ -555,9 +576,10 @@ onUnmounted(() => {
 .control-group label {
   font-size: 14px;
   font-weight: 600;
-  color: #4b5563;
+  color: #ffffff;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .time-range-select {
