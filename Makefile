@@ -12,7 +12,10 @@ backend-run-workers:
 	cd backend && PYTHONPATH=src uv run uvicorn api.main:app --port 8000 --workers 4
 
 backend-test:
-	cd backend && uv run pytest tests/ -v
+	cd backend && PYTHONPATH=src uv run pytest tests/ -v -n auto
+
+backend-test-serial:
+	cd backend && PYTHONPATH=src uv run pytest tests/ -v
 
 backend-download-models:
 	cd backend && uv run python download_deepfaune_model.py
