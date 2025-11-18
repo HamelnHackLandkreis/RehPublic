@@ -18,6 +18,8 @@ RUN apt-get update && apt-get install -y \
     libsm6 \
     libxext6 \
     libgomp1 \
+    wget \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv (cached unless uv version changes)
