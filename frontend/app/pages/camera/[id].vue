@@ -22,8 +22,8 @@
           <WildlifeMap v-if="location" ref="mapRef" height="100%" :auto-center="false" :default-zoom="20"
             :default-latitude="location.latitude" :default-longitude="location.longitude" :no-marker-popup="true" />
         </div>
-        <h1 class="text-3xl md:text-2xl font-bold text-white mb-3 drop-shadow-lg">{{ location.name }}</h1>
-        <p v-if="location.description" class="text-base text-white/90 mb-4 leading-relaxed drop-shadow">{{
+        <h1 class="text-3xl md:text-2xl font-bold text-gray-800 mb-3">{{ location.name }}</h1>
+        <p v-if="location.description" class="text-base text-gray-600 mb-4 leading-relaxed">{{
           location.description }}
         </p>
         <div class="flex flex-wrap items-center gap-3">
