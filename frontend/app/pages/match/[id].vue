@@ -26,15 +26,28 @@
       <svg v-if="!showCropped && imageData?.detections && imageData.detections.length > 0 && boundingBoxOverlay"
         class="absolute inset-0 w-full h-full pointer-events-none"
         :viewBox="`0 0 ${fullImageDimensions.width} ${fullImageDimensions.height}`" preserveAspectRatio="xMidYMid meet">
-        <rect v-for="(detection, index) in imageData.detections" :key="index" :x="detection.bounding_box.x"
-          :y="detection.bounding_box.y" :width="detection.bounding_box.width" :height="detection.bounding_box.height"
+        <rect v-for="(detection, index) in imageData.detections" :key="index" 
+          :x="detection.bounding_box.x * bboxScaleFactor"
+          :y="detection.bounding_box.y * bboxScaleFactor" 
+          :width="detection.bounding_box.width * bboxScaleFactor" 
+          :height="detection.bounding_box.height * bboxScaleFactor"
           fill="none" stroke="#3b82f6" stroke-width="12" stroke-dasharray="18,10" />
         <!-- Label for each detection -->
         <g v-for="(detection, index) in imageData.detections" :key="`label-${index}`">
-          <rect :x="detection.bounding_box.x" :y="detection.bounding_box.y - 60"
-            :width="detection.species.length * 19 + 40" height="60" fill="#3b82f6" opacity="0.9" />
-          <text :x="detection.bounding_box.x + 20" :y="detection.bounding_box.y - 18" fill="white" font-size="38"
-            font-weight="bold" font-family="system-ui, sans-serif">
+          <rect 
+            :x="detection.bounding_box.x * bboxScaleFactor" 
+            :y="detection.bounding_box.y * bboxScaleFactor - 60"
+            :width="detection.species.length * 19 + 40" 
+            height="60" 
+            fill="#3b82f6" 
+            opacity="0.9" />
+          <text 
+            :x="detection.bounding_box.x * bboxScaleFactor + 20" 
+            :y="detection.bounding_box.y * bboxScaleFactor - 18" 
+            fill="white" 
+            font-size="38"
+            font-weight="bold" 
+            font-family="system-ui, sans-serif">
             {{ detection.species }} ({{ Math.round(detection.confidence * 100) }}%)
           </text>
         </g>
@@ -301,6 +314,21 @@ const mainImageSrc = computed(() => {
 // Ref for cropped image
 const croppedImageSrc = ref<string | null>(null)
 
+// Computed property to calculate scale factor for bounding boxes
+// Backend processes images at max 1280px, but we display original size
+const bboxScaleFactor = computed(() => {
+  if (!fullImageDimensions.value.width || !fullImageDimensions.value.height) {
+    return 1
+  }
+  // Find the max dimension
+  const maxDim = Math.max(fullImageDimensions.value.width, fullImageDimensions.value.height)
+  // If image is larger than 1280, backend scaled it down
+  if (maxDim > 1280) {
+    return maxDim / 1280
+  }
+  return 1
+})
+
 // Handle full image load to get dimensions for bounding box overlay
 const handleFullImageLoad = (event: Event) => {
   const img = event.target as HTMLImageElement
@@ -343,16 +371,28 @@ const createCroppedImage = async () => {
     img.onload = resolve
   })
 
+  // Calculate scale factor for bounding box
+  const maxDim = Math.max(img.width, img.height)
+  const scaleFactor = maxDim > 1280 ? maxDim / 1280 : 1
+
+  // Scale bounding box coordinates to match original image size
+  const scaledBbox = {
+    x: bbox.x * scaleFactor,
+    y: bbox.y * scaleFactor,
+    width: bbox.width * scaleFactor,
+    height: bbox.height * scaleFactor
+  }
+
   // Add padding around the bounding box (30% on each side)
   const paddingPercent = 0.3
-  const paddedX = Math.max(0, bbox.x - bbox.width * paddingPercent)
-  const paddedY = Math.max(0, bbox.y - bbox.height * paddingPercent)
+  const paddedX = Math.max(0, scaledBbox.x - scaledBbox.width * paddingPercent)
+  const paddedY = Math.max(0, scaledBbox.y - scaledBbox.height * paddingPercent)
   const paddedWidth = Math.min(
-    bbox.width * (1 + 2 * paddingPercent),
+    scaledBbox.width * (1 + 2 * paddingPercent),
     img.width - paddedX
   )
   const paddedHeight = Math.min(
-    bbox.height * (1 + 2 * paddingPercent),
+    scaledBbox.height * (1 + 2 * paddingPercent),
     img.height - paddedY
   )
 
