@@ -10,7 +10,7 @@ import numpy as np
 from PIL import Image
 from PIL.Image import Image as ImageType
 
-from wildlife_processor.core.models import ModelManager
+from wildlife_processor.core.models import ModelManager, get_model_manager
 from wildlife_processor.utils.image_utils import preprocess_image_for_pytorch_wildlife
 
 logger = logging.getLogger(__name__)
@@ -29,11 +29,15 @@ class ProcessorClient:
         self.model_manager: Optional[ModelManager] = None
 
     def _ensure_model_loaded(self) -> None:
-        """Ensure model manager is initialized and models are loaded."""
+        """Ensure model manager is initialized and models are loaded.
+
+        Uses singleton ModelManager to keep models hot in memory across celery tasks.
+        """
         if self.model_manager is None:
-            logger.info(f"Initializing ModelManager with region: {self.model_region}")
-            self.model_manager = ModelManager(region=self.model_region)
-            self.model_manager.ensure_models_loaded()
+            logger.info(
+                f"Getting singleton ModelManager with region: {self.model_region}"
+            )
+            self.model_manager = get_model_manager(region=self.model_region)
 
     def process_image_data(
         self,

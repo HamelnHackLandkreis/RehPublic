@@ -31,6 +31,10 @@ MODEL_PATH = (
 if model_path := os.getenv("MODEL_PATH", None):
     MODEL_PATH = Path(model_path)
 
+# Module-level singleton ModelManager instance for celery workers
+# This keeps models loaded in memory across tasks
+_singleton_model_manager: "ModelManager | None" = None
+
 
 class ModelManager:
     """Manages PyTorch Wildlife models for detection and classification."""
@@ -266,3 +270,24 @@ class ModelManager:
             region=self.region,
             model_versions=self._model_versions.copy(),
         )
+
+
+def get_model_manager(region: str = "europe") -> ModelManager:
+    """Get or create singleton ModelManager instance.
+
+    This function ensures models are loaded once and reused across celery tasks,
+    keeping them "hot" in memory for better performance.
+
+    Args:
+        region: Regional model to use (default: "europe")
+
+    Returns:
+        ModelManager instance (singleton)
+    """
+    global _singleton_model_manager
+    if _singleton_model_manager is None:
+        logger.info(f"Creating singleton ModelManager with region: {region}")
+        _singleton_model_manager = ModelManager(region=region)
+        _singleton_model_manager.ensure_models_loaded()
+        logger.info("Singleton ModelManager created and models loaded")
+    return _singleton_model_manager
