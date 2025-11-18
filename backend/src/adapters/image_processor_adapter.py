@@ -4,6 +4,7 @@ import io
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional
+from uuid import UUID
 
 import numpy as np
 from PIL import Image
@@ -39,17 +40,15 @@ class ProcessorClient:
         image_bytes: bytes,
         timestamp: Optional[datetime] = None,
     ) -> List[Dict]:
-        """Process image bytes and return detection results.
+        """Process image bytes and return detection results synchronously.
 
         Args:
             image_bytes: Raw image bytes
-
             timestamp: Optional timestamp for temporal context
 
         Returns:
             List of detection dictionaries with species, confidence, and bounding box
         """
-
         # Ensure models are loaded
         self._ensure_model_loaded()
 
@@ -71,3 +70,37 @@ class ProcessorClient:
         detections = self.model_manager.process_image(processed_image)
 
         return [detection.to_dict() for detection in detections]
+
+    def process_image_async(
+        self,
+        image_id: UUID,
+        image_base64: str,
+        model_region: str = "europe",
+        timestamp: Optional[datetime] = None,
+    ) -> str:
+        """Dispatch image processing to Celery task queue.
+
+        Args:
+            image_id: UUID of the image
+            image_base64: Base64-encoded image data
+            model_region: Regional model to use for classification
+            timestamp: Optional timestamp for temporal context
+
+        Returns:
+            Celery task ID
+        """
+        # avoid cyclic import
+        from src.api.images.images_tasks import process_image_task
+
+        timestamp_str = timestamp.isoformat() if timestamp else None
+
+        task = process_image_task.delay(
+            image_id=str(image_id),
+            image_base64=image_base64,
+            model_region=model_region,
+            timestamp=timestamp_str,
+        )
+
+        logger.info(f"Dispatched async processing task {task.id} for image {image_id}")
+
+        return task.id

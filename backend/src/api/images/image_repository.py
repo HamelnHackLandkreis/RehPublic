@@ -23,6 +23,8 @@ class ImageRepository:
         base64_data: str,
         upload_timestamp: Optional[datetime] = None,
         processed: bool = False,
+        processing_status: str = "uploading",
+        celery_task_id: Optional[str] = None,
     ) -> Image:
         """Create new image record.
 
@@ -32,6 +34,8 @@ class ImageRepository:
             base64_data: Base64 encoded image data
             upload_timestamp: Optional timestamp to use for upload (defaults to current time)
             processed: Whether the image has been processed
+            processing_status: Processing status (uploading, detecting, completed, failed)
+            celery_task_id: Optional Celery task ID for async processing
 
         Returns:
             Created Image object
@@ -40,6 +44,8 @@ class ImageRepository:
             "location_id": str(location_id),
             "base64_data": base64_data,
             "processed": processed,
+            "processing_status": processing_status,
+            "celery_task_id": celery_task_id,
         }
         if upload_timestamp is not None:
             image_kwargs["upload_timestamp"] = upload_timestamp
@@ -50,6 +56,32 @@ class ImageRepository:
         db.add(image)
         db.commit()
         db.refresh(image)
+        return image
+
+    @staticmethod
+    def update_status(
+        db: Session,
+        image_id: UUID,
+        processing_status: str,
+        processed: bool = False,
+    ) -> Optional[Image]:
+        """Update image processing status.
+
+        Args:
+            db: Database session
+            image_id: UUID of the image
+            processing_status: New processing status
+            processed: Whether processing is complete
+
+        Returns:
+            Updated Image object or None if not found
+        """
+        image = db.query(Image).filter(Image.id == str(image_id)).first()
+        if image:
+            image.processing_status = processing_status
+            image.processed = processed
+            db.commit()
+            db.refresh(image)
         return image
 
     @staticmethod

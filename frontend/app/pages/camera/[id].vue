@@ -244,6 +244,28 @@
                 </div>
               </div>
             </div>
+
+            <!-- Failed Files -->
+            <div v-if="failedFiles.length > 0">
+              <div class="flex items-center gap-2 text-sm font-bold tracking-wider text-red-600 mb-4">
+                <svg class="text-red-500" width="24" height="24" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 8V12M12 16H12.01M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span>FAILED</span>
+              </div>
+              <div v-for="file in failedFiles" :key="file.id" class="bg-white border-2 border-red-200 rounded-xl p-5 mb-4 shadow-lg">
+                <div class="flex items-start gap-4">
+                  <div class="text-3xl flex-shrink-0">❌</div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex justify-between items-center mb-3">
+                      <span class="text-gray-900 text-base font-semibold truncate">{{ file.name }}</span>
+                      <span class="text-red-600 text-sm font-bold ml-4 flex-shrink-0 bg-red-100 px-3 py-1 rounded-full">Failed</span>
+                    </div>
+                    <p class="text-sm text-red-600 bg-red-50 p-3 rounded-lg">{{ file.errorMessage || 'Processing failed' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -252,7 +274,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const apiUrl = useApiUrl()
 const route = useRoute()
@@ -268,6 +290,9 @@ interface UploadFile {
   locationId?: string
   uploadTimestamp?: string
   detectedSpecies?: string[]
+  processingStatus?: string
+  taskId?: string
+  errorMessage?: string
 }
 
 interface ImageDetection {
@@ -303,9 +328,12 @@ const error = ref<string | null>(null)
 const activeTab = ref<'overview' | 'upload'>('overview')
 const isDragging = ref(false)
 const uploadingFiles = ref<UploadFile[]>([])
+const processingFiles = ref<UploadFile[]>([])
 const finishedFiles = ref<UploadFile[]>([])
+const failedFiles = ref<UploadFile[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const mapRef = ref<any>(null)
+const pollingIntervals = ref<Map<string, number>>(new Map())
 
 const cameraId = computed(() => route.params.id as string)
 
@@ -430,15 +458,9 @@ const fetchCameraData = async () => {
   }
 }
 
-// Refetch data after successful upload
-watch(finishedFiles, async (newFiles) => {
-  if (newFiles.length > 0) {
-    // Wait a bit for the backend to process, then refetch
-    setTimeout(() => {
-      fetchCameraData()
-    }, 1000)
-  }
-})
+// Note: We don't need to refetch camera data after upload
+// The completed files are shown in the upload tab with detection results
+// If user wants to see them in the overview, they can switch tabs manually
 
 const goToCameraList = () => {
   router.push('/camera')
@@ -530,21 +552,37 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
       if (xhr.status <= 300) {
         try {
           const response = JSON.parse(xhr.responseText)
+          console.log('Upload response:', response)
+
           uploadFile.progress = 100
-          uploadFile.detectionCount = response.detections_count
           uploadFile.imageId = response.image_id
           uploadFile.locationId = response.location_id
           uploadFile.uploadTimestamp = response.upload_timestamp
-          uploadFile.detectedSpecies = response.detected_species || []
+          uploadFile.processingStatus = response.processing_status
+          uploadFile.taskId = response.task_id
 
-          // Move to finished after a short delay
-          setTimeout(() => {
-            const index = uploadingFiles.value.findIndex(f => f.id === uploadFile.id)
-            if (index > -1) {
-              uploadingFiles.value.splice(index, 1)
-              finishedFiles.value.push(uploadFile)
-            }
-          }, 300)
+          // Remove from uploading list
+          const index = uploadingFiles.value.findIndex(f => f.id === uploadFile.id)
+          if (index > -1) {
+            uploadingFiles.value.splice(index, 1)
+          }
+
+          // Check processing status
+          if (response.processing_status === 'detecting' || response.task_id) {
+            console.log('Starting async processing for task:', response.task_id)
+            processingFiles.value.push(uploadFile)
+            startPollingStatus(uploadFile)
+          } else if (response.processing_status === 'completed') {
+            console.log('Sync processing complete, detections:', response.detections_count)
+            uploadFile.detectionCount = response.detections_count
+            uploadFile.detectedSpecies = response.detected_species || []
+            uploadFile.processingStatus = 'completed'
+            finishedFiles.value.push(uploadFile)
+          } else {
+            console.log('Unknown response format, starting polling')
+            processingFiles.value.push(uploadFile)
+            startPollingStatus(uploadFile)
+          }
         } catch (e) {
           console.error('Failed to parse response:', e)
           handleUploadError(uploadFile, 'Failed to parse response')
@@ -573,17 +611,97 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
   }
 }
 
+const startPollingStatus = (uploadFile: UploadFile) => {
+  if (!uploadFile.imageId) {
+    console.error('Cannot poll: no image ID')
+    return
+  }
+
+  console.log('Starting polling for image:', uploadFile.imageId)
+
+  const pollStatus = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/images/${uploadFile.imageId}`)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Poll response for', uploadFile.name, ':', data)
+
+        uploadFile.processingStatus = data.processing_status || 'detecting'
+
+        const detections = data.detections || []
+        uploadFile.detectionCount = detections.length
+        uploadFile.detectedSpecies = detections.map((d: any) => d.species).filter((s: string) => s)
+
+        const isComplete = data.processing_status === 'completed' || data.processed === true
+        const isFailed = data.processing_status === 'failed'
+
+        if (isComplete) {
+          console.log('Processing complete for', uploadFile.name, 'with', detections.length, 'detections')
+          stopPolling(uploadFile.id)
+          moveToFinished(uploadFile)
+        } else if (isFailed) {
+          console.log('Processing failed for', uploadFile.name)
+          stopPolling(uploadFile.id)
+          uploadFile.errorMessage = 'Image processing failed'
+          moveToFailed(uploadFile)
+        } else {
+          console.log('Still processing:', uploadFile.name, 'status:', data.processing_status)
+        }
+      } else {
+        console.error('Poll request failed:', response.status)
+      }
+    } catch (error) {
+      console.error('Failed to poll status:', error)
+    }
+  }
+
+  const intervalId = window.setInterval(pollStatus, 2000)
+  pollingIntervals.value.set(uploadFile.id, intervalId)
+  pollStatus()
+}
+
+const stopPolling = (fileId: string) => {
+  const intervalId = pollingIntervals.value.get(fileId)
+  if (intervalId) {
+    clearInterval(intervalId)
+    pollingIntervals.value.delete(fileId)
+  }
+}
+
+const moveToFinished = (uploadFile: UploadFile) => {
+  const index = processingFiles.value.findIndex(f => f.id === uploadFile.id)
+  if (index > -1) {
+    processingFiles.value.splice(index, 1)
+    finishedFiles.value.push(uploadFile)
+  }
+}
+
+const moveToFailed = (uploadFile: UploadFile) => {
+  const index = processingFiles.value.findIndex(f => f.id === uploadFile.id)
+  if (index > -1) {
+    processingFiles.value.splice(index, 1)
+    failedFiles.value.push(uploadFile)
+  }
+}
+
 const handleUploadError = (uploadFile: UploadFile, message: string) => {
   console.error(message, uploadFile.name)
-  // Remove from uploading list
+  uploadFile.errorMessage = message
+
   const index = uploadingFiles.value.findIndex(f => f.id === uploadFile.id)
   if (index > -1) {
     uploadingFiles.value.splice(index, 1)
   }
-  alert(`Failed to upload ${uploadFile.name}: ${message}`)
+
+  failedFiles.value.push(uploadFile)
 }
 
 onMounted(() => {
   fetchCameraData()
+})
+
+onUnmounted(() => {
+  pollingIntervals.value.forEach(intervalId => clearInterval(intervalId))
+  pollingIntervals.value.clear()
 })
 </script>
