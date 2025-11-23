@@ -11,10 +11,10 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
+from src.adapters.image_processor_adapter import ProcessorClient
+from src.api.images.image_models import Image
 from src.api.images.image_repository import ImageRepository
 from src.api.locations.location_repository import LocationRepository
-from src.api.images.image_models import Image
-from adapters.image_processor_adapter import ProcessorClient
 
 if TYPE_CHECKING:
     from src.api.locations.location_repository import SpottingRepository
@@ -92,6 +92,7 @@ class ImageService:
         db: Session,
         location_id: UUID,
         file_bytes: bytes,
+        user_id: str,
         upload_timestamp: Optional[datetime] = None,
         celery_task_id: Optional[str] = None,
     ) -> Image:
@@ -101,6 +102,7 @@ class ImageService:
             db: Database session
             location_id: UUID of the location
             file_bytes: Raw image bytes
+            user_id: ID of the user uploading the image
             upload_timestamp: Optional timestamp to use for upload (defaults to current time)
             celery_task_id: Optional Celery task ID for async processing
 
@@ -113,6 +115,7 @@ class ImageService:
             db=db,
             location_id=location_id,
             base64_data=base64_data,
+            user_id=user_id,
             upload_timestamp=upload_timestamp,
             processed=False,
             processing_status="uploading",
@@ -247,6 +250,7 @@ class ImageService:
         db: Session,
         location_id: UUID,
         file_bytes: bytes,
+        user_id: str,
         upload_timestamp: Optional[datetime] = None,
         async_processing: bool = True,
     ) -> ImageUploadResponse:
@@ -256,6 +260,7 @@ class ImageService:
             db: Database session
             location_id: UUID of the location
             file_bytes: Raw image bytes
+            user_id: ID of the user uploading the image
             upload_timestamp: Optional timestamp to use for upload
             async_processing: If True, process image asynchronously with Celery (default: True)
 
@@ -271,7 +276,13 @@ class ImageService:
 
         if async_processing:
             # Create image first without task_id
-            image = self.save_image(db, location_id, file_bytes, upload_timestamp)
+            image = self.save_image(
+                db=db,
+                location_id=location_id,
+                file_bytes=file_bytes,
+                user_id=user_id,
+                upload_timestamp=upload_timestamp,
+            )
 
             logger.info(
                 f"Queuing async processing for image {image.id} at location {location.name}"
@@ -300,7 +311,13 @@ class ImageService:
                 processing_status="detecting",
             )
 
-        image = self.save_image(db, location_id, file_bytes, upload_timestamp)
+        image = self.save_image(
+            db=db,
+            location_id=location_id,
+            file_bytes=file_bytes,
+            user_id=user_id,
+            upload_timestamp=upload_timestamp,
+        )
 
         logger.info(
             f"Processing image {image.id} synchronously for location {location.name}"
@@ -367,6 +384,7 @@ class ImageService:
         latitude: float,
         longitude: float,
         distance_range: float,
+        requesting_user_id: Optional[str] = None,
         time_start: Optional[datetime] = None,
         time_end: Optional[datetime] = None,
         limit_per_location: int = 3,
@@ -375,12 +393,14 @@ class ImageService:
         """Get images within a distance range from a location and optional time range.
         Limits to the most recent N images per location.
         If species_filter is provided, only returns images that have spottings matching that species.
+        Applies privacy filtering if requesting_user_id is provided.
 
         Args:
             db: Database session
             latitude: Center latitude in decimal degrees
             longitude: Center longitude in decimal degrees
             distance_range: Maximum distance in kilometers (km) from center location
+            requesting_user_id: Optional ID of the user making the request (for privacy filtering)
             time_start: Optional start timestamp in ISO 8601 format (inclusive)
             time_end: Optional end timestamp in ISO 8601 format (inclusive)
             limit_per_location: Maximum number of images to return per location (default: 3)
@@ -410,6 +430,7 @@ class ImageService:
             location_images = self.repository.get_by_location_id(
                 db=db,
                 location_id=UUID(str(location_id)),
+                requesting_user_id=requesting_user_id,
                 time_start=time_start,
                 time_end=time_end,
                 limit=limit_per_location,

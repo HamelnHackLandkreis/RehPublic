@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import LoginButton from './LoginButton.vue'
+import LogoutButton from './LogoutButton.vue'
+import UserProfile from './UserProfile.vue'
 
 const route = useRoute()
+const { isAuthenticated, isLoading } = useAuth()
 
 const isMapPage = computed(() => route.path.startsWith('/map'))
 const isCameraPage = computed(() => route.path.startsWith('/camera'))
 const isStatisticsPage = computed(() => route.path.startsWith('/statistics'))
 const isMatchPage = computed(() => route.path.startsWith('/match'))
+const isSettingsPage = computed(() => route.path.startsWith('/settings'))
 </script>
 
 <template>
@@ -49,6 +54,33 @@ const isMatchPage = computed(() => route.path.startsWith('/match'))
           <Icon name="mdi:image-search" class="text-2xl" />
           <span class="text-xs font-medium">Match</span>
         </NuxtLink>
+      </li>
+      <li>
+        <NuxtLink to="/settings" :class="[
+          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
+          isSettingsPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+        ]">
+          <Icon name="mdi:cog" class="text-2xl" />
+          <span class="text-xs font-medium">Settings</span>
+        </NuxtLink>
+      </li>
+      <li class="md:mt-auto md:border-t md:border-slate-700 md:pt-2">
+        <div v-if="isLoading" class="flex flex-col items-center gap-2 py-4 px-6 md:py-3 md:px-3">
+          <div class="text-slate-400 text-xs">Loading...</div>
+        </div>
+        <div v-else-if="isAuthenticated" class="flex flex-col items-center gap-2 py-4 px-6 md:py-3 md:px-3 w-full">
+          <div class="w-full px-2">
+            <UserProfile />
+          </div>
+          <div class="w-full px-2">
+            <LogoutButton />
+          </div>
+        </div>
+        <div v-else class="flex flex-col items-center gap-2 py-4 px-6 md:py-3 md:px-3 w-full">
+          <div class="w-full px-2">
+            <LoginButton />
+          </div>
+        </div>
       </li>
     </ul>
   </nav>

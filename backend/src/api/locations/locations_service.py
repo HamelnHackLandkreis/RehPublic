@@ -234,17 +234,19 @@ class SpottingService:
         latitude: float,
         longitude: float,
         distance_range: float,
+        requesting_user_id: Optional[str] = None,
         species_filter: Optional[str] = None,
         time_start: Optional[datetime] = None,
         time_end: Optional[datetime] = None,
     ) -> SpottingsResponse:
-        """Get spottings grouped by location with statistics.
+        """Get spottings grouped by location with statistics and privacy filtering.
 
         Args:
             db: Database session
             latitude: Center latitude
             longitude: Center longitude
             distance_range: Maximum distance in kilometers
+            requesting_user_id: Optional ID of the user making the request (for privacy filtering)
             species_filter: Optional species filter (case-insensitive)
             time_start: Optional start timestamp filter
             time_end: Optional end timestamp filter
@@ -260,12 +262,13 @@ class SpottingService:
             distance_range=distance_range,
         )
 
-        # Get images with spottings
+        # Get images with spottings (with privacy filtering)
         images = self.image_service.get_images_in_range(
             db=db,
             latitude=latitude,
             longitude=longitude,
             distance_range=distance_range,
+            requesting_user_id=requesting_user_id,
             time_start=time_start,
             time_end=time_end,
             limit_per_location=5,

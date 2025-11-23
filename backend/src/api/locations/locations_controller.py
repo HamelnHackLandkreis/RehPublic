@@ -5,14 +5,13 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.orm import Session, selectinload
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy.orm import Session
 
 from src.api.database import get_db
 from src.api.images.image_service import ImageService
 from src.api.locations.location_repository import LocationRepository
 from src.api.locations.locations_service import SpottingService
-from src.api.images.image_models import Image
 from src.api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
@@ -40,6 +39,7 @@ image_service = ImageService()
     tags=["locations"],
 )
 def get_locations(
+    request: Request,
     latitude: float = Query(
         ...,
         description="Center latitude for location search (decimal degrees, e.g., 50.123)",
@@ -102,12 +102,18 @@ def get_locations(
         GET /locations?latitude=50.0&longitude=10.0&distance_range=5.0&species=Red%20deer
         GET /locations?latitude=50.0&longitude=10.0&distance_range=5.0&time_start=2024-01-01T00:00:00&time_end=2024-12-31T23:59:59&species=Wild%20boar
     """
+    # Extract user ID from request state (set by authentication middleware)
+    requesting_user_id = None
+    if hasattr(request.state, "user"):
+        requesting_user_id = request.state.user.sub
+
     try:
         return spotting_service.get_spottings_by_location(
             db=db,
             latitude=latitude,
             longitude=longitude,
             distance_range=distance_range,
+            requesting_user_id=requesting_user_id,
             species_filter=species,
             time_start=time_start,
             time_end=time_end,
@@ -183,7 +189,9 @@ def create_location(
     status_code=status.HTTP_200_OK,
     tags=["locations"],
 )
-def get_location(location_id: UUID, db: Session = Depends(get_db)) -> LocationResponse:
+def get_location(
+    request: Request, location_id: UUID, db: Session = Depends(get_db)
+) -> LocationResponse:
     """Get specific location by ID with spotting statistics.
 
     Args:
@@ -207,14 +215,17 @@ def get_location(location_id: UUID, db: Session = Depends(get_db)) -> LocationRe
 
     location, total_unique_species, total_spottings = result
 
-    # Get up to 3 most recent images with spottings eagerly loaded
-    images = (
-        db.query(Image)
-        .filter(Image.location_id == str(location_id))
-        .options(selectinload(Image.spottings))
-        .order_by(Image.upload_timestamp.desc())
-        .limit(3)
-        .all()
+    # Extract user ID from request state for privacy filtering
+    requesting_user_id = None
+    if hasattr(request.state, "user"):
+        requesting_user_id = request.state.user.sub
+
+    # Get up to 3 most recent images with spottings eagerly loaded and privacy filtering
+    images = image_service.repository.get_by_location_id(
+        db=db,
+        location_id=location_id,
+        requesting_user_id=requesting_user_id,
+        limit=3,
     )
 
     # Convert images to SpottingImageResponse

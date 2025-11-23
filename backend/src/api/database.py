@@ -12,6 +12,7 @@ from src.api.models import Base
 from src.api.images.image_models import Image  # noqa: F401
 from src.api.locations.location_models import Location, Spotting  # noqa: F401
 from src.api.user_detections.user_detection_models import UserDetection  # noqa: F401
+from src.api.users.user_models import User  # noqa: F401
 
 # PostgreSQL database URL
 # Format: postgresql://user:password@host:port/database

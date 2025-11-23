@@ -6,6 +6,9 @@ services:
   #     # Frontend now talks to the 'loadbalancer' service's internal port (80)
   #     args:
   #       - NUXT_PUBLIC_API_URL=https://rehpublic-api.3ggert.de
+  #       - NUXT_PUBLIC_AUTH0_DOMAIN=${NUXT_PUBLIC_AUTH0_DOMAIN}
+  #       - NUXT_PUBLIC_AUTH0_CLIENT_ID=${NUXT_PUBLIC_AUTH0_CLIENT_ID}
+  #       - NUXT_PUBLIC_AUTH0_AUDIENCE=${NUXT_PUBLIC_AUTH0_AUDIENCE}
   #   ports:
   #     - "9001:80"
   #   restart: always
@@ -38,6 +41,9 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
     # Wait for the database to be ready before starting
     ports:
       - "8000:8000"
@@ -79,6 +85,9 @@ services:
     environment:
       - REDIS_URL=redis://redis:6379/0
       - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
     depends_on:
       - redis
       - db

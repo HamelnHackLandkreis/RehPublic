@@ -16,6 +16,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const route = useRoute()
+const { isAuthenticated: authIsAuthenticated, isLoading: authIsLoading } = useAuth()
 
 interface ImageDetection {
   image_id: string
@@ -60,6 +61,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const apiUrl = useApiUrl()
+const { fetchWithAuth } = useAuthenticatedApi()
 
 const locations = ref<Location[]>([])
 const loading = ref(true)
@@ -267,6 +269,17 @@ const mapCenter = computed((): [number, number] => {
 })
 
 const fetchLocations = async (isPollingCall: boolean = false) => {
+  if (authIsLoading.value) {
+    return
+  }
+
+  if (!authIsAuthenticated.value) {
+    if (!isPollingCall) {
+      loading.value = false
+    }
+    return
+  }
+
   isPolling.value = isPollingCall
   if (!isPollingCall) {
     loading.value = true
@@ -296,10 +309,13 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
       params.set('time_end', route.query.time_end)
     }
 
-    const spottingsUrl = `${apiUrl}/locations?${params.toString()}`
-    const response = await fetch(spottingsUrl)
+    const spottingsUrl = `/locations?${params.toString()}`
+    const response = await fetchWithAuth(spottingsUrl)
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -414,12 +430,18 @@ const calculateZoomLevel = (): number => {
 }
 
 onMounted(() => {
-  fetchLocations()
+  watch([authIsAuthenticated, authIsLoading], ([authenticated, loading]) => {
+    if (!loading && authenticated) {
+      fetchLocations()
 
-  // Start polling every 15 seconds
-  pollingInterval = setInterval(() => {
-    fetchLocations(true)
-  }, 15000)
+      // Start polling every 15 seconds
+      if (!pollingInterval) {
+        pollingInterval = setInterval(() => {
+          fetchLocations(true)
+        }, 15000)
+      }
+    }
+  }, { immediate: true })
 })
 
 onUnmounted(() => {
@@ -431,18 +453,20 @@ onUnmounted(() => {
 
 // Watch for route query changes and refetch
 watch(() => route.query, () => {
-  fetchLocations()
-  // If lat/lng query params changed, center on the new location
-  if (route.query.lat && route.query.lng) {
-    const lat = parseFloat(route.query.lat as string)
-    const lng = parseFloat(route.query.lng as string)
-    if (!isNaN(lat) && !isNaN(lng)) {
-      zoom.value = 15
-      setTimeout(() => {
-        if (mapRef.value?.setCenter) {
-          mapRef.value.setCenter([lat, lng], 15)
-        }
-      }, 300)
+  if (authIsAuthenticated.value) {
+    fetchLocations()
+    // If lat/lng query params changed, center on the new location
+    if (route.query.lat && route.query.lng) {
+      const lat = parseFloat(route.query.lat as string)
+      const lng = parseFloat(route.query.lng as string)
+      if (!isNaN(lat) && !isNaN(lng)) {
+        zoom.value = 15
+        setTimeout(() => {
+          if (mapRef.value?.setCenter) {
+            mapRef.value.setCenter([lat, lng], 15)
+          }
+        }, 300)
+      }
     }
   }
 }, { deep: true })

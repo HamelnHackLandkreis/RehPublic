@@ -30,7 +30,12 @@ def get_all_locations(api_base: str) -> List[dict]:
         SystemExit: If the API request fails
     """
     url = f"{api_base}/locations"
-    response = requests.get(url, timeout=30)
+    params = {
+        "latitude": 50,
+        "longitude": 10,
+        "distance_range": 100000000000,
+    }
+    response = requests.get(url, params=params, timeout=30)
 
     if response.status_code != 200:
         print(f"Error: Failed to get locations (HTTP {response.status_code})")
