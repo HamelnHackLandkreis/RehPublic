@@ -196,7 +196,8 @@ const fetchStatistics = async () => {
   error.value = null
 
   try {
-    const response = await fetch(`${apiUrl}/statistics?period=${period.value}&granularity=${granularity.value}`)
+    const { fetchWithAuth } = useAuthenticatedApi()
+    const response = await fetchWithAuth(`/statistics?period=${period.value}&granularity=${granularity.value}`)
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)

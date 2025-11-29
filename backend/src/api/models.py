@@ -1,6 +1,6 @@
 """Base SQLAlchemy model for wildlife camera API."""
 
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel
 from sqlalchemy.orm import declarative_base
@@ -14,6 +14,6 @@ class JWTUser(BaseModel):
     sub: str  # Auth0 user ID (subject)
     email: Optional[str] = None
     name: Optional[str] = None
-    aud: str  # Audience
+    aud: Union[str, list[str]]  # Audience (can be string or list)
     iss: str  # Issuer
     exp: int  # Expiration timestamp

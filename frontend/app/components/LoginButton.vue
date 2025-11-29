@@ -1,6 +1,7 @@
 <template>
   <button
-    @click="handleLogin"
+    type="button"
+    @click="login"
     class="button login"
     :disabled="isLoading"
   >
@@ -10,10 +11,6 @@
 
 <script setup lang="ts">
 const { login, isLoading } = useAuth()
-
-const handleLogin = () => {
-  login()
-}
 </script>
 
 <style scoped>

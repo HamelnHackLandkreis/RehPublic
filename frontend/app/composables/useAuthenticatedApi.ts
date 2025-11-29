@@ -15,7 +15,6 @@ export const useAuthenticatedApi = () => {
 
     if (!isAuthenticated.value) {
       if (!redirectTriggered) {
-        console.log('User not authenticated, redirecting to login...')
         redirectTriggered = true
         login()
       }
@@ -28,7 +27,6 @@ export const useAuthenticatedApi = () => {
     } catch (error) {
       console.error('Failed to get token:', error)
       if (!redirectTriggered) {
-        console.log('Token fetch failed, redirecting to login...')
         redirectTriggered = true
         login()
       }
@@ -37,7 +35,7 @@ export const useAuthenticatedApi = () => {
 
     if (!token) {
       if (!redirectTriggered) {
-        console.log('No token available, redirecting to login...')
+        // Token unavailable - likely need to re-authenticate
         redirectTriggered = true
         login()
       }
@@ -57,7 +55,6 @@ export const useAuthenticatedApi = () => {
 
       if (response.status === 401) {
         if (!redirectTriggered) {
-          console.log('Received 401 response, redirecting to login...')
           redirectTriggered = true
           login()
         }

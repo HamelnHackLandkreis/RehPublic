@@ -1,5 +1,26 @@
 <script setup>
-// Main app layout
+// Main app layout with global auth check
+const { isAuthenticated, isLoading, login } = useAuth()
+const route = useRoute()
+
+// Global auth protection
+watch([isAuthenticated, isLoading], ([authenticated, loading]) => {
+  // Skip callback page
+  if (route.path === '/callback') {
+    return
+  }
+
+  // Wait for auth to initialize
+  if (loading) {
+    return
+  }
+
+  // Redirect to login if not authenticated
+  if (!authenticated) {
+    login()
+  }
+}, { immediate: true })
+
 useHead({
   title: 'RehPublic',
   titleTemplate: '%s - Wildlife Monitoring'

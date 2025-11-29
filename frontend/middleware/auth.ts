@@ -1,10 +1,18 @@
-export default defineNuxtRouteMiddleware(async (to, from) => {
-  const { isAuthenticated, login } = useAuth()
+export default defineNuxtRouteMiddleware(async (to) => {
+  const { isAuthenticated, isLoading, login } = useAuth()
 
-  // Check if user is authenticated
+  // Allow callback page to process Auth0 redirect
+  if (to.path === '/callback') {
+    return
+  }
+
+  // Wait for auth to initialize
+  if (isLoading.value) {
+    return
+  }
+
+  // Redirect to login if not authenticated
   if (!isAuthenticated.value) {
-    // Redirect to login
-    await login()
-    return abortNavigation()
+    return login()
   }
 })
