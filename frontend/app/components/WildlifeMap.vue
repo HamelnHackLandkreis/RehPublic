@@ -1,14 +1,53 @@
 <template>
   <div class="wildlife-map-container">
+    <LeafletMap ref="mapRef" :center="mapCenter" :zoom="zoom" :height="height" :width="width"
+      :markers="markers" @marker-click="handleMarkerClick" />
     <div v-if="loading" class="loading-overlay">
       <LoadingSpinner size="md" />
     </div>
-    <div v-else-if="error" class="error-message">
+    <div v-if="error" class="error-message">
       <p>Error loading locations: {{ error }}</p>
       <button @click="() => fetchLocations()" class="retry-button">Retry</button>
     </div>
-    <LeafletMap v-else ref="mapRef" :center="mapCenter" :zoom="zoom" :height="height" :width="width"
-      :markers="markers" @marker-click="handleMarkerClick" />
+
+    <!-- Filter Panel -->
+    <div class="filter-panel" :class="{ expanded: filterExpanded }">
+      <button @click="filterExpanded = !filterExpanded" class="filter-toggle-button">
+        <Icon name="mdi:filter" class="text-xl" />
+        <span v-if="filterExpanded" class="ml-2">Filters</span>
+        <span v-if="hasActiveFilters" class="filter-badge">{{ activeFilterCount }}</span>
+      </button>
+
+      <div v-if="filterExpanded" class="filter-content">
+        <!-- Privacy Filter -->
+        <div class="filter-section">
+          <label class="filter-checkbox">
+            <input type="checkbox" v-model="showOnlyMyImages" @change="applyFilters" />
+            <span>Show only my images</span>
+          </label>
+        </div>
+
+        <!-- Species Filter -->
+        <div class="filter-section">
+          <h3 class="filter-title">Species</h3>
+          <div v-if="loadingSpecies" class="filter-loading">
+            <LoadingSpinner size="sm" />
+          </div>
+          <div v-else class="species-list">
+            <label v-for="species in availableSpecies" :key="species" class="filter-checkbox">
+              <input
+                type="checkbox"
+                :value="species"
+                v-model="selectedSpecies"
+                @change="applyFilters"
+              />
+              <span>{{ species }}</span>
+            </label>
+            <p v-if="availableSpecies.length === 0" class="filter-empty">No species found</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -73,6 +112,14 @@ const seenImageIds = ref<Set<string>>(new Set())
 const locationsWithNewImages = ref<Set<string>>(new Set())
 const isPolling = ref(false)
 let pollingInterval: ReturnType<typeof setInterval> | null = null
+
+// Filter state
+const filterExpanded = ref(false)
+const showOnlyMyImages = ref(false)
+const selectedSpecies = ref<string[]>([])
+const availableSpecies = ref<string[]>([])
+const loadingSpecies = ref(false)
+const defaultsApplied = ref(false)
 
 // Define emits for parent components
 const emit = defineEmits<{
@@ -294,9 +341,18 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
       distance_range: props.defaultDistanceRange.toString()
     })
 
-    // Add optional species parameter from route
-    if (route.query.species && typeof route.query.species === 'string') {
+    // Add species filter if selected
+    if (selectedSpecies.value.length > 0 && selectedSpecies.value[0]) {
+      // Use the first selected species (API only supports single species filter)
+      params.set('species', selectedSpecies.value[0])
+    } else if (route.query.species && typeof route.query.species === 'string') {
+      // Fallback to route query parameter
       params.set('species', route.query.species)
+    }
+
+    // Add only_my_images filter if enabled
+    if (showOnlyMyImages.value) {
+      params.set('only_my_images', 'true')
     }
 
     // Add optional time_start parameter from route
@@ -320,7 +376,11 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
     }
 
     const data: LocationsResponse = await response.json()
-    const newLocations = data.locations
+    let newLocations = data.locations
+
+    // Filter out locations without images (backend already filters by privacy/ownership)
+    // This ensures we don't show empty locations
+    newLocations = newLocations.filter(loc => loc.images && loc.images.length > 0)
 
     let hasNewImages = false
 
@@ -429,10 +489,74 @@ const calculateZoomLevel = (): number => {
   return 13
 }
 
+// Fetch available species from statistics
+const fetchAvailableSpecies = async () => {
+  loadingSpecies.value = true
+  try {
+    const response = await fetchWithAuth('/statistics?period=year&granularity=daily')
+    if (response.ok) {
+      const data = await response.json()
+      const speciesSet = new Set<string>()
+
+      // Collect all unique species from all time periods
+      data.statistics.forEach((period: any) => {
+        period.species.forEach((s: { name: string; count: number }) => {
+          speciesSet.add(s.name)
+        })
+      })
+
+      availableSpecies.value = Array.from(speciesSet).sort()
+
+      // Apply default species if they exist in available species (only once)
+      if (!defaultsApplied.value) {
+        const defaultSpecies = ['roe deer', 'boar']
+        const existingDefaults: string[] = []
+        defaultSpecies.forEach(defaultSpeciesName => {
+          const found = availableSpecies.value.find(available =>
+            available.toLowerCase() === defaultSpeciesName.toLowerCase()
+          )
+          if (found) {
+            existingDefaults.push(found) // Use the actual case from the API
+          }
+        })
+
+        if (existingDefaults.length > 0) {
+          selectedSpecies.value = existingDefaults
+          defaultsApplied.value = true
+          // Apply filters after setting defaults
+          applyFilters()
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch species:', err)
+  } finally {
+    loadingSpecies.value = false
+  }
+}
+
+// Apply filters and refetch locations
+const applyFilters = () => {
+  fetchLocations()
+}
+
+// Computed properties for filter UI
+const hasActiveFilters = computed(() => {
+  return showOnlyMyImages.value || selectedSpecies.value.length > 0
+})
+
+const activeFilterCount = computed(() => {
+  let count = 0
+  if (showOnlyMyImages.value) count++
+  if (selectedSpecies.value.length > 0) count++
+  return count
+})
+
 onMounted(() => {
   watch([authIsAuthenticated, authIsLoading], ([authenticated, loading]) => {
     if (!loading && authenticated) {
       fetchLocations()
+      fetchAvailableSpecies()
 
       // Start polling every 15 seconds
       if (!pollingInterval) {
@@ -500,7 +624,8 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f5f5;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
   border-radius: 8px;
   z-index: 1000;
 }
@@ -850,5 +975,124 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.filter-panel {
+  position: absolute;
+  bottom: 100px;
+  right: 20px;
+  z-index: 1001;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  max-width: 320px;
+}
+
+@media (min-width: 768px) {
+  .filter-panel {
+    bottom: 20px;
+  }
+}
+
+.filter-toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 16px;
+  background: white;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  color: #374151;
+  width: 100%;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.filter-toggle-button:hover {
+  background-color: #f9fafb;
+}
+
+.filter-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #3b82f6;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.filter-content {
+  padding: 16px;
+  border-top: 1px solid #e5e7eb;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.filter-section {
+  margin-bottom: 16px;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 12px;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 8px 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filter-checkbox input[type="checkbox"] {
+  margin-right: 8px;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+.filter-checkbox span {
+  font-size: 14px;
+  color: #374151;
+}
+
+.filter-checkbox:hover span {
+  color: #111827;
+}
+
+.species-list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.filter-loading {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+}
+
+.filter-empty {
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+  padding: 8px 0;
 }
 </style>

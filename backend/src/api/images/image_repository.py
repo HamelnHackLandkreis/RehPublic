@@ -110,6 +110,7 @@ class ImageRepository:
         time_end: Optional[datetime] = None,
         limit: Optional[int] = None,
         species_filter: Optional[str] = None,
+        only_my_images: bool = False,
     ) -> List[Image]:
         """Get images for a specific location with optional filters and privacy rules.
 
@@ -138,9 +139,14 @@ class ImageRepository:
 
         # Apply privacy filtering if requesting_user_id is provided
         if requesting_user_id:
-            query = query.outerjoin(User, Image.user_id == User.id).filter(
-                (User.privacy_public == True) | (Image.user_id == requesting_user_id)  # noqa: E712
-            )
+            if only_my_images:
+                # Only show images belonging to the requesting user
+                query = query.filter(Image.user_id == requesting_user_id)
+            else:
+                # Show public images OR images belonging to the requesting user
+                query = query.outerjoin(User, Image.user_id == User.id).filter(
+                    User.privacy_public | (Image.user_id == requesting_user_id)
+                )
 
         if time_start is not None:
             query = query.filter(Image.upload_timestamp >= time_start)

@@ -65,6 +65,10 @@ def get_locations(
         None,
         description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59",
     ),
+    only_my_images: bool = Query(
+        False,
+        description="If true, only returns images belonging to the authenticated user. Requires authentication.",
+    ),
     db: Session = Depends(get_db),
     spotting_service: SpottingService = Depends(SpottingService.factory),
 ) -> SpottingsResponse:
@@ -117,6 +121,7 @@ def get_locations(
             species_filter=species,
             time_start=time_start,
             time_end=time_end,
+            only_my_images=only_my_images,
         )
     except Exception as e:
         logger.error(f"Failed to get locations: {e}")

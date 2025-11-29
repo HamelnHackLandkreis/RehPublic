@@ -389,6 +389,7 @@ class ImageService:
         time_end: Optional[datetime] = None,
         limit_per_location: int = 3,
         species_filter: Optional[str] = None,
+        only_my_images: bool = False,
     ) -> List[Image]:
         """Get images within a distance range from a location and optional time range.
         Limits to the most recent N images per location.
@@ -435,6 +436,7 @@ class ImageService:
                 time_end=time_end,
                 limit=limit_per_location,
                 species_filter=species_filter,
+                only_my_images=only_my_images,
             )
             all_images.extend(location_images)
 

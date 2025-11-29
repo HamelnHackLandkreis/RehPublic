@@ -238,6 +238,7 @@ class SpottingService:
         species_filter: Optional[str] = None,
         time_start: Optional[datetime] = None,
         time_end: Optional[datetime] = None,
+        only_my_images: bool = False,
     ) -> SpottingsResponse:
         """Get spottings grouped by location with statistics and privacy filtering.
 
@@ -273,6 +274,7 @@ class SpottingService:
             time_end=time_end,
             limit_per_location=5,
             species_filter=species_filter,
+            only_my_images=only_my_images,
         )
 
         from collections import defaultdict

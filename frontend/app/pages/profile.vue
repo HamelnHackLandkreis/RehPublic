@@ -60,10 +60,22 @@
                 type="checkbox"
                 v-model="isPublic"
                 @change="updatePrivacy"
+                :disabled="saving || loading"
                 class="sr-only peer"
               />
-              <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-purple-600"></div>
+              <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-purple-600 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
             </label>
+          </div>
+
+          <!-- Success/Error Messages -->
+          <div v-if="saveSuccess" class="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded-lg">
+            <p class="text-sm text-green-300">✓ Privacy setting updated successfully</p>
+          </div>
+          <div v-if="saveError" class="mt-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg">
+            <p class="text-sm text-red-300">✗ {{ saveError }}</p>
+          </div>
+          <div v-if="loading" class="mt-4 p-3 bg-slate-700/50 rounded-lg">
+            <p class="text-sm text-slate-300">Loading privacy settings...</p>
           </div>
         </div>
       </div>
@@ -86,8 +98,42 @@
 </template>
 
 <script setup lang="ts">
-const { user, logout } = useAuth()
+interface UserProfile {
+  id: string
+  email: string | null
+  name: string | null
+  privacy_public: boolean
+  created_at: string
+  updated_at: string
+}
+
+const { user: auth0User, logout } = useAuth()
+const { fetchWithAuth } = useAuthenticatedApi()
+
+const userProfile = ref<UserProfile | null>(null)
 const isPublic = ref(false)
+const loading = ref(true)
+const saving = ref(false)
+const saveSuccess = ref(false)
+const saveError = ref<string | null>(null)
+
+const user = computed(() => {
+  const auth0 = auth0User.value
+  const profile = userProfile.value
+
+  if (!auth0 && !profile) {
+    return null
+  }
+
+  return {
+    ...auth0,
+    ...profile,
+    email: auth0?.email || profile?.email || null,
+    name: auth0?.name || profile?.name || null,
+    picture: auth0?.picture || null,
+    email_verified: auth0?.email_verified || false
+  }
+})
 
 const userInitial = computed(() => {
   if (user.value?.name) {
@@ -100,24 +146,81 @@ const userInitial = computed(() => {
 })
 
 const handleImageError = (e: Event) => {
-  // Hide the image element if it fails to load
   const target = e.target as HTMLImageElement
   target.style.display = 'none'
 }
 
-// TODO: Load user's privacy setting from backend
-onMounted(async () => {
-  // Fetch user privacy setting from API
-  // isPublic.value = await fetchUserPrivacy()
-})
+const fetchUserProfile = async () => {
+  loading.value = true
+  saveError.value = null
+
+  try {
+    const response = await fetchWithAuth('/users/me')
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch profile: ${response.status}`)
+    }
+
+    const data: UserProfile = await response.json()
+    userProfile.value = data
+    isPublic.value = data.privacy_public
+  } catch (error) {
+    console.error('Failed to fetch user profile:', error)
+    saveError.value = error instanceof Error ? error.message : 'Failed to load profile'
+  } finally {
+    loading.value = false
+  }
+}
 
 const updatePrivacy = async () => {
-  // TODO: Update privacy setting in backend
-  console.log('Privacy updated:', isPublic.value)
-  // await updateUserPrivacy(isPublic.value)
+  saving.value = true
+  saveSuccess.value = false
+  saveError.value = null
+
+  const previousValue = !isPublic.value
+
+  try {
+    const response = await fetchWithAuth('/users/me/privacy', {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        privacy_public: isPublic.value
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }))
+      throw new Error(errorData.detail || `Failed to update privacy: ${response.status}`)
+    }
+
+    const updatedProfile: UserProfile = await response.json()
+    userProfile.value = updatedProfile
+    isPublic.value = updatedProfile.privacy_public
+    saveSuccess.value = true
+
+    setTimeout(() => {
+      saveSuccess.value = false
+    }, 3000)
+  } catch (error) {
+    console.error('Failed to update privacy setting:', error)
+    isPublic.value = previousValue
+    saveError.value = error instanceof Error ? error.message : 'Failed to update privacy setting'
+
+    setTimeout(() => {
+      saveError.value = null
+    }, 5000)
+  } finally {
+    saving.value = false
+  }
 }
 
 const handleLogout = () => {
   logout()
 }
+
+onMounted(async () => {
+  await fetchUserProfile()
+})
 </script>
