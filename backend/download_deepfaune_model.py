@@ -47,15 +47,17 @@ def download_model() -> bool:
 
     try:
         # Download from Hugging Face Hub
-        logger.info("Downloading from Deepfaune_v1.4/deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt")
-        
+        logger.info(
+            "Downloading from Deepfaune_v1.4/deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt"
+        )
+
         downloaded_path = hf_hub_download(
             repo_id="Addax-Data-Science/Deepfaune_v1.4",
             filename="deepfaune-vit_large_patch14_dinov2.lvd142m.v4.pt",
             local_dir=model_dir,
-            local_dir_use_symlinks=False
+            local_dir_use_symlinks=False,
         )
-        
+
         # Verify download
         final_path = Path(downloaded_path)
         file_size = final_path.stat().st_size
@@ -63,10 +65,14 @@ def download_model() -> bool:
             # Move to expected location if needed
             if final_path != model_path:
                 final_path.rename(model_path)
-            logger.info(f"Model downloaded successfully to {model_path} ({file_size:,} bytes)")
+            logger.info(
+                f"Model downloaded successfully to {model_path} ({file_size:,} bytes)"
+            )
             return True
         else:
-            logger.error(f"Downloaded file is too small ({file_size} bytes), may be incomplete")
+            logger.error(
+                f"Downloaded file is too small ({file_size} bytes), may be incomplete"
+            )
             if final_path.exists():
                 final_path.unlink()
             return False
