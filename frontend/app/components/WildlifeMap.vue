@@ -55,7 +55,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const route = useRoute()
-const { isAuthenticated: authIsAuthenticated, isLoading: authIsLoading } = useAuth()
+const { isAuthenticated: authIsAuthenticated, isLoading: authIsLoading, getToken } = useAuth()
 
 interface ImageDetection {
   image_id: string
@@ -111,6 +111,7 @@ const markersWithIcons = ref<any[]>([])
 const seenImageIds = ref<Set<string>>(new Set())
 const locationsWithNewImages = ref<Set<string>>(new Set())
 const isPolling = ref(false)
+const imageUrls = ref<Map<string, string>>(new Map())
 let pollingInterval: ReturnType<typeof setInterval> | null = null
 
 // Filter state
@@ -126,10 +127,12 @@ const emit = defineEmits<{
   locationSelected: [location: Location]
 }>()
 
-const createCustomIcon = async (name: string, imageUrl?: string, hasNewImages: boolean = false) => {
+const createCustomIcon = async (name: string, imageId?: string, hasNewImages: boolean = false) => {
   const L = await import('leaflet')
 
-  const imageSrc = imageUrl || '/fallback.JPG'
+  const imageSrc = imageId && imageUrls.value.has(imageId)
+    ? imageUrls.value.get(imageId)!
+    : '/fallback.JPG'
 
   const wrapperClass = hasNewImages ? 'avatar-wrapper has-new-images' : 'avatar-wrapper'
 
@@ -188,9 +191,9 @@ const updateMarkers = async () => {
 
   const newMarkers = await Promise.all(
     locations.value.map(async (location) => {
-      // Get the first image if available
-      const imageUrl = location.images && location.images.length > 0 && location.images[0]
-        ? `${apiUrl}/images/${location.images[0].image_id}/base64`
+      // Get the first image ID if available
+      const firstImageId = location.images && location.images.length > 0 && location.images[0]
+        ? location.images[0].image_id
         : undefined
 
       const imageCount = location.images?.length || 0
@@ -203,10 +206,13 @@ const updateMarkers = async () => {
           <div class="popup-images">
             ${location.images.map(img => {
               const hasDetections = img.detections && img.detections.length > 0
+              const imageSrc = imageUrls.value.has(img.image_id)
+                ? imageUrls.value.get(img.image_id)!
+                : '/fallback.JPG'
               const imageContent = `
                 <div class="image-container">
                   <img
-                    src="${apiUrl}/images/${img.image_id}/base64"
+                    src="${imageSrc}"
                     alt="Camera image"
                     class="popup-image"
                     onerror="this.style.display='none'"
@@ -254,7 +260,7 @@ const updateMarkers = async () => {
             ${imagesHtml}
           </div>
         `,
-        icon: await createCustomIcon(location.name, imageUrl, hasNewImages),
+        icon: await createCustomIcon(location.name, firstImageId, hasNewImages),
         zIndexOffset: hasNewImages ? 1000 : 0,
         data: {
           location: location
@@ -427,6 +433,11 @@ const fetchLocations = async (isPollingCall: boolean = false) => {
     // Update locations AFTER we've set the new images flags
     locations.value = newLocations
 
+    // Fetch authenticated image URLs for all images
+    if (!isPollingCall) {
+      await fetchImageUrls(newLocations)
+    }
+
     // Auto-adjust zoom based on number of locations
     if (!isPollingCall && props.autoCenter && locations.value.length > 1) {
       zoom.value = calculateZoomLevel()
@@ -487,6 +498,52 @@ const calculateZoomLevel = (): number => {
   if (maxDiff > 0.5) return 10
   if (maxDiff > 0.1) return 12
   return 13
+}
+
+// Fetch authenticated image URLs and create object URLs
+const fetchImageUrls = async (locationsToFetch: Location[]) => {
+  const imageIds = new Set<string>()
+  locationsToFetch.forEach(location => {
+    if (location.images) {
+      location.images.forEach(img => {
+        imageIds.add(img.image_id)
+      })
+    }
+  })
+
+  // Only fetch images we don't already have
+  const imagesToFetch = Array.from(imageIds).filter(id => !imageUrls.value.has(id))
+
+  if (imagesToFetch.length === 0) {
+    return
+  }
+
+  try {
+    const token = await getToken()
+    if (!token) {
+      return
+    }
+
+    await Promise.all(
+      imagesToFetch.map(async (imageId) => {
+        try {
+          const response = await fetchWithAuth(`/images/${imageId}/base64`)
+          if (response.ok) {
+            const blob = await response.blob()
+            const url = URL.createObjectURL(blob)
+            imageUrls.value.set(imageId, url)
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch image ${imageId}:`, err)
+        }
+      })
+    )
+
+    // Update markers after fetching images
+    await updateMarkers()
+  } catch (err) {
+    console.error('Error fetching image URLs:', err)
+  }
 }
 
 // Fetch available species from statistics
@@ -573,6 +630,9 @@ onUnmounted(() => {
     clearInterval(pollingInterval)
     pollingInterval = null
   }
+  // Clean up object URLs
+  imageUrls.value.forEach(url => URL.revokeObjectURL(url))
+  imageUrls.value.clear()
 })
 
 // Watch for route query changes and refetch
