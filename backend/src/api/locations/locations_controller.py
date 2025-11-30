@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -12,6 +11,7 @@ from src.api.database import get_db
 from src.api.images.image_service import ImageService
 from src.api.locations.location_repository import LocationRepository
 from src.api.locations.locations_service import SpottingService
+from src.api.models import auth0_sub_to_uuid
 from src.api.images.images_schemas import (
     BoundingBoxResponse,
     DetectionResponse,
@@ -53,15 +53,15 @@ def get_locations(
         description="Maximum distance from center location in kilometers (km). Example: 5.0 for 5 km radius",
         gt=0,
     ),
-    species: Optional[str] = Query(
+    species: str | None = Query(
         None,
         description="Filter by species name (case-insensitive). If provided, only returns spottings of this species.",
     ),
-    time_start: Optional[datetime] = Query(
+    time_start: datetime | None = Query(
         None,
         description="Start timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-01-01T00:00:00",
     ),
-    time_end: Optional[datetime] = Query(
+    time_end: datetime | None = Query(
         None,
         description="End timestamp for time range filter (ISO 8601 format: YYYY-MM-DDTHH:MM:SS or YYYY-MM-DD). Inclusive. Example: 2024-12-31T23:59:59",
     ),
@@ -109,7 +109,7 @@ def get_locations(
     # Extract user ID from request state (set by authentication middleware)
     requesting_user_id = None
     if hasattr(request.state, "user"):
-        requesting_user_id = request.state.user.sub
+        requesting_user_id = auth0_sub_to_uuid(request.state.user.sub)
 
     try:
         return spotting_service.get_spottings_by_location(

@@ -1,7 +1,7 @@
 """Pydantic schemas for location-related request/response validation."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -18,7 +18,7 @@ class LocationCreate(BaseModel):
     name: str
     longitude: float
     latitude: float
-    description: Optional[str] = None
+    description: str | None = None
 
 
 class LocationResponse(BaseModel):
@@ -28,7 +28,7 @@ class LocationResponse(BaseModel):
     name: str
     longitude: float
     latitude: float
-    description: Optional[str]
+    description: str | None
     total_unique_species: int
     total_spottings: int
     images: List[SpottingImageResponse]
@@ -62,7 +62,7 @@ class LocationWithImagesResponse(BaseModel):
     name: str
     longitude: float
     latitude: float
-    description: Optional[str]
+    description: str | None
     images: List[SpottingImageResponse]
     total_images: int
     total_unique_species: int

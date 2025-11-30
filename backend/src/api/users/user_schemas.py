@@ -1,7 +1,6 @@
 """Pydantic schemas for user API endpoints."""
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -10,8 +9,8 @@ class UserResponse(BaseModel):
     """Response schema for user data."""
 
     id: str
-    email: Optional[str] = None
-    name: Optional[str] = None
+    email: str | None = None
+    name: str | None = None
     privacy_public: bool
     created_at: datetime
     updated_at: datetime

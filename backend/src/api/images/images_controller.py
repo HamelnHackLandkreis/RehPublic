@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from fastapi import (
@@ -17,6 +16,8 @@ from fastapi import (
     status,
 )
 from sqlalchemy.orm import Session
+
+from src.api.models import auth0_sub_to_uuid
 
 from src.api.database import get_db
 from src.api.images.image_service import ImageService
@@ -39,7 +40,7 @@ async def upload_image(
     request: Request,
     location_id: UUID,
     file: UploadFile = File(...),
-    upload_timestamp: Optional[datetime] = Query(
+    upload_timestamp: datetime | None = Query(
         None,
         description="Optional ISO 8601 timestamp for the upload (e.g., 2024-01-01T12:00:00). If not provided, current time is used.",
     ),
@@ -77,7 +78,8 @@ async def upload_image(
             detail="Authentication required",
         )
 
-    user_id = request.state.user.sub
+    auth0_sub = request.state.user.sub
+    user_id = auth0_sub_to_uuid(auth0_sub)
 
     try:
         file_bytes = await file.read()

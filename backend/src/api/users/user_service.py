@@ -1,6 +1,6 @@
 """Service layer for user business logic."""
 
-from typing import Optional
+from uuid import UUID
 
 from fastapi import Depends, HTTPException
 from starlette import status
@@ -21,12 +21,12 @@ class UserService:
     ) -> "UserService":
         return cls(user_repository=user_repository)
 
-    def get_or_create_user(self, user_id: str, email: str, name: str) -> User:
+    def get_or_create_user(self, user_id: UUID, email: str, name: str) -> User:
         """
         Get existing user or create new one from JWT data.
 
         Args:
-            user_id: The Auth0 user ID.
+            user_id: The UUID of the user.
             email: User's email address.
             name: User's name.
 
@@ -37,12 +37,12 @@ class UserService:
             user_id=user_id, email=email, name=name
         )
 
-    def get_user(self, user_id: str) -> Optional[User]:
+    def get_user(self, user_id: UUID) -> User | None:
         """
         Retrieve user by ID.
 
         Args:
-            user_id: The user ID to retrieve.
+            user_id: The UUID of the user to retrieve.
 
         Returns:
             User object if found, None otherwise.
@@ -50,14 +50,14 @@ class UserService:
         return self._user_repository.get_user(user_id=user_id)
 
     def update_privacy_setting(
-        self, user_id: str, requesting_user_id: str, privacy_public: bool
+        self, user_id: UUID, requesting_user_id: UUID, privacy_public: bool
     ) -> User:
         """
         Update user's privacy preference with authorization check.
 
         Args:
-            user_id: The user ID to update.
-            requesting_user_id: The ID of the user making the request.
+            user_id: The UUID of the user to update.
+            requesting_user_id: The UUID of the user making the request.
             privacy_public: New privacy setting value.
 
         Returns:

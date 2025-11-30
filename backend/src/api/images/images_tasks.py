@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict
 from uuid import UUID
 from src.api.images.image_models import Image
 
@@ -20,7 +20,7 @@ def process_image_task(
     image_id: str,
     image_base64: str,
     model_region: str = "europe",
-    timestamp: Optional[str] = None,
+    timestamp: str | None = None,
 ) -> Dict:
     """Process image using wildlife detection models.
 

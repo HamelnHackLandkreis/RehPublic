@@ -6,7 +6,7 @@ import base64
 import logging
 import math
 from datetime import datetime
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -34,11 +34,11 @@ class ImageService:
 
     def __init__(
         self,
-        repository: Optional[ImageRepository] = None,
-        location_repository: Optional[LocationRepository] = None,
-        spotting_repository: Optional[object] = None,
-        spotting_service: Optional[object] = None,
-        processor_client: Optional[ProcessorClient] = None,
+        repository: ImageRepository | None = None,
+        location_repository: LocationRepository | None = None,
+        spotting_repository: object | None = None,
+        spotting_service: object | None = None,
+        processor_client: ProcessorClient | None = None,
     ) -> None:
         """Initialize image service.
 
@@ -92,9 +92,9 @@ class ImageService:
         db: Session,
         location_id: UUID,
         file_bytes: bytes,
-        user_id: str,
-        upload_timestamp: Optional[datetime] = None,
-        celery_task_id: Optional[str] = None,
+        user_id: UUID,
+        upload_timestamp: datetime | None = None,
+        celery_task_id: str | None = None,
     ) -> Image:
         """Save uploaded image as base64.
 
@@ -102,7 +102,7 @@ class ImageService:
             db: Database session
             location_id: UUID of the location
             file_bytes: Raw image bytes
-            user_id: ID of the user uploading the image
+            user_id: UUID of the user uploading the image
             upload_timestamp: Optional timestamp to use for upload (defaults to current time)
             celery_task_id: Optional Celery task ID for async processing
 
@@ -122,7 +122,7 @@ class ImageService:
             celery_task_id=celery_task_id,
         )
 
-    def get_image_by_id(self, db: Session, image_id: UUID) -> Optional[Image]:
+    def get_image_by_id(self, db: Session, image_id: UUID) -> Image | None:
         """Retrieve image by ID.
 
         Args:
@@ -136,7 +136,7 @@ class ImageService:
 
     def get_image_with_detections(
         self, db: Session, image_id: UUID
-    ) -> Optional[ImageDetailResponse]:
+    ) -> ImageDetailResponse | None:
         """Get image with detection data.
 
         Args:
@@ -178,9 +178,7 @@ class ImageService:
             processed=image.processed,  # type: ignore[arg-type]
         )
 
-    def get_image_bytes(
-        self, db: Session, image_id: UUID
-    ) -> Optional[Tuple[bytes, str]]:
+    def get_image_bytes(self, db: Session, image_id: UUID) -> Tuple[bytes, str] | None:
         """Get image bytes and content type.
 
         Args:
@@ -250,8 +248,8 @@ class ImageService:
         db: Session,
         location_id: UUID,
         file_bytes: bytes,
-        user_id: str,
-        upload_timestamp: Optional[datetime] = None,
+        user_id: UUID,
+        upload_timestamp: datetime | None = None,
         async_processing: bool = True,
     ) -> ImageUploadResponse:
         """Upload and process an image.
@@ -260,7 +258,7 @@ class ImageService:
             db: Database session
             location_id: UUID of the location
             file_bytes: Raw image bytes
-            user_id: ID of the user uploading the image
+            user_id: UUID of the user uploading the image
             upload_timestamp: Optional timestamp to use for upload
             async_processing: If True, process image asynchronously with Celery (default: True)
 
@@ -384,11 +382,11 @@ class ImageService:
         latitude: float,
         longitude: float,
         distance_range: float,
-        requesting_user_id: Optional[str] = None,
-        time_start: Optional[datetime] = None,
-        time_end: Optional[datetime] = None,
+        requesting_user_id: UUID | None = None,
+        time_start: datetime | None = None,
+        time_end: datetime | None = None,
         limit_per_location: int = 3,
-        species_filter: Optional[str] = None,
+        species_filter: str | None = None,
         only_my_images: bool = False,
     ) -> List[Image]:
         """Get images within a distance range from a location and optional time range.
@@ -401,7 +399,7 @@ class ImageService:
             latitude: Center latitude in decimal degrees
             longitude: Center longitude in decimal degrees
             distance_range: Maximum distance in kilometers (km) from center location
-            requesting_user_id: Optional ID of the user making the request (for privacy filtering)
+            requesting_user_id: Optional UUID of the user making the request (for privacy filtering)
             time_start: Optional start timestamp in ISO 8601 format (inclusive)
             time_end: Optional end timestamp in ISO 8601 format (inclusive)
             limit_per_location: Maximum number of images to return per location (default: 3)

@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import List, Optional
+from typing import List
 from uuid import UUID
 
 from sqlalchemy.orm import Session, selectinload
@@ -22,11 +22,11 @@ class ImageRepository:
         db: Session,
         location_id: UUID,
         base64_data: str,
-        user_id: str,
-        upload_timestamp: Optional[datetime] = None,
+        user_id: UUID,
+        upload_timestamp: datetime | None = None,
         processed: bool = False,
         processing_status: str = "uploading",
-        celery_task_id: Optional[str] = None,
+        celery_task_id: str | None = None,
     ) -> Image:
         """Create new image record.
 
@@ -34,11 +34,11 @@ class ImageRepository:
             db: Database session
             location_id: UUID of the location
             base64_data: Base64 encoded image data
-            user_id: ID of the user uploading the image
-            upload_timestamp: Optional timestamp to use for upload (defaults to current time)
+            user_id: UUID of the user uploading the image
+            upload_timestamp: Timestamp to use for upload (defaults to current time) or None
             processed: Whether the image has been processed
             processing_status: Processing status (uploading, detecting, completed, failed)
-            celery_task_id: Optional Celery task ID for async processing
+            celery_task_id: Celery task ID for async processing or None
 
         Returns:
             Created Image object
@@ -46,7 +46,7 @@ class ImageRepository:
         image_kwargs = {
             "location_id": str(location_id),
             "base64_data": base64_data,
-            "user_id": user_id,
+            "user_id": str(user_id),
             "processed": processed,
             "processing_status": processing_status,
             "celery_task_id": celery_task_id,
@@ -68,7 +68,7 @@ class ImageRepository:
         image_id: UUID,
         processing_status: str,
         processed: bool = False,
-    ) -> Optional[Image]:
+    ) -> Image | None:
         """Update image processing status.
 
         Args:
@@ -89,7 +89,7 @@ class ImageRepository:
         return image
 
     @staticmethod
-    def get_by_id(db: Session, image_id: UUID) -> Optional[Image]:
+    def get_by_id(db: Session, image_id: UUID) -> Image | None:
         """Retrieve image by ID.
 
         Args:
@@ -105,11 +105,11 @@ class ImageRepository:
     def get_by_location_id(
         db: Session,
         location_id: UUID,
-        requesting_user_id: Optional[str] = None,
-        time_start: Optional[datetime] = None,
-        time_end: Optional[datetime] = None,
-        limit: Optional[int] = None,
-        species_filter: Optional[str] = None,
+        requesting_user_id: UUID | None = None,
+        time_start: datetime | None = None,
+        time_end: datetime | None = None,
+        limit: int | None = None,
+        species_filter: str | None = None,
         only_my_images: bool = False,
     ) -> List[Image]:
         """Get images for a specific location with optional filters and privacy rules.
@@ -117,11 +117,11 @@ class ImageRepository:
         Args:
             db: Database session
             location_id: UUID of the location
-            requesting_user_id: Optional ID of the user making the request (for privacy filtering)
-            time_start: Optional start timestamp filter
-            time_end: Optional end timestamp filter
-            limit: Optional limit on number of results
-            species_filter: Optional species filter (case-insensitive)
+            requesting_user_id: UUID of the user making the request (for privacy filtering) or None
+            time_start: Start timestamp filter or None
+            time_end: End timestamp filter or None
+            limit: Limit on number of results or None
+            species_filter: Species filter (case-insensitive) or None
 
         Returns:
             List of Image objects (filtered by privacy rules if requesting_user_id provided)
@@ -139,13 +139,14 @@ class ImageRepository:
 
         # Apply privacy filtering if requesting_user_id is provided
         if requesting_user_id:
+            requesting_user_id_str = str(requesting_user_id)
             if only_my_images:
                 # Only show images belonging to the requesting user
-                query = query.filter(Image.user_id == requesting_user_id)
+                query = query.filter(Image.user_id == requesting_user_id_str)
             else:
                 # Show public images OR images belonging to the requesting user
                 query = query.outerjoin(User, Image.user_id == User.id).filter(
-                    User.privacy_public | (Image.user_id == requesting_user_id)
+                    User.privacy_public | (Image.user_id == requesting_user_id_str)
                 )
 
         if time_start is not None:
@@ -177,11 +178,11 @@ class ImageRepository:
     @staticmethod
     def get_visible_images(
         db: Session,
-        requesting_user_id: str,
-        location_ids: Optional[List[str]] = None,
-        time_start: Optional[datetime] = None,
-        time_end: Optional[datetime] = None,
-        species_filter: Optional[str] = None,
+        requesting_user_id: UUID,
+        location_ids: List[str] | None = None,
+        time_start: datetime | None = None,
+        time_end: datetime | None = None,
+        species_filter: str | None = None,
     ) -> List[Image]:
         """Get images visible to the requesting user based on privacy settings.
 
@@ -191,11 +192,11 @@ class ImageRepository:
 
         Args:
             db: Database session
-            requesting_user_id: ID of the user making the request
-            location_ids: Optional list of location IDs to filter by
-            time_start: Optional start timestamp filter
-            time_end: Optional end timestamp filter
-            species_filter: Optional species filter (case-insensitive)
+            requesting_user_id: UUID of the user making the request
+            location_ids: List of location IDs to filter by or None
+            time_start: Start timestamp filter or None
+            time_end: End timestamp filter or None
+            species_filter: Species filter (case-insensitive) or None
 
         Returns:
             List of Image objects visible to the requesting user
@@ -211,8 +212,9 @@ class ImageRepository:
             query = db.query(Image)
 
         # Apply privacy filtering
+        requesting_user_id_str = str(requesting_user_id)
         query = query.outerjoin(User, Image.user_id == User.id).filter(
-            (User.privacy_public == True) | (Image.user_id == requesting_user_id)  # noqa: E712
+            User.privacy_public | (Image.user_id == requesting_user_id_str)
         )
 
         if location_ids:

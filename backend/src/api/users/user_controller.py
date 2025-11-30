@@ -4,6 +4,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 
+from src.api.models import auth0_sub_to_uuid
 from src.api.users.user_schemas import PrivacyUpdateRequest, UserResponse
 from src.api.users.user_service import UserService
 
@@ -45,9 +46,12 @@ def get_current_user(
 
     jwt_user = request.state.user
 
+    # Convert Auth0 sub to UUID
+    user_id = auth0_sub_to_uuid(jwt_user.sub)
+
     # Get or create user from JWT data
     user = user_service.get_or_create_user(
-        user_id=jwt_user.sub,
+        user_id=user_id,
         email=jwt_user.email or "",
         name=jwt_user.name or "",
     )
@@ -88,7 +92,8 @@ def update_privacy_setting(
             detail="Authentication required",
         )
 
-    user_id = request.state.user.sub
+    auth0_sub = request.state.user.sub
+    user_id = auth0_sub_to_uuid(auth0_sub)
 
     # Update privacy setting with authorization check
     user = user_service.update_privacy_setting(

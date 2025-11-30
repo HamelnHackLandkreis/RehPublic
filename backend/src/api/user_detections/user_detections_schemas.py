@@ -1,7 +1,7 @@
 """Pydantic schemas for user detection-related request/response validation."""
 
 from datetime import datetime
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING, List
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -15,7 +15,7 @@ class UserDetectionCreate(BaseModel):
 
     image_id: UUID
     species: str
-    user_session_id: Optional[str] = None
+    user_session_id: str | None = None
 
 
 class UserDetectionResponse(BaseModel):
@@ -24,7 +24,7 @@ class UserDetectionResponse(BaseModel):
     id: UUID
     image_id: UUID
     species: str
-    user_session_id: Optional[str]
+    user_session_id: str | None
     detection_timestamp: datetime
 
 
