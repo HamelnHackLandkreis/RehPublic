@@ -21,7 +21,7 @@ from src.api.config import AUTH0_DOMAIN, AUTH0_AUDIENCE
 logger = logging.getLogger(__name__)
 
 # Paths that don't require authentication
-AUTH_IGNORE_PATHS = {"/health", "/docs", "/redoc", "/openapi.json"}
+AUTH_IGNORE_PATHS = {"/health", "/docs", "/redoc", "/openapi.json", "/"}
 
 
 def get_jwks() -> dict[str, Any]:
