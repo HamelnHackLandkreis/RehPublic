@@ -97,6 +97,7 @@ interface CameraLocation {
 
 const apiUrl = useApiUrl()
 const router = useRouter()
+const { fetchWithAuth } = useAuthenticatedApi()
 
 const cameras = ref<CameraLocation[]>([])
 const loading = ref(true)
@@ -113,9 +114,12 @@ const fetchCameras = async () => {
       distance_range: '100000000000'
     })
 
-    const response = await fetch(`${apiUrl}/locations?${params.toString()}`)
+    const response = await fetchWithAuth(`/locations?${params.toString()}`)
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 

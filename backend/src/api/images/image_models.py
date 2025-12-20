@@ -18,6 +18,7 @@ class Image(Base):
     location_id = Column(
         String, ForeignKey("locations.id", ondelete="CASCADE"), nullable=False
     )
+    user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
     base64_data = Column(Text, nullable=False)
     upload_timestamp = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
@@ -28,6 +29,7 @@ class Image(Base):
 
     # Relationships
     location = relationship("Location", back_populates="images")
+    user = relationship("User", back_populates="images")
     spottings = relationship(
         "Spotting", back_populates="image", cascade="all, delete-orphan"
     )

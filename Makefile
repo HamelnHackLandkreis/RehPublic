@@ -1,4 +1,4 @@
-.PHONY: backend-sync backend-run backend-run-workers backend-test backend-download-models frontend-prep frontend-run run pre-commit-install pre-commit-run pre-commit-update lint lint-fix types
+.PHONY: backend-sync backend-run backend-run-workers backend-run-celery backend-test backend-download-models frontend-prep frontend-run redis-start run pre-commit-install pre-commit-run pre-commit-update lint lint-fix types
 
 backend-sync:
 	cd backend && uv sync --extra dev
@@ -10,6 +10,9 @@ backend-run:
 backend-run-workers:
 	cd backend && uv run python download_deepfaune_model.py
 	cd backend && PYTHONPATH=src uv run uvicorn api.main:app --port 8000 --workers 4
+
+backend-run-celery:
+	cd backend && PYTHONPATH=src uv run celery -A src.celery_app worker --loglevel=info --concurrency=1
 
 backend-test:
 	cd backend && PYTHONPATH=src uv run pytest tests/ -v -n auto
@@ -25,6 +28,10 @@ frontend-prep:
 
 frontend-run:
 	cd frontend && npm run dev
+
+redis-start:
+	@echo "Starting Redis..."
+	@docker-compose up -d redis || docker run -d --name rehpublic-redis -p 6379:6379 redis:7-alpine || echo "Redis already running or Docker not available"
 
 pre-commit-install:
 	cd backend && uv sync --extra dev
@@ -47,9 +54,11 @@ lint-fix:
 types:
 	cd backend && uv run mypy api/ --ignore-missing-imports
 
-run: backend-sync frontend-prep
-	@echo "Starting backend and frontend..."
+run: backend-sync frontend-prep redis-start
+	@echo "Starting backend, celery, and frontend..."
 	@echo "Backend: http://127.0.0.1:8000"
 	@echo "Frontend: Check terminal output for URL"
+	@sleep 2
 	@cd backend && uv run python download_deepfaune_model.py && PYTHONPATH=src uv run uvicorn api.main:app --reload --port 8000 & \
+	cd backend && PYTHONPATH=src uv run celery -A src.celery_app worker --loglevel=info --concurrency=1 & \
 	cd frontend && npm run dev

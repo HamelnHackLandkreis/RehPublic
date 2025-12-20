@@ -2,7 +2,6 @@
 
 import logging
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from fastapi import (
@@ -11,11 +10,14 @@ from fastapi import (
     File,
     HTTPException,
     Query,
+    Request,
     Response,
     UploadFile,
     status,
 )
 from sqlalchemy.orm import Session
+
+from src.api.models import auth0_sub_to_uuid
 
 from src.api.database import get_db
 from src.api.images.image_service import ImageService
@@ -35,9 +37,10 @@ ImageService
     tags=["images"],
 )
 async def upload_image(
+    request: Request,
     location_id: UUID,
     file: UploadFile = File(...),
-    upload_timestamp: Optional[datetime] = Query(
+    upload_timestamp: datetime | None = Query(
         None,
         description="Optional ISO 8601 timestamp for the upload (e.g., 2024-01-01T12:00:00). If not provided, current time is used.",
     ),
@@ -47,13 +50,15 @@ async def upload_image(
     """Upload an image to a specific location and process it for animal detection.
 
     This endpoint:
-    1. Validates the location exists
-    2. Saves the image as base64 in the database
-    3. Synchronously processes the image using the wildlife processor
-    4. Stores all detected animals in the spottings table
-    5. Returns the image ID and detection count
+    1. Validates the user is authenticated
+    2. Validates the location exists
+    3. Saves the image as base64 in the database with user association
+    4. Synchronously processes the image using the wildlife processor
+    5. Stores all detected animals in the spottings table
+    6. Returns the image ID and detection count
 
     Args:
+        request: FastAPI request object (contains authenticated user)
         location_id: UUID of the location
         file: Uploaded image file
         upload_timestamp: Optional ISO 8601 timestamp for the upload
@@ -64,13 +69,27 @@ async def upload_image(
         Image upload response with image_id and detection count
 
     Raises:
-        HTTPException: 404 if location not found, 500 on processing error
+        HTTPException: 401 if not authenticated, 404 if location not found, 500 on processing error
     """
+    # Extract user from request state (set by authentication middleware)
+    if not hasattr(request.state, "user"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required",
+        )
+
+    auth0_sub = request.state.user.sub
+    user_id = auth0_sub_to_uuid(auth0_sub)
+
     try:
         file_bytes = await file.read()
 
         result = image_service.upload_and_process_image(
-            db, location_id, file_bytes, upload_timestamp
+            db=db,
+            location_id=location_id,
+            file_bytes=file_bytes,
+            user_id=user_id,
+            upload_timestamp=upload_timestamp,
         )
 
         return result

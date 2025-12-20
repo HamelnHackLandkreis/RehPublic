@@ -225,6 +225,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 
 const apiUrl = useApiUrl()
 const route = useRoute()
+const { fetchWithAuth } = useAuthenticatedApi()
 
 // Types
 interface WikipediaArticle {
@@ -462,7 +463,7 @@ const getAIConfidence = (speciesName: string): number => {
 // Fetch image data from backend
 const fetchImageData = async () => {
   try {
-    const response = await fetch(`${apiUrl}/images/${imageId.value}`, {
+    const response = await fetchWithAuth(`/images/${imageId.value}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -470,6 +471,9 @@ const fetchImageData = async () => {
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -501,7 +505,7 @@ const fetchImageData = async () => {
 // Fetch historical species from statistics endpoint
 const fetchHistoricalSpecies = async (): Promise<string[]> => {
   try {
-    const response = await fetch(`${apiUrl}/statistics?period=year&granularity=daily`, {
+    const response = await fetchWithAuth(`/statistics?period=year&granularity=daily`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -509,6 +513,9 @@ const fetchHistoricalSpecies = async (): Promise<string[]> => {
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return []
+      }
       console.warn('Failed to fetch statistics, using default fallback')
       return []
     }
@@ -533,7 +540,7 @@ const fetchHistoricalSpecies = async (): Promise<string[]> => {
 // Fetch animals from backend
 const fetchAnimals = async (speciesList: string[]) => {
   try {
-    const response = await fetch(`${apiUrl}/wikipedia/articles`, {
+    const response = await fetchWithAuth(`/wikipedia/articles`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -544,6 +551,9 @@ const fetchAnimals = async (speciesList: string[]) => {
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -561,7 +571,7 @@ const fetchAnimals = async (speciesList: string[]) => {
 const fetchUserStats = async () => {
   try {
     console.log('Fetching user stats for image:', imageId.value)
-    const response = await fetch(`${apiUrl}/user-detections/${imageId.value}`, {
+    const response = await fetchWithAuth(`/user-detections/${imageId.value}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -571,6 +581,9 @@ const fetchUserStats = async () => {
     console.log('User stats response status:', response.status)
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       const errorText = await response.text()
       console.error('User stats API error:', response.status, errorText)
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -636,7 +649,7 @@ const getCardStyle = (index: number) => {
 const submitUnknown = async () => {
   try {
     // Submit "unknown" as the species
-    const response = await fetch(`${apiUrl}/user-detections`, {
+    const response = await fetchWithAuth(`/user-detections`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -649,6 +662,9 @@ const submitUnknown = async () => {
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -667,7 +683,7 @@ const submitMatch = async (animal: WikipediaArticle, isCorrect: boolean) => {
   try {
     if (isCorrect) {
       // Submit user detection to backend
-      const response = await fetch(`${apiUrl}/user-detections`, {
+      const response = await fetchWithAuth(`/user-detections`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -680,6 +696,9 @@ const submitMatch = async (animal: WikipediaArticle, isCorrect: boolean) => {
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          return
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 

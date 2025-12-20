@@ -120,7 +120,7 @@
                   <div @click="() => router.push(`/match/${image.image_id}`)"
                     class="group block relative rounded-lg overflow-hidden border-2 border-transparent transition-all hover:border-blue-500 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
                     <div class="relative w-full aspect-[4/3] overflow-hidden bg-gray-100">
-                      <img :src="`${apiUrl}/images/${image.image_id}/base64`"
+                      <img :src="imageUrls.get(image.image_id) || `${apiUrl}/images/${image.image_id}/base64`"
                         :alt="`Image from ${new Date(image.upload_timestamp).toLocaleString()}`"
                         class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         @error="handleImageError" />
@@ -279,6 +279,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 const apiUrl = useApiUrl()
 const route = useRoute()
 const router = useRouter()
+const { fetchWithAuth } = useAuthenticatedApi()
+const { getToken } = useAuth()
 
 interface UploadFile {
   id: string
@@ -334,6 +336,7 @@ const failedFiles = ref<UploadFile[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 const mapRef = ref<any>(null)
 const pollingIntervals = ref<Map<string, number>>(new Map())
+const imageUrls = ref<Map<string, string>>(new Map())
 
 const cameraId = computed(() => route.params.id as string)
 
@@ -418,9 +421,12 @@ const fetchCameraData = async () => {
       distance_range: '100000000000'
     })
 
-    const response = await fetch(`${apiUrl}/locations?${params.toString()}`)
+    const response = await fetchWithAuth(`/locations?${params.toString()}`)
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
@@ -433,6 +439,27 @@ const fetchCameraData = async () => {
 
     location.value = foundLocation
 
+    // Pre-fetch image URLs with authentication
+    if (foundLocation.images && foundLocation.images.length > 0) {
+      const token = await getToken()
+      if (token) {
+        await Promise.all(
+          foundLocation.images.map(async (img) => {
+            try {
+              const response = await fetchWithAuth(`/images/${img.image_id}/base64`)
+              if (response.ok) {
+                const blob = await response.blob()
+                const url = URL.createObjectURL(blob)
+                imageUrls.value.set(img.image_id, url)
+              }
+            } catch (err) {
+              console.warn(`Failed to fetch image ${img.image_id}:`, err)
+            }
+          })
+        )
+      }
+    }
+
     // Fetch statistics for this location to get complete species breakdown
     try {
       const statsParams = new URLSearchParams({
@@ -440,7 +467,7 @@ const fetchCameraData = async () => {
         granularity: 'daily',
         location_id: cameraId.value
       })
-      const statsResponse = await fetch(`${apiUrl}/statistics?${statsParams.toString()}`)
+      const statsResponse = await fetchWithAuth(`/statistics?${statsParams.toString()}`)
 
       if (statsResponse.ok) {
         const statsData = await statsResponse.json()
@@ -538,6 +565,12 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
   formData.append('file', uploadFile.file)
 
   try {
+    const token = await getToken()
+    if (!token) {
+      handleUploadError(uploadFile, 'Authentication required')
+      return
+    }
+
     const xhr = new XMLHttpRequest()
 
     // Track upload progress
@@ -603,6 +636,7 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
 
     // Send the request
     xhr.open('POST', `${apiUrl}/locations/${location.value.id}/image`)
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.send(formData)
 
   } catch (error) {
@@ -621,7 +655,7 @@ const startPollingStatus = (uploadFile: UploadFile) => {
 
   const pollStatus = async () => {
     try {
-      const response = await fetch(`${apiUrl}/images/${uploadFile.imageId}`)
+      const response = await fetchWithAuth(`/images/${uploadFile.imageId}`)
       if (response.ok) {
         const data = await response.json()
         console.log('Poll response for', uploadFile.name, ':', data)
@@ -703,5 +737,8 @@ onMounted(() => {
 onUnmounted(() => {
   pollingIntervals.value.forEach(intervalId => clearInterval(intervalId))
   pollingIntervals.value.clear()
+  // Clean up object URLs
+  imageUrls.value.forEach(url => URL.revokeObjectURL(url))
+  imageUrls.value.clear()
 })
 </script>

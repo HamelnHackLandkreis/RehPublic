@@ -10,6 +10,8 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@auth0/auth0-spa-js": "^2.9.1",
+    "@auth0/auth0-vue": "^2.4.0",
     "@nuxt/eslint": "^1.10.0",
     "@nuxt/image": "^2.0.0",
     "@nuxt/ui": "^4.1.0",

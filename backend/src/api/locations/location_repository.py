@@ -2,7 +2,7 @@
 
 import logging
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -29,7 +29,7 @@ class LocationRepository:
         return db.query(Location).all()
 
     @staticmethod
-    def get_by_id(db: Session, location_id: UUID) -> Optional[Location]:
+    def get_by_id(db: Session, location_id: UUID) -> Location | None:
         """Get specific location by ID.
 
         Args:
@@ -47,7 +47,7 @@ class LocationRepository:
         name: str,
         longitude: float,
         latitude: float,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> Location:
         """Create new location.
 
@@ -126,7 +126,7 @@ class LocationRepository:
     @staticmethod
     def get_by_id_with_statistics(
         db: Session, location_id: UUID
-    ) -> Optional[Tuple[Location, int, int]]:
+    ) -> Tuple[Location, int, int] | None:
         """Get specific location by ID with spotting statistics.
 
         Args:
@@ -214,7 +214,7 @@ class SpottingRepository:
         bbox_height: int,
         classification_model: str,
         is_uncertain: bool,
-        detection_timestamp: Optional[datetime] = None,
+        detection_timestamp: datetime | None = None,
     ) -> Spotting:
         """Create a new spotting.
 
@@ -338,8 +338,8 @@ class SpottingRepository:
         db: Session,
         start_time: datetime,
         end_time: datetime,
-        location_id: Optional[str] = None,
-        limit: Optional[int] = None,
+        location_id: str | None = None,
+        limit: int | None = None,
     ) -> List[Tuple[str, datetime]]:
         """Get spottings within a time range.
 
@@ -391,8 +391,8 @@ class SpottingRepository:
     @staticmethod
     def get_animal_spottings_with_location(
         db: Session,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> Tuple[List[Tuple[Spotting, Image, Location]], int]:
         """Get spottings with species "animal" joined with Image and Location.
 
@@ -425,9 +425,9 @@ class SpottingRepository:
     def get_location_statistics(
         db: Session,
         location_id: str,
-        species_filter: Optional[str] = None,
-        time_start: Optional[datetime] = None,
-        time_end: Optional[datetime] = None,
+        species_filter: str | None = None,
+        time_start: datetime | None = None,
+        time_end: datetime | None = None,
     ) -> Tuple[int, int, int, int]:
         """Get statistics for a specific location.
 
@@ -502,9 +502,9 @@ class SpottingRepository:
     def get_global_statistics(
         db: Session,
         location_ids: List[str],
-        species_filter: Optional[str] = None,
-        time_start: Optional[datetime] = None,
-        time_end: Optional[datetime] = None,
+        species_filter: str | None = None,
+        time_start: datetime | None = None,
+        time_end: datetime | None = None,
     ) -> Tuple[int, int]:
         """Get global statistics across multiple locations.
 

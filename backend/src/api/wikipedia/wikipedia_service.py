@@ -2,7 +2,7 @@
 
 import logging
 from functools import lru_cache
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import httpx
 
@@ -20,7 +20,7 @@ class WikipediaService:
         self._cache: Dict[str, Dict[str, Any]] = {}  # Manual cache for async function
 
     @lru_cache(maxsize=128)
-    def _get_cached_article(self, title: str) -> Optional[Dict]:
+    def _get_cached_article(self, title: str) -> Dict | None:
         """Internal cache lookup method.
 
         This method serves as a cache key storage. The actual data
@@ -34,7 +34,7 @@ class WikipediaService:
         """
         return self._cache.get(title)
 
-    def _set_cached_article(self, title: str, data: Optional[Dict]) -> None:
+    def _set_cached_article(self, title: str, data: Dict | None) -> None:
         """Store article data in cache.
 
         Args:
@@ -45,7 +45,7 @@ class WikipediaService:
         # Trigger the lru_cache to register this key
         self._get_cached_article(title)
 
-    async def fetch_article(self, title: str) -> Optional[Dict]:
+    async def fetch_article(self, title: str) -> Dict | None:
         """Fetch a single Wikipedia article summary with caching.
 
         Args:

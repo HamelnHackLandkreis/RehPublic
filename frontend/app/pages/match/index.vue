@@ -19,6 +19,7 @@ import { ref, onMounted } from 'vue'
 
 const apiUrl = useApiUrl()
 const router = useRouter()
+const { fetchWithAuth } = useAuthenticatedApi()
 
 // Types
 interface SpottingImage {
@@ -50,8 +51,8 @@ const error = ref<string | null>(null)
 const fetchRandomImageAndRedirect = async () => {
   try {
     // Fetch locations with very large distance range to get all images
-    const response = await fetch(
-      `${apiUrl}/locations?latitude=50.123&longitude=10.456&distance_range=100000000000`,
+    const response = await fetchWithAuth(
+      `/locations?latitude=50.123&longitude=10.456&distance_range=100000000000`,
       {
         method: 'GET',
         headers: {
@@ -61,6 +62,9 @@ const fetchRandomImageAndRedirect = async () => {
     )
 
     if (!response.ok) {
+      if (response.status === 401) {
+        return
+      }
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 

@@ -1,7 +1,7 @@
 """Repository for user detection data access operations."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List
 from uuid import UUID
 
 from sqlalchemy import func
@@ -18,7 +18,7 @@ class UserDetectionRepository:
 
     @staticmethod
     def create(
-        db: Session, image_id: UUID, species: str, user_session_id: Optional[str] = None
+        db: Session, image_id: UUID, species: str, user_session_id: str | None = None
     ) -> UserDetection:
         """Create a new user detection.
 

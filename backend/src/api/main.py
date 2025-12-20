@@ -6,17 +6,20 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
+from src.api.config import validate_auth0_config
 from src.api.database import init_db
 from src.api.images.images_controller import (
     router as images_router,
     upload_router as image_upload_router,
 )
 from src.api.locations.locations_controller import router as locations_router
+from src.api.middleware.auth import create_authentication_middleware
 from src.api.root.root_controller import router as root_router
 from src.api.statistics.statistics_controller import router as statistics_router
 from src.api.user_detections.user_detections_controller import (
     router as user_detections_router,
 )
+from src.api.users.user_controller import router as users_router
 from src.api.wikipedia.wikipedia_controller import router as wikipedia_router
 
 # Configure logging
@@ -73,6 +76,10 @@ app = FastAPI(
             "name": "statistics",
             "description": "Get statistics for animal spottings grouped by time periods.",
         },
+        {
+            "name": "users",
+            "description": "User profile and settings management.",
+        },
     ],
 )
 
@@ -92,6 +99,9 @@ app.add_middleware(
     allowed_hosts=["*"],  # Adjust to your specific domains in production
 )
 
+# Register authentication middleware
+create_authentication_middleware(app)
+
 # Include routers
 app.include_router(locations_router, prefix="/locations", tags=["locations"])
 app.include_router(images_router, prefix="/images", tags=["images"])
@@ -102,6 +112,7 @@ app.include_router(statistics_router, prefix="/statistics", tags=["statistics"])
 app.include_router(
     user_detections_router, prefix="/user-detections", tags=["user-detections"]
 )
+app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(wikipedia_router, prefix="/wikipedia", tags=["wikipedia"])
 app.include_router(root_router, tags=["root"])
 
@@ -109,6 +120,10 @@ app.include_router(root_router, tags=["root"])
 @app.on_event("startup")
 def startup_event() -> None:
     """Initialize database on startup."""
+    logger.info("Validating Auth0 configuration...")
+    validate_auth0_config()
+    logger.info("Auth0 configuration validated successfully")
+
     logger.info("Initializing database...")
     init_db()
     logger.info("Database initialized successfully")

@@ -1,7 +1,7 @@
 """Service for user detection business logic."""
 
 import logging
-from typing import Dict, Optional
+from typing import Dict
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class UserDetectionService:
     """Service for user detection operations."""
 
-    def __init__(self, repository: Optional[UserDetectionRepository] = None) -> None:
+    def __init__(self, repository: UserDetectionRepository | None = None) -> None:
         """Initialize user detection service.
 
         Args:
@@ -37,7 +37,7 @@ class UserDetectionService:
         db: Session,
         image_id: UUID,
         species: str,
-        user_session_id: Optional[str] = None,
+        user_session_id: str | None = None,
     ) -> UserDetection:
         """Create a new user detection.
 

@@ -142,6 +142,10 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 
+definePageMeta({
+  middleware: 'auth'
+})
+
 interface CameraLocation {
   id: string
   name: string
@@ -163,6 +167,7 @@ interface UploadFile {
 }
 
 const API_BASE_URL = useApiUrl()
+const { fetchWithAuth } = useAuthenticatedApi()
 
 const isDragging = ref(false)
 const uploadingFiles = ref<UploadFile[]>([])
@@ -182,10 +187,12 @@ onMounted(async () => {
       longitude: '9.7085',
       distance_range: '1000'
     })
-    const response = await fetch(`${API_BASE_URL}/locations?${params.toString()}`)
+    const response = await fetchWithAuth(`/locations?${params.toString()}`)
     if (response.ok) {
       const data = await response.json()
       cameraLocations.value = data.locations || []
+    } else if (response.status === 401) {
+      return
     }
   } catch (error) {
     console.error('Failed to fetch camera locations:', error)
@@ -261,6 +268,14 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
     return
   }
 
+  const { getToken } = useAuth()
+  const token = await getToken()
+
+  if (!token) {
+    handleUploadError(uploadFile, 'Authentication required')
+    return
+  }
+
   const formData = new FormData()
   formData.append('file', uploadFile.file)
 
@@ -312,8 +327,9 @@ const uploadFileToAPI = async (uploadFile: UploadFile) => {
       handleUploadError(uploadFile, 'Upload cancelled')
     })
 
-    // Send the request
+    // Send the request with Authorization header
     xhr.open('POST', `${API_BASE_URL}/locations/${selectedLocation.value.id}/image`)
+    xhr.setRequestHeader('Authorization', `Bearer ${token}`)
     xhr.send(formData)
 
   } catch (error) {

@@ -1,6 +1,6 @@
 """Pydantic schemas for Wikipedia-related request/response validation."""
 
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel
 
@@ -9,8 +9,8 @@ class WikipediaArticleResponse(BaseModel):
     """Schema for Wikipedia article response."""
 
     title: str
-    description: Optional[str]
-    image_url: Optional[str]
+    description: str | None
+    image_url: str | None
     article_url: str
 
 

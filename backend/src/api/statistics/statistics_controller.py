@@ -1,7 +1,6 @@
 """Controller for statistics endpoints."""
 
 import logging
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
@@ -34,17 +33,17 @@ def get_statistics(
         description="Time period range: 'day' (current day), 'week' (last 7 days), 'month' (last 30 days), or 'year' (last 365 days)",
         pattern="^(day|week|month|year)$",
     ),
-    granularity: Optional[str] = Query(
+    granularity: str | None = Query(
         None,
         description="Grouping granularity: 'hourly', 'daily', or 'weekly'. If not provided, defaults based on period (day=hourly, week/month=daily, year=weekly)",
         pattern="^(hourly|daily|weekly)$",
     ),
-    limit: Optional[int] = Query(
+    limit: int | None = Query(
         None,
         description="Maximum number of spottings to include in statistics before aggregation. If not provided, all spottings in the period are included.",
         gt=0,
     ),
-    location_id: Optional[str] = Query(
+    location_id: str | None = Query(
         None,
         description="Optional location ID to filter statistics by a specific location.",
     ),

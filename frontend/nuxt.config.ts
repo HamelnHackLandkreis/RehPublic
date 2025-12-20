@@ -16,7 +16,10 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:8000'
+      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'http://localhost:8000',
+      auth0Domain: process.env.NUXT_PUBLIC_AUTH0_DOMAIN || '',
+      auth0ClientId: process.env.NUXT_PUBLIC_AUTH0_CLIENT_ID || '',
+      auth0Audience: process.env.NUXT_PUBLIC_AUTH0_AUDIENCE || ''
     }
   },
   pwa: {

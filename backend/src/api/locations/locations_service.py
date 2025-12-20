@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Tuple
 from uuid import UUID
 
 from sqlalchemy.orm import Session
@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 class LocationService:
     """Service for location-related operations."""
 
-    def __init__(self, repository: Optional[LocationRepository] = None) -> None:
+    def __init__(self, repository: LocationRepository | None = None) -> None:
         """Initialize location service.
 
         Args:
@@ -79,7 +79,7 @@ class LocationService:
         """
         return self.repository.get_all_with_statistics(db)
 
-    def get_location_by_id(self, db: Session, location_id: UUID) -> Optional[Location]:
+    def get_location_by_id(self, db: Session, location_id: UUID) -> Location | None:
         """Get specific location by ID.
 
         Args:
@@ -93,7 +93,7 @@ class LocationService:
 
     def get_location_by_id_with_statistics(
         self, db: Session, location_id: UUID
-    ) -> Optional[Tuple[Location, int, int]]:
+    ) -> Tuple[Location, int, int] | None:
         """Get specific location by ID with spotting statistics.
 
         Args:
@@ -114,7 +114,7 @@ class LocationService:
         name: str,
         longitude: float,
         latitude: float,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> Location:
         """Create new location.
 
@@ -142,10 +142,10 @@ class SpottingService:
 
     def __init__(
         self,
-        repository: Optional[SpottingRepository] = None,
-        image_service: Optional[object] = None,
-        image_repository: Optional[object] = None,
-        location_repository: Optional[LocationRepository] = None,
+        repository: SpottingRepository | None = None,
+        image_service: object | None = None,
+        image_repository: object | None = None,
+        location_repository: LocationRepository | None = None,
     ) -> None:
         """Initialize spotting service.
 
@@ -195,7 +195,7 @@ class SpottingService:
         db: Session,
         image_id: UUID,
         detections: List[Dict],
-        detection_timestamp: Optional[datetime] = None,
+        detection_timestamp: datetime | None = None,
     ) -> List:
         """Store detection results.
 
@@ -234,17 +234,20 @@ class SpottingService:
         latitude: float,
         longitude: float,
         distance_range: float,
-        species_filter: Optional[str] = None,
-        time_start: Optional[datetime] = None,
-        time_end: Optional[datetime] = None,
+        requesting_user_id: UUID | None = None,
+        species_filter: str | None = None,
+        time_start: datetime | None = None,
+        time_end: datetime | None = None,
+        only_my_images: bool = False,
     ) -> SpottingsResponse:
-        """Get spottings grouped by location with statistics.
+        """Get spottings grouped by location with statistics and privacy filtering.
 
         Args:
             db: Database session
             latitude: Center latitude
             longitude: Center longitude
             distance_range: Maximum distance in kilometers
+            requesting_user_id: Optional UUID of the user making the request (for privacy filtering)
             species_filter: Optional species filter (case-insensitive)
             time_start: Optional start timestamp filter
             time_end: Optional end timestamp filter
@@ -260,16 +263,18 @@ class SpottingService:
             distance_range=distance_range,
         )
 
-        # Get images with spottings
+        # Get images with spottings (with privacy filtering)
         images = self.image_service.get_images_in_range(
             db=db,
             latitude=latitude,
             longitude=longitude,
             distance_range=distance_range,
+            requesting_user_id=requesting_user_id,
             time_start=time_start,
             time_end=time_end,
             limit_per_location=5,
             species_filter=species_filter,
+            only_my_images=only_my_images,
         )
 
         from collections import defaultdict
@@ -366,8 +371,8 @@ class SpottingService:
     def get_animal_spottings(
         self,
         db: Session,
-        limit: Optional[int] = None,
-        offset: Optional[int] = None,
+        limit: int | None = None,
+        offset: int | None = None,
     ) -> AnimalSpottingsResponse:
         """Get all spottings with species "animal".
 
@@ -456,9 +461,9 @@ class SpottingService:
         self,
         db: Session,
         period: str = "day",
-        granularity: Optional[str] = None,
-        limit: Optional[int] = None,
-        location_id: Optional[str] = None,
+        granularity: str | None = None,
+        limit: int | None = None,
+        location_id: str | None = None,
     ) -> List[Dict]:
         """Get statistics for spottings grouped by time period.
 

@@ -1,5 +1,9 @@
 <script setup lang="ts">
-navigateTo('/map')
+const route = useRoute()
+navigateTo({
+  path: '/map',
+  query: route.query
+})
 </script>
 
 <template>
