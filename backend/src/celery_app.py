@@ -3,6 +3,7 @@
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -10,7 +11,10 @@ celery_app = Celery(
     "wildlife_processor",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["src.api.images.images_tasks"],
+    include=[
+        "src.api.images.images_tasks",
+        "src.api.image_pull_sources.image_pull_tasks",
+    ],
 )
 
 celery_app.conf.update(
@@ -25,3 +29,11 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1,
     worker_max_tasks_per_child=50,
 )
+
+celery_app.conf.beat_schedule = {
+    "pull-images-every-hour": {
+        "task": "image_pull.pull_all_sources",
+        "schedule": crontab(minute=0),
+        "kwargs": {"max_files_per_source": 10},
+    },
+}

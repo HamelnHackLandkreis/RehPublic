@@ -33,6 +33,8 @@ class SpottingImageResponse(BaseModel):
     location_id: UUID
     upload_timestamp: datetime
     detections: List[DetectionResponse]
+    processing_status: str  # uploading, detecting, completed, failed
+    processed: bool
 
 
 class ImageDetailResponse(BaseModel):

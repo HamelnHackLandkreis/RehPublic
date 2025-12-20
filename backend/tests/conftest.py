@@ -53,10 +53,14 @@ def client():
         # Delete all records from tables (in correct order due to foreign keys)
         from src.api.locations.location_models import Spotting
         from src.api.images.image_models import Image
+        from src.api.image_pull_sources.image_pull_source_models import (
+            ImagePullSource,
+        )
         from src.api.locations.location_models import Location
 
         db.query(Spotting).delete()
         db.query(Image).delete()
+        db.query(ImagePullSource).delete()
         db.query(Location).delete()
         db.commit()
     finally:

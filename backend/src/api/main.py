@@ -8,6 +8,9 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from src.api.config import validate_auth0_config
 from src.api.database import init_db
+from src.api.image_pull_sources.image_pull_controller import (
+    router as image_pull_sources_router,
+)
 from src.api.images.images_controller import (
     router as images_router,
     upload_router as image_upload_router,
@@ -65,6 +68,10 @@ app = FastAPI(
             "description": "Operations for uploading and retrieving images with animal detections.",
         },
         {
+            "name": "image_pull_sources",
+            "description": "Configure and manage automated image pulling from external sources.",
+        },
+        {
             "name": "user-detections",
             "description": "Track manual user identifications and compare with automated detections.",
         },
@@ -108,6 +115,9 @@ app.include_router(images_router, prefix="/images", tags=["images"])
 app.include_router(
     image_upload_router, prefix="/locations", tags=["images"]
 )  # For /locations/{id}/image endpoint
+app.include_router(
+    image_pull_sources_router, prefix="/image-pull-sources", tags=["image_pull_sources"]
+)
 app.include_router(statistics_router, prefix="/statistics", tags=["statistics"])
 app.include_router(
     user_detections_router, prefix="/user-detections", tags=["user-detections"]

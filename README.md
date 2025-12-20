@@ -91,6 +91,48 @@ You can run the application using either Docker Compose (recommended for product
 └── Makefile            # Make commands for development
 ```
 
+## Make Commands
+
+The project includes several convenient Make commands for development:
+
+### Backend Commands
+- `make backend-sync`: Install/sync backend dependencies
+- `make backend-run`: Start the backend server in development mode
+- `make backend-run-workers`: Start the backend with multiple workers
+- `make backend-run-celery`: Start the Celery worker for background tasks
+- `make backend-test`: Run backend tests in parallel
+- `make backend-download-models`: Download the wildlife detection models
+- `make backend-sync-images`: **Manually trigger image sync from external sources (default: 10 files/source)**
+- `make backend-sync-images-all`: **Manually trigger image sync with higher limit (100 files/source)**
+
+### Frontend Commands
+- `make frontend-prep`: Install frontend dependencies
+- `make frontend-run`: Start the frontend development server
+
+### Other Commands
+- `make redis-start`: Start Redis server (required for Celery)
+- `make run`: Start all services (backend, celery, frontend)
+- `make lint`: Run linting checks
+- `make lint-fix`: Fix linting issues automatically
+
+### Image Pull Synchronization
+
+RehPublic supports automated polling of images from external HTTP directory sources (e.g., wildlife camera APIs). Images are automatically fetched hourly by Celery Beat, but you can also trigger manual synchronization:
+
+```bash
+# Sync up to 10 files per source (default)
+make backend-sync-images
+
+# Sync up to 100 files per source
+make backend-sync-images-all
+
+# Or use the Python script directly with custom limits
+cd backend
+PYTHONPATH=src uv run python trigger_image_sync.py --max-files 50
+```
+
+For more details on setting up image pull sources, see the [Image Pull Sources documentation](backend/src/api/image_pull_sources/README.md).
+
 ## API Endpoints
 
 The backend provides a RESTful API with the following main endpoints:
