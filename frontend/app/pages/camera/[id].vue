@@ -431,11 +431,11 @@
                     <p class="text-sm text-green-700">{{ integrationSuccess }}</p>
                   </div>
 
-                  <div class="flex gap-3">
+                  <div class="flex gap-3 pt-4">
                     <button
                       type="submit"
                       :disabled="integrationLoading"
-                      class="px-6 py-2.5 bg-secondary text-white rounded-lg font-medium transition-colors hover:bg-secondary-dark disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="px-6 py-2.5 bg-green-500 text-white rounded-lg font-medium transition-all hover:bg-green-600 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:scale-105"
                     >
                       {{ integrationLoading ? 'Creating...' : 'Create Integration' }}
                     </button>
