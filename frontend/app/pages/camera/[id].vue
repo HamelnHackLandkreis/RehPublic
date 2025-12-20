@@ -53,6 +53,16 @@
             </svg>
             Edit Location
           </button>
+          <button @click="openDeleteModal"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-red-300 rounded-lg text-sm font-medium text-red-700 transition-all hover:border-red-400 hover:bg-red-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            Delete Camera
+          </button>
         </div>
       </div>
 
@@ -549,6 +559,68 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Camera Modal -->
+    <div v-if="showDeleteModal" class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 10000;">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/50" @click="closeDeleteModal"></div>
+
+      <!-- Modal Content -->
+      <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div class="p-6">
+          <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" class="text-red-600">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 text-center mb-2">Delete Camera</h2>
+          <p class="text-gray-600 text-center mb-2">
+            Are you sure you want to delete <strong class="text-gray-900">{{ location?.name }}</strong>?
+          </p>
+
+          <!-- Image Count Warning -->
+          <div v-if="loadingImageCount" class="flex justify-center mb-4">
+            <LoadingSpinner size="sm" />
+          </div>
+          <div v-else-if="deleteImageCount > 0" class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+            <p class="text-red-700 text-sm text-center font-medium">
+              ⚠️ This will also delete <strong>{{ deleteImageCount }}</strong> image{{ deleteImageCount !== 1 ? 's' : '' }} and all associated detections.
+            </p>
+          </div>
+          <p class="text-gray-500 text-sm text-center mb-6">
+            This action cannot be undone.
+          </p>
+
+          <!-- Confirmation Input -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Type <strong class="text-red-600">{{ location?.name }}</strong> to confirm:
+            </label>
+            <input v-model="deleteConfirmation" type="text" :placeholder="location?.name"
+              class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-red-500 transition-colors"
+              @keyup.enter="deleteCamera" />
+          </div>
+
+          <!-- Error Message -->
+          <p v-if="deleteError" class="text-red-500 text-sm mb-4 text-center">{{ deleteError }}</p>
+
+          <div class="flex gap-3">
+            <button @click="closeDeleteModal"
+              class="flex-1 px-5 py-2.5 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+              Cancel
+            </button>
+            <button @click="deleteCamera" :disabled="!canDelete || deleting"
+              class="flex-1 px-5 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              <LoadingSpinner v-if="deleting" size="sm" />
+              {{ deleting ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -650,6 +722,18 @@ const canSaveEdit = computed(() => {
   return editLocation.value.name.trim() !== '' &&
     editLocation.value.latitude !== null &&
     editLocation.value.longitude !== null
+})
+
+// Delete modal state
+const showDeleteModal = ref(false)
+const deleting = ref(false)
+const deleteError = ref<string | null>(null)
+const deleteConfirmation = ref('')
+const deleteImageCount = ref(0)
+const loadingImageCount = ref(false)
+
+const canDelete = computed(() => {
+  return location.value && deleteConfirmation.value === location.value.name
 })
 
 const cameraId = computed(() => route.params.id as string)
@@ -950,6 +1034,65 @@ const saveLocationEdit = async () => {
     console.error('Error updating location:', err)
   } finally {
     saving.value = false
+  }
+}
+
+// Delete modal functions
+const openDeleteModal = async () => {
+  if (!location.value) return
+
+  deleteConfirmation.value = ''
+  deleteError.value = null
+  deleteImageCount.value = 0
+  loadingImageCount.value = true
+  showDeleteModal.value = true
+
+  // Fetch the image count for this camera
+  try {
+    const response = await fetchWithAuth(`/locations/${location.value.id}/image-count`)
+    if (response.ok) {
+      const data = await response.json()
+      deleteImageCount.value = data.image_count || 0
+    }
+  } catch (err) {
+    console.error('Error fetching image count:', err)
+  } finally {
+    loadingImageCount.value = false
+  }
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  deleteConfirmation.value = ''
+  deleteError.value = null
+  deleteImageCount.value = 0
+  loadingImageCount.value = false
+}
+
+const deleteCamera = async () => {
+  if (!canDelete.value || !location.value) return
+
+  deleting.value = true
+  deleteError.value = null
+
+  try {
+    const response = await fetchWithAuth(`/locations/${location.value.id}`, {
+      method: 'DELETE'
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    // Close modal and navigate back to camera list
+    closeDeleteModal()
+    router.push('/camera')
+  } catch (err) {
+    deleteError.value = err instanceof Error ? err.message : 'Failed to delete camera'
+    console.error('Error deleting camera:', err)
+  } finally {
+    deleting.value = false
   }
 }
 

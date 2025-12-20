@@ -36,57 +36,51 @@
       </div>
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 w-full">
-        <div v-for="camera in cameras" :key="camera.id"
-          class="group relative flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl transition-all hover:border-secondary hover:shadow-lg hover:-translate-y-0.5">
-          <button @click="selectCamera(camera.id)"
-            class="flex items-center gap-3 sm:gap-4 flex-1 text-left cursor-pointer">
-            <div
-              class="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100">
-              <img v-if="camera.images && camera.images.length > 0 && camera.images[0]"
-                :src="`${apiUrl}/images/${camera.images[0].image_id}/base64`" :alt="camera.name"
-                class="w-full h-full object-cover" @error="handleImageError" />
-              <div v-else
-                class="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-secondary-dark">
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" class="w-8 h-8 sm:w-10 sm:h-10 text-white">
+        <button v-for="camera in cameras" :key="camera.id" @click="selectCamera(camera.id)"
+          class="group flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl cursor-pointer transition-all text-left w-full hover:border-secondary hover:shadow-lg hover:-translate-y-0.5">
+          <div
+            class="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100">
+            <img v-if="camera.images && camera.images.length > 0 && camera.images[0]"
+              :src="`${apiUrl}/images/${camera.images[0].image_id}/base64`" :alt="camera.name"
+              class="w-full h-full object-cover" @error="handleImageError" />
+            <div v-else
+              class="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-secondary-dark">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2" class="w-8 h-8 sm:w-10 sm:h-10 text-white">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0 overflow-hidden">
+            <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{{ camera.name }}</h3>
+            <p v-if="camera.description" class="text-xs sm:text-sm text-gray-500 mb-2 leading-snug line-clamp-2">{{
+              camera.description }}</p>
+            <div class="flex items-center gap-3 text-xs text-gray-400">
+              <div class="flex items-center gap-1.5 font-mono">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                  <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <span class="truncate">{{ camera.latitude.toFixed(4) }}, {{ camera.longitude.toFixed(4) }}</span>
+              </div>
+              <div class="flex items-center gap-1.5 font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" class="flex-shrink-0">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
                 </svg>
               </div>
             </div>
-            <div class="flex-1 min-w-0 overflow-hidden">
-              <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{{ camera.name }}</h3>
-              <p v-if="camera.description" class="text-xs sm:text-sm text-gray-500 mb-2 leading-snug line-clamp-2">{{
-                camera.description }}</p>
-              <div class="flex items-center gap-3 text-xs text-gray-400">
-                <div class="flex items-center gap-1.5 font-mono">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" class="flex-shrink-0">
-                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                    <circle cx="12" cy="10" r="3"></circle>
-                  </svg>
-                  <span class="truncate">{{ camera.latitude.toFixed(4) }}, {{ camera.longitude.toFixed(4) }}</span>
-                </div>
-                <div class="flex items-center gap-1.5 font-medium">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" class="flex-shrink-0">
-                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                    <circle cx="12" cy="13" r="4"></circle>
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </button>
-          <button @click.stop="openDeleteModal(camera)"
-            class="flex-shrink-0 p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
+          </div>
+          <div class="flex-shrink-0 text-gray-400 transition-all group-hover:text-secondary group-hover:translate-x-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
-          </button>
-        </div>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -177,68 +171,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Delete Camera Modal -->
-    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <!-- Backdrop -->
-      <div class="absolute inset-0 bg-black/50" @click="closeDeleteModal"></div>
-
-      <!-- Modal Content -->
-      <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md">
-        <div class="p-6">
-          <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-              stroke="currentColor" stroke-width="2" class="text-red-600">
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
-            </svg>
-          </div>
-          <h2 class="text-xl font-bold text-gray-900 text-center mb-2">Delete Camera</h2>
-          <p class="text-gray-600 text-center mb-2">
-            Are you sure you want to delete <strong class="text-gray-900">{{ cameraToDelete?.name }}</strong>?
-          </p>
-
-          <!-- Image Count Warning -->
-          <div v-if="loadingImageCount" class="flex justify-center mb-4">
-            <LoadingSpinner size="sm" />
-          </div>
-          <div v-else-if="deleteImageCount > 0" class="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-            <p class="text-red-700 text-sm text-center font-medium">
-              ⚠️ This will also delete <strong>{{ deleteImageCount }}</strong> image{{ deleteImageCount !== 1 ? 's' : '' }} and all associated detections.
-            </p>
-          </div>
-          <p class="text-gray-500 text-sm text-center mb-6">
-            This action cannot be undone.
-          </p>
-
-          <!-- Confirmation Input -->
-          <div class="mb-6">
-            <label class="block text-sm font-medium text-gray-700 mb-2">
-              Type <strong class="text-red-600">{{ cameraToDelete?.name }}</strong> to confirm:
-            </label>
-            <input v-model="deleteConfirmation" type="text" :placeholder="cameraToDelete?.name"
-              class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-red-500 transition-colors"
-              @keyup.enter="deleteCamera" />
-          </div>
-
-          <!-- Error Message -->
-          <p v-if="deleteError" class="text-red-500 text-sm mb-4 text-center">{{ deleteError }}</p>
-
-          <div class="flex gap-3">
-            <button @click="closeDeleteModal"
-              class="flex-1 px-5 py-2.5 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition-colors">
-              Cancel
-            </button>
-            <button @click="deleteCamera" :disabled="!canDelete || deleting"
-              class="flex-1 px-5 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-              <LoadingSpinner v-if="deleting" size="sm" />
-              {{ deleting ? 'Deleting...' : 'Delete' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -276,19 +208,6 @@ const createError = ref<string | null>(null)
 const createMapContainer = ref<HTMLElement | null>(null)
 let createMap: Map | null = null
 let createMarker: Marker | null = null
-
-// Delete modal state
-const showDeleteModal = ref(false)
-const deleting = ref(false)
-const deleteError = ref<string | null>(null)
-const cameraToDelete = ref<CameraLocation | null>(null)
-const deleteConfirmation = ref('')
-const deleteImageCount = ref(0)
-const loadingImageCount = ref(false)
-
-const canDelete = computed(() => {
-  return cameraToDelete.value && deleteConfirmation.value === cameraToDelete.value.name
-})
 
 const newCamera = ref({
   name: '',
@@ -462,65 +381,6 @@ const selectCamera = (cameraId: string) => {
 const handleImageError = (event: Event) => {
   const img = event.target as HTMLImageElement
   img.src = '/fallback.JPG'
-}
-
-// Delete modal functions
-const openDeleteModal = async (camera: CameraLocation) => {
-  cameraToDelete.value = camera
-  deleteConfirmation.value = ''
-  deleteError.value = null
-  deleteImageCount.value = 0
-  loadingImageCount.value = true
-  showDeleteModal.value = true
-
-  // Fetch the image count for this camera
-  try {
-    const response = await fetchWithAuth(`/locations/${camera.id}/image-count`)
-    if (response.ok) {
-      const data = await response.json()
-      deleteImageCount.value = data.image_count || 0
-    }
-  } catch (err) {
-    console.error('Error fetching image count:', err)
-  } finally {
-    loadingImageCount.value = false
-  }
-}
-
-const closeDeleteModal = () => {
-  showDeleteModal.value = false
-  cameraToDelete.value = null
-  deleteConfirmation.value = ''
-  deleteError.value = null
-  deleteImageCount.value = 0
-  loadingImageCount.value = false
-}
-
-const deleteCamera = async () => {
-  if (!canDelete.value || !cameraToDelete.value) return
-
-  deleting.value = true
-  deleteError.value = null
-
-  try {
-    const response = await fetchWithAuth(`/locations/${cameraToDelete.value.id}`, {
-      method: 'DELETE'
-    })
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}))
-      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
-    }
-
-    // Close modal and refresh list
-    closeDeleteModal()
-    await fetchCameras()
-  } catch (err) {
-    deleteError.value = err instanceof Error ? err.message : 'Failed to delete camera'
-    console.error('Error deleting camera:', err)
-  } finally {
-    deleting.value = false
-  }
 }
 
 onMounted(() => {
