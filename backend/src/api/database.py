@@ -30,8 +30,12 @@ if DATABASE_URL.startswith("sqlite"):
         echo=False,  # Set to True for SQL query logging
         connect_args={
             "check_same_thread": False,  # Allow multi-threaded access
-            "timeout": 30,  # Increase timeout for lock acquisition
+            "timeout": 60,  # Increase timeout for lock acquisition
         },
+        pool_size=5,  # Limit pool size for SQLite
+        max_overflow=10,  # Limit overflow connections
+        pool_pre_ping=True,  # Test connections before using
+        pool_recycle=3600,  # Recycle connections after 1 hour
     )
 
     # Enable WAL mode for SQLite to support better concurrent access
@@ -41,7 +45,12 @@ if DATABASE_URL.startswith("sqlite"):
         if DATABASE_URL.startswith("sqlite"):
             cursor = dbapi_conn.cursor()
             cursor.execute("PRAGMA journal_mode=WAL")
-            cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds
+            cursor.execute("PRAGMA busy_timeout=60000")  # 60 seconds
+            cursor.execute(
+                "PRAGMA synchronous=NORMAL"
+            )  # Faster writes, still safe with WAL
+            cursor.execute("PRAGMA cache_size=-64000")  # 64MB cache
+            cursor.execute("PRAGMA temp_store=MEMORY")  # Keep temp tables in memory
             cursor.close()
 else:
     engine = create_engine(

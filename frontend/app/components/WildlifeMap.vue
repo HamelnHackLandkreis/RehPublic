@@ -592,6 +592,9 @@ const activeFilterCount = computed(() => {
 })
 
 onMounted(() => {
+  // Clear any pre-selected species to ensure all locations show initially
+  selectedSpecies.value = []
+
   watch([authIsAuthenticated, authIsLoading], ([authenticated, loading]) => {
     if (!loading && authenticated) {
       fetchLocations()
