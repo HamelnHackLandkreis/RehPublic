@@ -1,9 +1,10 @@
 export const useAuthenticatedApi = () => {
   const { getToken, login, isAuthenticated, isLoading } = useAuth()
-  const apiUrl = useApiUrl()
   let redirectTriggered = false
 
   const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
+    // Get apiUrl at fetch time to ensure we have the correct hydrated value
+    const apiUrl = useApiUrl()
     // Skip during server-side rendering
     if (typeof window === 'undefined') {
       throw new Error('fetchWithAuth cannot be used during SSR')
