@@ -31,9 +31,9 @@ celery_app.conf.update(
 )
 
 celery_app.conf.beat_schedule = {
-    "pull-images-every-hour": {
+    "pull-images-every-minute": {
         "task": "image_pull.pull_all_sources",
-        "schedule": crontab(minute=0),
+        "schedule": crontab(minute="*"),
         "kwargs": {"max_files_per_source": 10},
     },
 }
