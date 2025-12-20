@@ -5,6 +5,11 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   css: ["./app/assets/css/main.css"],
   modules: ["@nuxt/image", "@nuxt/eslint", "@nuxt/ui", "@vite-pwa/nuxt"],
+  // Skip prerendering for auth-protected routes
+  routeRules: {
+    '/settings': { ssr: false },
+    '/upload': { ssr: false },
+  },
   app: {
     head: {
       title: 'RehPublic',
