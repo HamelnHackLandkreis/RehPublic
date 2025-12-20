@@ -563,13 +563,9 @@ const fetchAvailableSpecies = async () => {
 
       availableSpecies.value = Array.from(speciesSet).sort()
 
-      // Apply default: select all species (only once)
-      if (!defaultsApplied.value && availableSpecies.value.length > 0) {
-        selectedSpecies.value = [...availableSpecies.value]
-        defaultsApplied.value = true
-        // Apply filters after setting defaults
-        applyFilters()
-      }
+      // Don't pre-select species - let user choose what they want to see
+      // This ensures all locations show up initially, even those without detections
+      defaultsApplied.value = true
     }
   } catch (err) {
     console.error('Failed to fetch species:', err)
