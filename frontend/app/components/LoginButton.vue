@@ -30,7 +30,7 @@ const { login, isLoading } = useAuth()
 }
 
 .button:focus {
-  box-shadow: 0 0 0 3px rgba(99, 179, 237, 0.5);
+  box-shadow: 0 0 0 3px rgba(var(--color-secondary), 0.5);
 }
 
 .button:disabled {
@@ -40,12 +40,12 @@ const { login, isLoading } = useAuth()
 }
 
 .button.login {
-  background-color: #63b3ed;
-  color: #1a1e27;
+  background-color: var(--color-secondary);
+  color: white;
 }
 
 .button.login:hover:not(:disabled) {
-  background-color: #4299e1;
+  background-color: var(--color-secondary-dark);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }

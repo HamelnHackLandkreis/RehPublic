@@ -3,7 +3,8 @@
 import os
 from typing import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from src.api.models import Base
@@ -22,14 +23,34 @@ DATABASE_URL = os.getenv(
     "sqlite:///./wildlife_camera.db",
 )
 
-# Create engine
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,  # Set to True for SQL query logging
-    pool_pre_ping=True,  # Verify connections before using them
-    pool_size=10,  # Number of connections to maintain
-    max_overflow=20,  # Maximum number of connections beyond pool_size
-)
+# Create engine with SQLite-specific configuration
+if DATABASE_URL.startswith("sqlite"):
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,  # Set to True for SQL query logging
+        connect_args={
+            "check_same_thread": False,  # Allow multi-threaded access
+            "timeout": 30,  # Increase timeout for lock acquisition
+        },
+    )
+
+    # Enable WAL mode for SQLite to support better concurrent access
+    @event.listens_for(Engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        """Set SQLite pragmas for better concurrency."""
+        if DATABASE_URL.startswith("sqlite"):
+            cursor = dbapi_conn.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds
+            cursor.close()
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,  # Set to True for SQL query logging
+        pool_pre_ping=True,  # Verify connections before using them
+        pool_size=10,  # Number of connections to maintain
+        max_overflow=20,  # Maximum number of connections beyond pool_size
+    )
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

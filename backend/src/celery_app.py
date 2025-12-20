@@ -2,7 +2,7 @@
 
 import os
 
-from celery import Celery
+from celery import Celery, signals
 from celery.schedules import crontab
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
@@ -37,3 +37,17 @@ celery_app.conf.beat_schedule = {
         "kwargs": {"max_files_per_source": 10},
     },
 }
+
+
+@signals.worker_process_init.connect
+def init_worker(**kwargs):
+    """Initialize worker process - close and recreate database connections.
+
+    This is critical for SQLite/SQLAlchemy to work correctly with Celery's
+    prefork worker model. Without this, child processes inherit the parent's
+    database connections which causes "readonly database" errors.
+    """
+    from src.api.database import engine
+
+    # Dispose of the engine to close all connections inherited from parent
+    engine.dispose()

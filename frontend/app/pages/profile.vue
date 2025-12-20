@@ -14,7 +14,7 @@
                   @error="handleImageError"
                 />
               </div>
-              <div v-else class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-indigo-400 flex items-center justify-center border-2 border-slate-600">
+              <div v-else class="w-24 h-24 md:w-32 md:h-32 rounded-full bg-primary flex items-center justify-center border-2 border-slate-600">
                 <span class="text-4xl md:text-5xl font-bold text-white">{{ userInitial }}</span>
               </div>
             </div>
@@ -37,15 +37,15 @@
         <div class="bg-slate-800 rounded-lg p-6 border border-slate-700">
           <div class="flex items-center gap-3 mb-4">
             <div class="w-10 h-10 rounded-lg bg-slate-700 flex items-center justify-center">
-              <Icon name="mdi:shield-account" class="text-2xl text-indigo-400" />
+              <Icon name="mdi:shield-account" class="text-2xl text-primary" />
             </div>
             <h2 class="text-2xl font-bold">Privacy Settings</h2>
           </div>
 
-          <div class="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700 hover:border-indigo-400 transition-colors">
+          <div class="flex items-center justify-between p-4 bg-slate-900 rounded-lg border border-slate-700 hover:border-primary transition-colors">
             <div class="flex items-center gap-4">
               <div class="w-12 h-12 rounded-lg bg-slate-700 flex items-center justify-center">
-                <Icon name="mdi:image-multiple" class="text-2xl text-indigo-400" />
+                <Icon name="mdi:image-multiple" class="text-2xl text-primary" />
               </div>
               <div>
                 <p class="font-semibold text-lg">Public Images</p>
@@ -60,16 +60,16 @@
                 :disabled="saving || loading"
                 class="sr-only peer"
               />
-              <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-400/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-600 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-400 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
+              <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/50 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-600 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-primary peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
             </label>
           </div>
 
           <!-- Success/Error Messages -->
           <div v-if="saveSuccess" class="mt-4 p-3 bg-slate-700 border border-slate-600 rounded-lg">
-            <p class="text-sm text-green-400">✓ Privacy setting updated successfully</p>
+            <p class="text-sm text-success">✓ Privacy setting updated successfully</p>
           </div>
           <div v-if="saveError" class="mt-4 p-3 bg-slate-700 border border-slate-600 rounded-lg">
-            <p class="text-sm text-red-400">✗ {{ saveError }}</p>
+            <p class="text-sm text-error">✗ {{ saveError }}</p>
           </div>
           <div v-if="loading" class="mt-4 p-3 bg-slate-700 rounded-lg">
             <p class="text-sm text-slate-300">Loading privacy settings...</p>
@@ -81,7 +81,7 @@
       <div>
         <button
           @click="handleLogout"
-          class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-4 px-6 rounded-lg transition-colors border border-red-700"
+          class="w-full bg-error hover:bg-error-dark text-white font-semibold py-4 px-6 rounded-lg transition-colors border border-error-dark"
         >
           <div class="flex items-center justify-center gap-3">
             <Icon name="mdi:logout" class="text-xl" />

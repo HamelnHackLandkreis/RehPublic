@@ -442,14 +442,14 @@ const renderSpeciesChart = async (speciesName: string) => {
       datasets: [{
         label: speciesName,
         data,
-        borderColor: '#3b82f6',
+        borderColor: 'var(--color-secondary)',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
         borderWidth: 3,
         fill: true,
         tension: 0.4,
         pointRadius: 4,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#3b82f6',
+        pointBackgroundColor: 'var(--color-secondary)',
         pointBorderColor: '#fff',
         pointBorderWidth: 2
       }]
@@ -597,12 +597,12 @@ onUnmounted(() => {
 }
 
 .time-range-select:hover {
-  border-color: #3b82f6;
+  border-color: var(--color-secondary);
 }
 
 .time-range-select:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-secondary);
+  box-shadow: 0 0 0 3px rgba(var(--color-secondary), 0.1);
 }
 
 .loading,
@@ -617,12 +617,12 @@ onUnmounted(() => {
 
 
 .error {
-  color: #ef4444;
+  color: var(--color-error);
 }
 
 .retry-btn {
   padding: 10px 24px;
-  background: #3b82f6;
+  background: var(--color-secondary);
   color: white;
   border: none;
   border-radius: 8px;
@@ -632,7 +632,7 @@ onUnmounted(() => {
 }
 
 .retry-btn:hover {
-  background: #2563eb;
+  background: var(--color-secondary-dark);
 }
 
 .chart-section {
@@ -673,9 +673,9 @@ onUnmounted(() => {
 }
 
 .collapse-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.05);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  background: rgba(var(--color-secondary), 0.05);
 }
 
 .collapse-btn svg {
@@ -800,7 +800,7 @@ onUnmounted(() => {
 
 .species-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  background: linear-gradient(90deg, var(--color-secondary), var(--color-secondary-dark));
   border-radius: 4px;
   transition: width 0.3s ease;
 }
@@ -820,9 +820,9 @@ onUnmounted(() => {
 }
 
 .map-icon-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.05);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  background: rgba(var(--color-secondary), 0.05);
 }
 
 .chart-icon-btn {
@@ -840,15 +840,15 @@ onUnmounted(() => {
 }
 
 .chart-icon-btn:hover {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.05);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  background: rgba(var(--color-secondary), 0.05);
 }
 
 .chart-icon-btn.active {
-  border-color: #3b82f6;
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
+  border-color: var(--color-secondary);
+  color: var(--color-secondary);
+  background: rgba(var(--color-secondary), 0.1);
 }
 
 .species-chart-container {
@@ -867,8 +867,8 @@ onUnmounted(() => {
   margin-top: 16px;
   padding: 10px 20px;
   background: transparent;
-  color: #3b82f6;
-  border: 2px solid #3b82f6;
+  color: var(--color-secondary);
+  border: 2px solid var(--color-secondary);
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -878,7 +878,7 @@ onUnmounted(() => {
 }
 
 .toggle-species-btn:hover {
-  background: #3b82f6;
+  background: var(--color-secondary);
   color: white;
 }
 </style>

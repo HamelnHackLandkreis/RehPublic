@@ -10,7 +10,6 @@
 
 <script setup lang="ts">
 import { useAuth } from '#imports'
-// import { useAuth0 } from '@auth0/auth0-vue'
 
 const { logout, isLoading } = useAuth()
 
@@ -35,7 +34,7 @@ const handleLogout = () => {
 }
 
 .button:focus {
-  box-shadow: 0 0 0 4px rgba(99, 179, 237, 0.5);
+  box-shadow: 0 0 0 4px rgba(var(--color-secondary), 0.5);
 }
 
 .button:disabled {
@@ -45,12 +44,12 @@ const handleLogout = () => {
 }
 
 .button.logout {
-  background-color: #fc8181;
-  color: #1a1e27;
+  background-color: var(--color-error);
+  color: white;
 }
 
 .button.logout:hover:not(:disabled) {
-  background-color: #e53e3e;
+  background-color: var(--color-error-dark);
   transform: translateY(-5px) scale(1.03);
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.5);
 }

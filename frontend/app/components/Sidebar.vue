@@ -30,37 +30,33 @@ const userInitial = computed(() => {
     <ul
       class="flex items-center justify-around md:flex-col md:justify-center md:gap-1 md:pt-0 list-none p-0 m-0 max-w-screen-xl md:max-w-none mx-auto md:h-full">
       <li>
-        <NuxtLink to="/map" :class="[
-          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
-          isMapPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-        ]">
+        <NuxtLink to="/map"
+          class="flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          :style="isMapPage ? { color: 'var(--color-primary)', backgroundColor: '#1e293b' } : {}">
           <Icon name="mdi:map-marker" class="text-2xl" />
           <span class="text-xs font-medium">Map</span>
         </NuxtLink>
       </li>
       <li>
-        <NuxtLink to="/camera" :class="[
-          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
-          isCameraPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-        ]">
+        <NuxtLink to="/camera"
+          class="flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          :style="isCameraPage ? { color: 'var(--color-primary)', backgroundColor: '#1e293b' } : {}">
           <Icon name="mdi:camera" class="text-2xl" />
           <span class="text-xs font-medium">Cams</span>
         </NuxtLink>
       </li>
       <li>
-        <NuxtLink to="/statistics" :class="[
-          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
-          isStatisticsPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-        ]">
+        <NuxtLink to="/statistics"
+          class="flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          :style="isStatisticsPage ? { color: 'var(--color-primary)', backgroundColor: '#1e293b' } : {}">
           <Icon name="mdi:chart-bar" class="text-2xl" />
           <span class="text-xs font-medium">Statistics</span>
         </NuxtLink>
       </li>
       <li>
-        <NuxtLink to="/match" :class="[
-          'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
-          isMatchPage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-        ]">
+        <NuxtLink to="/match"
+          class="flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16 text-slate-400 hover:text-white hover:bg-slate-800/50"
+          :style="isMatchPage ? { color: 'var(--color-primary)', backgroundColor: '#1e293b' } : {}">
           <Icon name="mdi:image-search" class="text-2xl" />
           <span class="text-xs font-medium">Match</span>
         </NuxtLink>
@@ -70,10 +66,9 @@ const userInitial = computed(() => {
           <div v-if="isLoading" class="flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3">
             <div class="w-8 h-8 rounded-full bg-slate-700 animate-pulse"></div>
           </div>
-          <NuxtLink v-else-if="isAuthenticated" to="/profile" :class="[
-            'flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16',
-            isProfilePage ? 'text-indigo-400 bg-slate-800' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-          ]">
+          <NuxtLink v-else-if="isAuthenticated" to="/profile"
+            class="flex flex-col items-center gap-1 py-4 px-6 md:py-3 md:px-3 md:rounded-lg no-underline transition-all group md:w-16 text-slate-400 hover:text-white hover:bg-slate-800/50"
+            :style="isProfilePage ? { color: 'var(--color-primary)', backgroundColor: '#1e293b' } : {}">
             <div v-if="user?.picture" class="w-8 h-8 rounded-full overflow-hidden border-2 border-current">
               <img
                 :src="user.picture"
@@ -81,8 +76,8 @@ const userInitial = computed(() => {
                 class="w-full h-full object-cover"
               />
             </div>
-            <div v-else class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center border-2 border-current">
-              <span class="text-sm font-bold">{{ userInitial }}</span>
+            <div v-else class="w-8 h-8 rounded-full flex items-center justify-center border-2 border-current" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))">
+              <span class="text-sm font-bold text-white">{{ userInitial }}</span>
             </div>
             <span class="text-xs font-medium">Profile</span>
           </NuxtLink>

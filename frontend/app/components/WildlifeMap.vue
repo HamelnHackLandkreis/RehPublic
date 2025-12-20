@@ -15,7 +15,6 @@
       <button @click="filterExpanded = !filterExpanded" class="filter-toggle-button">
         <Icon name="mdi:filter" class="text-xl" />
         <span v-if="filterExpanded" class="ml-2">Filters</span>
-        <span v-if="hasActiveFilters" class="filter-badge">{{ activeFilterCount }}</span>
       </button>
 
       <div v-if="filterExpanded" class="filter-content">
@@ -707,7 +706,7 @@ defineExpose({
 
 .retry-button {
   padding: 8px 16px;
-  background-color: #3b82f6;
+  background-color: var(--color-secondary);
   color: white;
   border: none;
   border-radius: 4px;
@@ -716,7 +715,7 @@ defineExpose({
 }
 
 .retry-button:hover {
-  background-color: #2563eb;
+  background-color: var(--color-secondary-dark);
 }
 
 :deep(.marker-popup) {
@@ -743,7 +742,7 @@ defineExpose({
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  background-color: #3b82f6;
+  background-color: var(--color-primary);
   color: white;
   text-decoration: none;
   border-radius: 4px;
@@ -757,9 +756,9 @@ defineExpose({
 }
 
 :deep(.camera-detail-button-inline:hover) {
-  background-color: #2563eb;
+  background-color: var(--color-primary-dark);
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
 }
 
 :deep(.camera-detail-button-inline svg) {
@@ -865,7 +864,7 @@ defineExpose({
 }
 
 :deep(.image-link:hover) {
-  border-color: #3b82f6;
+  border-color: var(--color-secondary);
 }
 
 :deep(.image-link:hover .click-overlay) {
@@ -931,18 +930,18 @@ defineExpose({
 }
 
 :deep(.avatar-wrapper.has-new-images) {
-  border: 5px solid #3b82f6;
+  border: 5px solid var(--color-secondary);
   animation: pulse-blue-border 1s ease-in-out infinite;
   box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 @keyframes pulse-blue-border {
   0%, 100% {
-    border-color: #3b82f6;
+    border-color: var(--color-secondary);
     box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 0 20px rgba(59, 130, 246, 0.8), 0 2px 8px rgba(0, 0, 0, 0.3);
   }
   50% {
-    border-color: #1d4ed8;
+    border-color: var(--color-secondary-dark);
     box-shadow: 0 0 0 16px rgba(59, 130, 246, 0), 0 0 30px rgba(59, 130, 246, 1), 0 2px 16px rgba(59, 130, 246, 0.8);
   }
 }
@@ -971,30 +970,13 @@ defineExpose({
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-:deep(.avatar-wrapper.has-new-images) {
-  border: 5px solid #3b82f6;
-  animation: pulse-blue-border 1s ease-in-out infinite;
-  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-@keyframes pulse-blue-border {
-  0%, 100% {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.9), 0 0 20px rgba(59, 130, 246, 0.8), 0 2px 8px rgba(0, 0, 0, 0.3);
-  }
-  50% {
-    border-color: #1d4ed8;
-    box-shadow: 0 0 0 16px rgba(59, 130, 246, 0), 0 0 30px rgba(59, 130, 246, 1), 0 2px 16px rgba(59, 130, 246, 0.8);
-  }
-}
-
 :deep(.camera-badge) {
   position: absolute;
   bottom: -2px;
   right: -2px;
   width: 20px;
   height: 20px;
-  background-color: #2563eb;
+  background-color: var(--color-secondary-dark);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1062,22 +1044,6 @@ defineExpose({
   background-color: #f9fafb;
 }
 
-.filter-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: #3b82f6;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 600;
-}
-
 .filter-content {
   padding: 16px;
   border-top: 1px solid #e5e7eb;
@@ -1113,7 +1079,7 @@ defineExpose({
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #3b82f6;
+  accent-color: var(--color-secondary);
 }
 
 .filter-checkbox span {

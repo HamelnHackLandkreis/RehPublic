@@ -9,7 +9,7 @@
     <div v-else-if="error" class="flex flex-col items-center justify-center flex-1 gap-4 text-red-600">
       <p>{{ error }}</p>
       <button @click="fetchCameraData"
-        class="px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium transition-colors hover:bg-blue-600">
+        class="px-6 py-2.5 bg-secondary text-white rounded-lg font-medium transition-colors hover:bg-secondary-dark">
         Retry
       </button>
     </div>
@@ -28,7 +28,7 @@
         </p>
         <div class="flex flex-wrap items-center gap-3">
           <button @click="goToCameraList"
-            class="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-all hover:border-blue-500 hover:text-blue-500 hover:bg-blue-50">
+            class="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-all hover:border-secondary hover:text-secondary hover:bg-secondary/5">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2">
               <path d="M19 12H5M12 19l-7-7 7-7" />
@@ -62,7 +62,7 @@
           <button @click="activeTab = 'overview'" :class="[
             'px-6 py-4 text-sm font-medium transition-colors border-b-2',
             activeTab === 'overview'
-              ? 'border-blue-500 text-blue-600'
+              ? 'border-secondary text-secondary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           ]">
             Overview
@@ -70,7 +70,7 @@
           <button @click="activeTab = 'upload'" :class="[
             'px-6 py-4 text-sm font-medium transition-colors border-b-2',
             activeTab === 'upload'
-              ? 'border-blue-500 text-blue-600'
+              ? 'border-secondary text-secondary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           ]">
             Upload
@@ -78,7 +78,7 @@
           <button @click="activeTab = 'integration'" :class="[
             'px-6 py-4 text-sm font-medium transition-colors border-b-2',
             activeTab === 'integration'
-              ? 'border-blue-500 text-blue-600'
+              ? 'border-secondary text-secondary'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
           ]">
             Integration
@@ -93,15 +93,15 @@
             <div class="mb-8">
               <h2 class="text-2xl font-bold text-gray-900 mb-6">Statistics</h2>
               <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-center text-white">
+                <div class="p-6 rounded-xl text-center text-white shadow-lg" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))">
                   <div class="text-4xl font-bold mb-2">{{ totalImages }}</div>
                   <div class="text-sm opacity-90 uppercase tracking-wide">Total Images</div>
                 </div>
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-center text-white">
+                <div class="p-6 rounded-xl text-center text-white shadow-lg" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))">
                   <div class="text-4xl font-bold mb-2">{{ location?.total_unique_species ?? uniqueSpecies.size }}</div>
                   <div class="text-sm opacity-90 uppercase tracking-wide">Unique Species</div>
                 </div>
-                <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-6 rounded-xl text-center text-white">
+                <div class="p-6 rounded-xl text-center text-white shadow-lg" style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))">
                   <div class="text-4xl font-bold mb-2">{{ totalDetections }}</div>
                   <div class="text-sm opacity-90 uppercase tracking-wide">Total Detections</div>
                   <div class="text-xs opacity-75 mt-1">({{ imagesWithDetections }} images)</div>
@@ -120,8 +120,11 @@
                     </div>
                     <div class="h-2 bg-gray-200 rounded overflow-hidden">
                       <div
-                        class="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded transition-all duration-300 ease-out"
-                        :style="{ width: `${(species.count / totalDetections) * 100}%` }"></div>
+                        class="h-full rounded transition-all duration-300 ease-out"
+                        :style="{
+                          width: `${(species.count / totalDetections) * 100}%`,
+                          background: 'linear-gradient(90deg, var(--color-primary), var(--color-primary-dark))'
+                        }"></div>
                     </div>
                   </div>
                 </div>
@@ -135,7 +138,7 @@
                 class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 md:gap-4">
                 <div v-for="image in location.images" :key="image.image_id" class="flex flex-col gap-3">
                   <div @click="() => router.push(`/match/${image.image_id}`)"
-                    class="group block relative rounded-lg overflow-hidden border-2 border-transparent transition-all hover:border-blue-500 hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
+                    class="group block relative rounded-lg overflow-hidden border-2 border-transparent transition-all hover:border-secondary hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
                     <div class="relative w-full aspect-[4/3] overflow-hidden bg-gray-100">
                       <img :src="imageUrls.get(image.image_id) || `${apiUrl}/images/${image.image_id}/base64`"
                         :alt="`Image from ${new Date(image.upload_timestamp).toLocaleString()}`"
@@ -162,7 +165,7 @@
                       </div>
                       <!-- Processing/Pending -->
                       <span v-else-if="!image.processed || image.processing_status === 'detecting' || image.processing_status === 'uploading'"
-                        class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold animate-pulse">
+                        class="bg-secondary text-white px-3 py-1 rounded-full text-xs font-semibold animate-pulse">
                         Pending
                       </span>
                       <!-- Failed -->
@@ -308,13 +311,13 @@
               </p>
 
               <!-- Existing Integration Display -->
-              <div v-if="existingIntegration" class="mb-8 bg-green-50 border-2 border-green-200 rounded-xl p-6">
+              <div v-if="existingIntegration" class="mb-8 rounded-xl p-6 border-2 shadow-lg" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(22, 163, 74, 0.1)); border-color: var(--color-primary);">
                 <div class="flex items-start justify-between mb-4">
                   <div>
-                    <h3 class="text-lg font-bold text-green-900 mb-2">Active Integration</h3>
-                    <p class="text-sm text-green-700">{{ existingIntegration.name }}</p>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2">Active Integration</h3>
+                    <p class="text-sm font-medium text-primary">{{ existingIntegration.name }}</p>
                   </div>
-                  <span class="inline-flex items-center gap-2 px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">
+                  <span class="inline-flex items-center gap-2 px-3 py-1 text-white text-xs font-bold rounded-full" :style="{ background: existingIntegration.is_active ? 'var(--color-primary)' : 'var(--color-gray-500)' }">
                     <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                     </svg>
@@ -324,20 +327,20 @@
 
                 <div class="space-y-3 mb-4">
                   <div class="flex items-start gap-3">
-                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Base URL:</span>
-                    <span class="text-sm text-green-700 break-all">{{ existingIntegration.base_url }}</span>
+                    <span class="text-sm font-semibold text-gray-900 min-w-[120px]">Base URL:</span>
+                    <span class="text-sm text-gray-700 break-all">{{ existingIntegration.base_url }}</span>
                   </div>
                   <div class="flex items-start gap-3">
-                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Auth Type:</span>
-                    <span class="text-sm text-green-700">{{ existingIntegration.auth_type }}</span>
+                    <span class="text-sm font-semibold text-gray-900 min-w-[120px]">Auth Type:</span>
+                    <span class="text-sm text-gray-700">{{ existingIntegration.auth_type }}</span>
                   </div>
                   <div v-if="existingIntegration.last_pulled_filename" class="flex items-start gap-3">
-                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Last Pulled:</span>
-                    <span class="text-sm text-green-700">{{ existingIntegration.last_pulled_filename }}</span>
+                    <span class="text-sm font-semibold text-gray-900 min-w-[120px]">Last Pulled:</span>
+                    <span class="text-sm text-gray-700">{{ existingIntegration.last_pulled_filename }}</span>
                   </div>
                   <div v-if="existingIntegration.last_pull_timestamp" class="flex items-start gap-3">
-                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Last Pull Time:</span>
-                    <span class="text-sm text-green-700">{{ new Date(existingIntegration.last_pull_timestamp).toLocaleString() }}</span>
+                    <span class="text-sm font-semibold text-gray-900 min-w-[120px]">Last Pull Time:</span>
+                    <span class="text-sm text-gray-700">{{ new Date(existingIntegration.last_pull_timestamp).toLocaleString() }}</span>
                   </div>
                 </div>
 
@@ -347,11 +350,11 @@
                     {{ existingIntegration.is_active ? 'Deactivate' : 'Activate' }}
                   </button>
                   <button @click="testIntegration" :disabled="integrationLoading"
-                    class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium transition-colors hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="px-4 py-2 bg-secondary text-white rounded-lg font-medium transition-colors hover:bg-secondary-dark disabled:opacity-50 disabled:cursor-not-allowed">
                     Test Pull (2 files)
                   </button>
                   <button @click="deleteIntegration"
-                    class="px-4 py-2 bg-red-500 text-white rounded-lg font-medium transition-colors hover:bg-red-600">
+                    class="px-4 py-2 bg-error text-white rounded-lg font-medium transition-colors hover:bg-error-dark">
                     Delete
                   </button>
                 </div>
@@ -370,7 +373,7 @@
                       type="text"
                       required
                       placeholder="e.g., Hameln-Pyrmont Camera Feed"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-secondary transition-colors"
                     />
                   </div>
 
@@ -384,7 +387,7 @@
                       type="url"
                       required
                       placeholder="https://assets.hameln-pyrmont.digital/image-api/"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-secondary transition-colors"
                     />
                     <p class="text-xs text-gray-500 mt-1">
                       URL to the directory listing containing images
@@ -400,7 +403,7 @@
                       v-model="integrationForm.username"
                       type="text"
                       placeholder="mitwirker"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-secondary transition-colors"
                     />
                   </div>
 
@@ -413,7 +416,7 @@
                       v-model="integrationForm.password"
                       type="password"
                       placeholder="••••••••"
-                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-secondary focus:border-secondary transition-colors"
                     />
                     <p class="text-xs text-gray-500 mt-1">
                       Leave empty if no authentication is required
@@ -432,7 +435,7 @@
                     <button
                       type="submit"
                       :disabled="integrationLoading"
-                      class="px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium transition-colors hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      class="px-6 py-2.5 bg-secondary text-white rounded-lg font-medium transition-colors hover:bg-secondary-dark disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {{ integrationLoading ? 'Creating...' : 'Create Integration' }}
                     </button>
@@ -441,14 +444,14 @@
               </div>
 
               <!-- Information Section -->
-              <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
-                <h4 class="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+              <div class="mt-8 bg-secondary/10 border border-secondary/20 rounded-xl p-6">
+                <h4 class="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                   </svg>
                   How it works
                 </h4>
-                <ul class="text-sm text-blue-800 space-y-2">
+                <ul class="text-sm text-gray-700 space-y-2">
                   <li>• Images are automatically pulled from the configured URL every hour</li>
                   <li>• Each image is processed through the wildlife detection system</li>
                   <li>• Detected animals appear in the Overview tab like manual uploads</li>
