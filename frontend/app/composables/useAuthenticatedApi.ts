@@ -4,6 +4,11 @@ export const useAuthenticatedApi = () => {
   let redirectTriggered = false
 
   const fetchWithAuth = async (endpoint: string, options: RequestInit = {}) => {
+    // Skip during server-side rendering
+    if (typeof window === 'undefined') {
+      throw new Error('fetchWithAuth cannot be used during SSR')
+    }
+
     if (isLoading.value) {
       await new Promise(resolve => setTimeout(resolve, 100))
       return fetchWithAuth(endpoint, options)
