@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 upload_router = APIRouter()
-ImageService
 
 
 @upload_router.post(

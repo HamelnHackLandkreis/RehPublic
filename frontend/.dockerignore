@@ -1,7 +1,8 @@
-# Ignore Node modules and build artifacts from the host system
+# Node modules and build artifacts
 node_modules
 .nuxt
 .output
+dist
 
 # Operating system files
 .DS_Store
@@ -10,8 +11,42 @@ Thumbs.db
 # Source control
 .git
 .gitignore
+.gitattributes
 
 # Logs and misc
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+*.log
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Docker files
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test/
+tests/
+*.spec.js
+*.spec.ts
+*.test.js
+*.test.ts
+
+# Coverage
+coverage/
+.nyc_output/

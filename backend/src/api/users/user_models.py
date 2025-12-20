@@ -22,3 +22,6 @@ class User(Base):
 
     # Relationships
     images = relationship("Image", back_populates="user")
+    image_pull_sources = relationship(
+        "ImagePullSource", back_populates="user", cascade="all, delete-orphan"
+    )

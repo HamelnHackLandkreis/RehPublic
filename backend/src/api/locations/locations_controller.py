@@ -259,6 +259,8 @@ def get_location(
                 location_id=UUID(str(image.location_id)),
                 upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
                 detections=detections,
+                processing_status=str(image.processing_status),
+                processed=bool(image.processed),
             )
         )
 
