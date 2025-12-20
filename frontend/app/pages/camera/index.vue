@@ -36,45 +36,49 @@
       </div>
 
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5 w-full">
-        <button v-for="camera in cameras" :key="camera.id" @click="selectCamera(camera.id)"
-          class="group flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl cursor-pointer transition-all text-left w-full hover:border-secondary hover:shadow-lg hover:-translate-y-0.5">
-          <div
-            class="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100">
-            <img v-if="camera.images && camera.images.length > 0 && camera.images[0]"
-              :src="`${apiUrl}/images/${camera.images[0].image_id}/base64`" :alt="camera.name"
-              class="w-full h-full object-cover" @error="handleImageError" />
-            <div v-else
-              class="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-secondary-dark">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2" class="w-8 h-8 sm:w-10 sm:h-10 text-white">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
-            </div>
-          </div>
-          <div class="flex-1 min-w-0 overflow-hidden">
-            <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{{ camera.name }}</h3>
-            <p v-if="camera.description" class="text-xs sm:text-sm text-gray-500 mb-2 leading-snug line-clamp-2">{{
-              camera.description }}</p>
-            <div class="flex items-center gap-3 text-xs text-gray-400">
-              <div class="flex items-center gap-1.5 font-mono">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" class="flex-shrink-0">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-                <span class="truncate">{{ camera.latitude.toFixed(4) }}, {{ camera.longitude.toFixed(4) }}</span>
-              </div>
-              <div class="flex items-center gap-1.5 font-medium">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+        <div v-for="camera in cameras" :key="camera.id"
+          class="group relative flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-white border-2 border-gray-200 rounded-xl transition-all hover:border-secondary hover:shadow-lg hover:-translate-y-0.5">
+          <button @click="selectCamera(camera.id)"
+            class="flex items-center gap-3 sm:gap-4 flex-1 text-left cursor-pointer">
+            <div
+              class="flex-shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-xl overflow-hidden border-2 border-gray-200 bg-gray-100">
+              <img v-if="camera.images && camera.images.length > 0 && camera.images[0]"
+                :src="`${apiUrl}/images/${camera.images[0].image_id}/base64`" :alt="camera.name"
+                class="w-full h-full object-cover" @error="handleImageError" />
+              <div v-else
+                class="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-secondary-dark">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" class="w-8 h-8 sm:w-10 sm:h-10 text-white">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
                 </svg>
               </div>
             </div>
-          </div>
-          <div class="flex-shrink-0 text-gray-400 transition-all group-hover:text-secondary group-hover:translate-x-1">
+            <div class="flex-1 min-w-0 overflow-hidden">
+              <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{{ camera.name }}</h3>
+              <p v-if="camera.description" class="text-xs sm:text-sm text-gray-500 mb-2 leading-snug line-clamp-2">{{
+                camera.description }}</p>
+              <div class="flex items-center gap-3 text-xs text-gray-400">
+                <div class="flex items-center gap-1.5 font-mono">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                  <span class="truncate">{{ camera.latitude.toFixed(4) }}, {{ camera.longitude.toFixed(4) }}</span>
+                </div>
+                <div class="flex items-center gap-1.5 font-medium">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" class="flex-shrink-0">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                    <circle cx="12" cy="13" r="4"></circle>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </button>
+          <button @click.stop="openDeleteModal(camera)"
+            class="flex-shrink-0 p-2 text-gray-400 hover:text-red-500 transition-colors cursor-pointer">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2">
               <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
