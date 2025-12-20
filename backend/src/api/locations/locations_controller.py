@@ -20,6 +20,7 @@ from src.api.images.images_schemas import (
 from src.api.locations.locations_schemas import (
     LocationCreate,
     LocationResponse,
+    LocationUpdate,
     SpottingsResponse,
 )
 
@@ -278,3 +279,154 @@ def get_location(
         images=image_responses,
         total_images_with_animals=images_with_animals,
     )
+
+
+@router.patch(
+    "/{location_id}",
+    response_model=LocationResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["locations"],
+)
+def update_location(
+    location_id: UUID,
+    location_data: LocationUpdate,
+    db: Session = Depends(get_db),
+) -> LocationResponse:
+    """Update an existing camera location.
+
+    Args:
+        location_id: UUID of the location to update
+        location_data: Location data to update (all fields optional)
+
+    Returns:
+        Updated location with statistics
+
+    Raises:
+        HTTPException: 404 if location not found, 409 if name conflict
+    """
+    try:
+        location = location_repository.update(
+            db=db,
+            location_id=location_id,
+            name=location_data.name,
+            longitude=location_data.longitude,
+            latitude=location_data.latitude,
+            description=location_data.description,
+        )
+
+        if not location:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Location with id {location_id} not found",
+            )
+
+        # Get statistics for the updated location
+        result = location_repository.get_by_id_with_statistics(db, location_id)
+        if result:
+            _, total_unique_species, total_spottings = result
+        else:
+            total_unique_species = 0
+            total_spottings = 0
+
+        return LocationResponse(
+            id=UUID(str(location.id)),
+            name=str(location.name),
+            longitude=float(location.longitude),
+            latitude=float(location.latitude),
+            description=str(location.description) if location.description else None,
+            total_unique_species=total_unique_species,
+            total_spottings=total_spottings,
+            images=[],
+            total_images_with_animals=0,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update location: {e}")
+        error_msg = str(e)
+
+        # Handle duplicate location name
+        if (
+            "UNIQUE constraint failed: locations.name" in error_msg
+            or "duplicate" in error_msg.lower()
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"Location with name '{location_data.name}' already exists",
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Failed to update location. Please check your input data.",
+        )
+
+
+@router.get(
+    "/{location_id}/image-count",
+    status_code=status.HTTP_200_OK,
+    tags=["locations"],
+)
+def get_location_image_count(
+    location_id: UUID,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Get the number of images for a location.
+
+    Args:
+        location_id: UUID of the location
+
+    Returns:
+        Object with image_count field
+
+    Raises:
+        HTTPException: 404 if location not found
+    """
+    location = location_repository.get_by_id(db, location_id)
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location with id {location_id} not found",
+        )
+
+    image_count = location_repository.get_image_count(db=db, location_id=location_id)
+    return {"image_count": image_count}
+
+
+@router.delete(
+    "/{location_id}",
+    status_code=status.HTTP_200_OK,
+    tags=["locations"],
+)
+def delete_location(
+    location_id: UUID,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Delete an existing camera location and all its images.
+
+    Args:
+        location_id: UUID of the location to delete
+
+    Returns:
+        Object with deleted_images count
+
+    Raises:
+        HTTPException: 404 if location not found
+    """
+    try:
+        deleted, image_count = location_repository.delete(db=db, location_id=location_id)
+
+        if not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Location with id {location_id} not found",
+            )
+
+        return {"deleted_images": image_count}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete location: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete location.",
+        )

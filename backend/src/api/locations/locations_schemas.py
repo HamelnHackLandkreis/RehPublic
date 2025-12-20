@@ -21,6 +21,15 @@ class LocationCreate(BaseModel):
     description: str | None = None
 
 
+class LocationUpdate(BaseModel):
+    """Schema for updating a location. All fields are optional."""
+
+    name: str | None = None
+    longitude: float | None = None
+    latitude: float | None = None
+    description: str | None = None
+
+
 class LocationResponse(BaseModel):
     """Schema for location response."""
 

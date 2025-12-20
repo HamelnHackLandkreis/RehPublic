@@ -70,6 +70,85 @@ class LocationRepository:
         return location
 
     @staticmethod
+    def update(
+        db: Session,
+        location_id: UUID,
+        name: str | None = None,
+        longitude: float | None = None,
+        latitude: float | None = None,
+        description: str | None = None,
+    ) -> Location | None:
+        """Update an existing location.
+
+        Args:
+            db: Database session
+            location_id: UUID of the location to update
+            name: Optional new name
+            longitude: Optional new longitude
+            latitude: Optional new latitude
+            description: Optional new description
+
+        Returns:
+            Updated Location object or None if not found
+        """
+        location = db.query(Location).filter(Location.id == str(location_id)).first()
+        if not location:
+            return None
+
+        if name is not None:
+            location.name = name
+        if longitude is not None:
+            location.longitude = longitude
+        if latitude is not None:
+            location.latitude = latitude
+        if description is not None:
+            location.description = description
+
+        db.commit()
+        db.refresh(location)
+        return location
+
+    @staticmethod
+    def delete(db: Session, location_id: UUID) -> tuple[bool, int]:
+        """Delete an existing location and its associated images.
+
+        Args:
+            db: Database session
+            location_id: UUID of the location to delete
+
+        Returns:
+            Tuple of (success: bool, image_count: int)
+            - success: True if deleted, False if not found
+            - image_count: Number of images that were deleted with the location
+        """
+        location = db.query(Location).filter(Location.id == str(location_id)).first()
+        if not location:
+            return False, 0
+
+        # Count images before deletion (cascade will delete them)
+        image_count = len(location.images) if location.images else 0
+
+        db.delete(location)
+        db.commit()
+        return True, image_count
+
+    @staticmethod
+    def get_image_count(db: Session, location_id: UUID) -> int:
+        """Get the count of images for a location.
+
+        Args:
+            db: Database session
+            location_id: UUID of the location
+
+        Returns:
+            Number of images at this location
+        """
+        location = db.query(Location).filter(Location.id == str(location_id)).first()
+        if not location:
+            return 0
+        return len(location.images) if location.images else 0
+
+    @staticmethod
     def get_spottings_for_location(db: Session, location_id: UUID) -> List[Spotting]:
         """Get all spottings for images belonging to a location.
 

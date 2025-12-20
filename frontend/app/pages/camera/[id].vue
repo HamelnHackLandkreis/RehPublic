@@ -44,6 +44,15 @@
             </svg>
             Reveal on Map
           </button>
+          <button @click="openEditModal"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-amber-300 rounded-lg text-sm font-medium text-amber-700 transition-all hover:border-amber-400 hover:bg-amber-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            Edit Location
+          </button>
         </div>
       </div>
 
@@ -270,11 +279,96 @@
         </div>
       </div>
     </div>
+
+    <!-- Edit Location Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 10000;">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/50" @click="closeEditModal"></div>
+
+      <!-- Modal Content -->
+      <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <h2 class="text-xl font-bold text-gray-900">Edit Camera Location</h2>
+          <button @click="closeEditModal" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <div class="p-6 space-y-6">
+          <!-- Map for Location Selection -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Update Location on Map
+              <span class="text-gray-400 font-normal">(click to change location)</span>
+            </label>
+            <div class="relative h-[300px] rounded-xl overflow-hidden border-2 border-gray-200">
+              <div ref="editMapContainer" class="w-full h-full"></div>
+            </div>
+            <p v-if="editLocation.latitude && editLocation.longitude" class="mt-2 text-sm text-green-600">
+              📍 Location: {{ editLocation.latitude.toFixed(6) }}, {{ editLocation.longitude.toFixed(6) }}
+            </p>
+          </div>
+
+          <!-- Name Input -->
+          <div>
+            <label for="edit-camera-name" class="block text-sm font-medium text-gray-700 mb-2">
+              Camera Name <span class="text-red-500">*</span>
+            </label>
+            <input id="edit-camera-name" v-model="editLocation.name" type="text" placeholder="e.g., Forest Camera North"
+              class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors" />
+          </div>
+
+          <!-- Description Input -->
+          <div>
+            <label for="edit-camera-description" class="block text-sm font-medium text-gray-700 mb-2">
+              Description <span class="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea id="edit-camera-description" v-model="editLocation.description" rows="3"
+              placeholder="Describe the camera location..."
+              class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors resize-none"></textarea>
+          </div>
+
+          <!-- Coordinates (Manual Entry) -->
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label for="edit-camera-lat" class="block text-sm font-medium text-gray-700 mb-2">Latitude</label>
+              <input id="edit-camera-lat" v-model.number="editLocation.latitude" type="number" step="0.000001"
+                placeholder="52.101813"
+                class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+            <div>
+              <label for="edit-camera-lng" class="block text-sm font-medium text-gray-700 mb-2">Longitude</label>
+              <input id="edit-camera-lng" v-model.number="editLocation.longitude" type="number" step="0.000001"
+                placeholder="9.375444"
+                class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors" />
+            </div>
+          </div>
+
+          <!-- Error Message -->
+          <p v-if="editError" class="text-red-500 text-sm">{{ editError }}</p>
+        </div>
+
+        <div class="sticky bottom-0 bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+          <button @click="closeEditModal"
+            class="px-5 py-2.5 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+            Cancel
+          </button>
+          <button @click="saveLocationEdit" :disabled="!canSaveEdit || saving"
+            class="px-5 py-2.5 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2">
+            <LoadingSpinner v-if="saving" size="sm" />
+            {{ saving ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 const apiUrl = useApiUrl()
 const route = useRoute()
@@ -337,6 +431,27 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const mapRef = ref<any>(null)
 const pollingIntervals = ref<Map<string, number>>(new Map())
 const imageUrls = ref<Map<string, string>>(new Map())
+
+// Edit modal state
+const showEditModal = ref(false)
+const saving = ref(false)
+const editError = ref<string | null>(null)
+const editMapContainer = ref<HTMLElement | null>(null)
+let editMap: any = null
+let editMarker: any = null
+
+const editLocation = ref({
+  name: '',
+  description: '',
+  latitude: null as number | null,
+  longitude: null as number | null
+})
+
+const canSaveEdit = computed(() => {
+  return editLocation.value.name.trim() !== '' &&
+    editLocation.value.latitude !== null &&
+    editLocation.value.longitude !== null
+})
 
 const cameraId = computed(() => route.params.id as string)
 
@@ -503,6 +618,139 @@ const revealOnMap = () => {
         lng: location.value.longitude.toString()
       }
     })
+  }
+}
+
+// Edit modal functions
+const openEditModal = async () => {
+  if (!location.value) return
+
+  showEditModal.value = true
+  editError.value = null
+
+  // Populate form with current values
+  editLocation.value = {
+    name: location.value.name,
+    description: location.value.description || '',
+    latitude: location.value.latitude,
+    longitude: location.value.longitude
+  }
+
+  // Wait for modal to render, then initialize map
+  await nextTick()
+  initEditMap()
+}
+
+const closeEditModal = () => {
+  showEditModal.value = false
+  if (editMap) {
+    editMap.remove()
+    editMap = null
+  }
+  editMarker = null
+}
+
+const initEditMap = async () => {
+  if (!editMapContainer.value) return
+
+  const L = await import('leaflet')
+  await import('leaflet/dist/leaflet.css')
+
+  // Fix for default marker icons
+  delete (L.Icon.Default.prototype as any)._getIconUrl
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  })
+
+  // Use current location as center
+  const center: [number, number] = [
+    editLocation.value.latitude || 52.10181392588904,
+    editLocation.value.longitude || 9.37544441225413
+  ]
+
+  editMap = L.map(editMapContainer.value).setView(center, 15)
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(editMap)
+
+  // Add marker at current location
+  if (editLocation.value.latitude && editLocation.value.longitude) {
+    editMarker = L.marker([editLocation.value.latitude, editLocation.value.longitude]).addTo(editMap)
+  }
+
+  // Add click handler for location selection
+  editMap.on('click', (e: any) => {
+    const { lat, lng } = e.latlng
+    editLocation.value.latitude = lat
+    editLocation.value.longitude = lng
+
+    // Update or create marker
+    if (editMarker) {
+      editMarker.setLatLng([lat, lng])
+    } else if (editMap) {
+      editMarker = L.marker([lat, lng]).addTo(editMap)
+    }
+  })
+}
+
+// Watch for manual coordinate changes in edit modal and update marker
+watch(
+  () => [editLocation.value.latitude, editLocation.value.longitude],
+  ([lat, lng]) => {
+    if (editMap && lat !== null && lng !== null && showEditModal.value) {
+      const L = (window as any).L
+      if (editMarker) {
+        editMarker.setLatLng([lat, lng])
+      } else if (L) {
+        editMarker = L.marker([lat, lng]).addTo(editMap)
+      }
+      editMap.setView([lat, lng], editMap.getZoom())
+    }
+  }
+)
+
+const saveLocationEdit = async () => {
+  if (!canSaveEdit.value || !location.value) return
+
+  saving.value = true
+  editError.value = null
+
+  try {
+    const response = await fetchWithAuth(`/locations/${location.value.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: editLocation.value.name.trim(),
+        description: editLocation.value.description.trim() || null,
+        latitude: editLocation.value.latitude,
+        longitude: editLocation.value.longitude
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    // Update local location data
+    location.value.name = editLocation.value.name.trim()
+    location.value.description = editLocation.value.description.trim() || ''
+    location.value.latitude = editLocation.value.latitude!
+    location.value.longitude = editLocation.value.longitude!
+
+    // Close modal
+    closeEditModal()
+  } catch (err) {
+    editError.value = err instanceof Error ? err.message : 'Failed to update location'
+    console.error('Error updating location:', err)
+  } finally {
+    saving.value = false
   }
 }
 
