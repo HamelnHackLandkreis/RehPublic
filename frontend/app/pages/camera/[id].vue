@@ -1327,7 +1327,7 @@ const fetchExistingIntegration = async () => {
   }
 
   try {
-    const response = await fetchWithAuth('/image-pull-sources')
+    const response = await fetchWithAuth('/image-pull-sources/')
     if (response.ok) {
       const data = await response.json()
       // Find integration for this location
@@ -1366,7 +1366,7 @@ const createIntegration = async () => {
       payload.auth_type = 'none'
     }
 
-    const response = await fetchWithAuth('/image-pull-sources', {
+    const response = await fetchWithAuth('/image-pull-sources/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

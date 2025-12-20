@@ -99,12 +99,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add middleware to handle proxy headers correctly
-# This ensures FastAPI uses X-Forwarded-Proto for scheme detection
+# Add trusted host middleware for security
 app.add_middleware(
     TrustedHostMiddleware,
     allowed_hosts=["*"],  # Adjust to your specific domains in production
 )
+
+
+# Middleware to handle X-Forwarded-Proto header for proper HTTPS redirect URLs
+@app.middleware("http")
+async def set_scheme_from_forwarded_proto(request, call_next):
+    """Handle X-Forwarded-Proto header to ensure redirects use correct scheme.
+
+    When behind a reverse proxy that terminates HTTPS, the backend only sees HTTP.
+    This middleware ensures that any redirects (e.g., trailing slash redirects)
+    use the correct scheme from the X-Forwarded-Proto header.
+    """
+    forwarded_proto = request.headers.get("x-forwarded-proto")
+    if forwarded_proto:
+        request.scope["scheme"] = forwarded_proto
+    return await call_next(request)
 
 # Register authentication middleware
 create_authentication_middleware(app)
