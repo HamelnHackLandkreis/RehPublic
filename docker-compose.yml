@@ -3,12 +3,17 @@ services:
   # nuxt-frontend:
   #   build:
   #     context: ./frontend
+  #     dockerfile: Dockerfile
   #     # Frontend now talks to the 'loadbalancer' service's internal port (80)
   #     args:
   #       - NUXT_PUBLIC_API_URL=https://rehpublic-api.3ggert.de
   #       - NUXT_PUBLIC_AUTH0_DOMAIN=${NUXT_PUBLIC_AUTH0_DOMAIN}
   #       - NUXT_PUBLIC_AUTH0_CLIENT_ID=${NUXT_PUBLIC_AUTH0_CLIENT_ID}
   #       - NUXT_PUBLIC_AUTH0_AUDIENCE=${NUXT_PUBLIC_AUTH0_AUDIENCE}
+  #     cache_from:
+  #       - type=gha,scope=frontend
+  #     cache_to:
+  #       - type=gha,scope=frontend,mode=max
   #   ports:
   #     - "9001:80"
   #   restart: always
@@ -36,7 +41,7 @@ services:
   backend:
     build:
       context: ./backend
-    # We do not expose 8000 here as only the load balancer needs to reach it
+      dockerfile: Dockerfile
     restart: always
     environment:
       - REDIS_URL=redis://redis:6379/0
@@ -44,7 +49,6 @@ services:
       - AUTH0_DOMAIN=${AUTH0_DOMAIN}
       - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
       - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
-    # Wait for the database to be ready before starting
     ports:
       - "8000:8000"
     depends_on:
@@ -63,6 +67,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    shm_size: 128mb
 
   # --- Redis Service (New) ---
   redis:
@@ -73,12 +78,13 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
   # --- Celery Worker Service (New) ---
   celery-worker:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     container_name: rehpublic-celery-worker
     command: celery -A src.celery_app worker --loglevel=info --concurrency=1
     restart: always
@@ -98,6 +104,7 @@ services:
   celery-flower:
     build:
       context: ./backend
+      dockerfile: Dockerfile
     container_name: rehpublic-celery-flower
     command: celery -A src.celery_app flower --port=5555
     restart: always

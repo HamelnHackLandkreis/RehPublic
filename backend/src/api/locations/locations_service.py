@@ -311,6 +311,8 @@ class SpottingService:
                     location_id=UUID(image.location_id),  # type: ignore[arg-type]
                     upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
                     detections=detections,
+                    processing_status=image.processing_status or "completed",  # type: ignore[arg-type]
+                    processed=image.processed or False,  # type: ignore[arg-type]
                 )
             )
 

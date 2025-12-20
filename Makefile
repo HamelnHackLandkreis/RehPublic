@@ -1,4 +1,4 @@
-.PHONY: backend-sync backend-run backend-run-workers backend-run-celery backend-test backend-download-models frontend-prep frontend-run redis-start run pre-commit-install pre-commit-run pre-commit-update lint lint-fix types
+.PHONY: backend-sync backend-run backend-run-workers backend-run-celery backend-test backend-download-models backend-sync-images frontend-prep frontend-run redis-start run pre-commit-install pre-commit-run pre-commit-update lint lint-fix types
 
 backend-sync:
 	cd backend && uv sync --extra dev
@@ -22,6 +22,12 @@ backend-test-serial:
 
 backend-download-models:
 	cd backend && uv run python download_deepfaune_model.py
+
+backend-sync-images:
+	cd backend && PYTHONPATH=src uv run python trigger_image_sync.py
+
+backend-sync-images-all:
+	cd backend && PYTHONPATH=src uv run python trigger_image_sync.py --max-files 100
 
 frontend-prep:
 	cd frontend && npm install

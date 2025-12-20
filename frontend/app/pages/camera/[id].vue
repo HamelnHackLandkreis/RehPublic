@@ -75,6 +75,14 @@
           ]">
             Upload
           </button>
+          <button @click="activeTab = 'integration'" :class="[
+            'px-6 py-4 text-sm font-medium transition-colors border-b-2',
+            activeTab === 'integration'
+              ? 'border-blue-500 text-blue-600'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ]">
+            Integration
+          </button>
         </div>
 
         <!-- Tab Content -->
@@ -146,13 +154,26 @@
                   <div class="flex justify-between items-center gap-2">
                     <small class="text-xs text-gray-500">{{ new Date(image.upload_timestamp).toLocaleString() }}</small>
                     <div class="flex gap-2">
+                      <!-- Has detections -->
                       <div v-if="image.detections && image.detections.length > 0"
                         @click="() => router.push(`/match/${image.image_id}`)"
                         class="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-semibold transition-opacity hover:opacity-85 cursor-pointer">
                         {{ image.detections.length }} detection{{ image.detections.length !== 1 ? 's' : '' }}
                       </div>
-                      <span v-else class="bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-semibold">No
-                        detection</span>
+                      <!-- Processing/Pending -->
+                      <span v-else-if="!image.processed || image.processing_status === 'detecting' || image.processing_status === 'uploading'"
+                        class="bg-blue-500 text-white px-3 py-1 rounded-full text-xs font-semibold animate-pulse">
+                        Pending
+                      </span>
+                      <!-- Failed -->
+                      <span v-else-if="image.processing_status === 'failed'"
+                        class="bg-red-600 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        Processing failed
+                      </span>
+                      <!-- No detections (completed but empty) -->
+                      <span v-else class="bg-gray-500 text-white px-3 py-1 rounded-full text-xs font-semibold">
+                        No detection
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -276,6 +297,167 @@
               </div>
             </div>
           </div>
+
+          <!-- Integration Tab -->
+          <div v-if="activeTab === 'integration'" class="p-8 md:p-5">
+            <div class="max-w-2xl">
+              <h2 class="text-2xl font-bold text-gray-900 mb-4">External Image Source Integration</h2>
+              <p class="text-gray-600 mb-8">
+                Configure an external image source that will be automatically polled every hour.
+                Images will be downloaded and processed through the same wildlife detection pipeline as manual uploads.
+              </p>
+
+              <!-- Existing Integration Display -->
+              <div v-if="existingIntegration" class="mb-8 bg-green-50 border-2 border-green-200 rounded-xl p-6">
+                <div class="flex items-start justify-between mb-4">
+                  <div>
+                    <h3 class="text-lg font-bold text-green-900 mb-2">Active Integration</h3>
+                    <p class="text-sm text-green-700">{{ existingIntegration.name }}</p>
+                  </div>
+                  <span class="inline-flex items-center gap-2 px-3 py-1 bg-green-600 text-white text-xs font-bold rounded-full">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    {{ existingIntegration.is_active ? 'Active' : 'Inactive' }}
+                  </span>
+                </div>
+
+                <div class="space-y-3 mb-4">
+                  <div class="flex items-start gap-3">
+                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Base URL:</span>
+                    <span class="text-sm text-green-700 break-all">{{ existingIntegration.base_url }}</span>
+                  </div>
+                  <div class="flex items-start gap-3">
+                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Auth Type:</span>
+                    <span class="text-sm text-green-700">{{ existingIntegration.auth_type }}</span>
+                  </div>
+                  <div v-if="existingIntegration.last_pulled_filename" class="flex items-start gap-3">
+                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Last Pulled:</span>
+                    <span class="text-sm text-green-700">{{ existingIntegration.last_pulled_filename }}</span>
+                  </div>
+                  <div v-if="existingIntegration.last_pull_timestamp" class="flex items-start gap-3">
+                    <span class="text-sm font-semibold text-green-900 min-w-[120px]">Last Pull Time:</span>
+                    <span class="text-sm text-green-700">{{ new Date(existingIntegration.last_pull_timestamp).toLocaleString() }}</span>
+                  </div>
+                </div>
+
+                <div class="flex gap-3">
+                  <button @click="toggleIntegration" :disabled="integrationLoading"
+                    class="px-4 py-2 bg-yellow-500 text-white rounded-lg font-medium transition-colors hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    {{ existingIntegration.is_active ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <button @click="testIntegration" :disabled="integrationLoading"
+                    class="px-4 py-2 bg-blue-500 text-white rounded-lg font-medium transition-colors hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Test Pull (2 files)
+                  </button>
+                  <button @click="deleteIntegration"
+                    class="px-4 py-2 bg-red-500 text-white rounded-lg font-medium transition-colors hover:bg-red-600">
+                    Delete
+                  </button>
+                </div>
+              </div>
+
+              <!-- Integration Form -->
+              <div v-if="!existingIntegration" class="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                <form @submit.prevent="createIntegration" class="space-y-6">
+                  <div>
+                    <label for="integration-name" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Integration Name
+                    </label>
+                    <input
+                      id="integration-name"
+                      v-model="integrationForm.name"
+                      type="text"
+                      required
+                      placeholder="e.g., Hameln-Pyrmont Camera Feed"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label for="integration-url" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Base URL
+                    </label>
+                    <input
+                      id="integration-url"
+                      v-model="integrationForm.baseUrl"
+                      type="url"
+                      required
+                      placeholder="https://assets.hameln-pyrmont.digital/image-api/"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">
+                      URL to the directory listing containing images
+                    </p>
+                  </div>
+
+                  <div>
+                    <label for="integration-username" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Username
+                    </label>
+                    <input
+                      id="integration-username"
+                      v-model="integrationForm.username"
+                      type="text"
+                      placeholder="mitwirker"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label for="integration-password" class="block text-sm font-semibold text-gray-700 mb-2">
+                      Password
+                    </label>
+                    <input
+                      id="integration-password"
+                      v-model="integrationForm.password"
+                      type="password"
+                      placeholder="••••••••"
+                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    />
+                    <p class="text-xs text-gray-500 mt-1">
+                      Leave empty if no authentication is required
+                    </p>
+                  </div>
+
+                  <div v-if="integrationError" class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p class="text-sm text-red-700">{{ integrationError }}</p>
+                  </div>
+
+                  <div v-if="integrationSuccess" class="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p class="text-sm text-green-700">{{ integrationSuccess }}</p>
+                  </div>
+
+                  <div class="flex gap-3">
+                    <button
+                      type="submit"
+                      :disabled="integrationLoading"
+                      class="px-6 py-2.5 bg-blue-500 text-white rounded-lg font-medium transition-colors hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {{ integrationLoading ? 'Creating...' : 'Create Integration' }}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <!-- Information Section -->
+              <div class="mt-8 bg-blue-50 border border-blue-200 rounded-xl p-6">
+                <h4 class="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                  </svg>
+                  How it works
+                </h4>
+                <ul class="text-sm text-blue-800 space-y-2">
+                  <li>• Images are automatically pulled from the configured URL every hour</li>
+                  <li>• Each image is processed through the wildlife detection system</li>
+                  <li>• Detected animals appear in the Overview tab like manual uploads</li>
+                  <li>• The system tracks which files have been processed to avoid duplicates</li>
+                  <li>• Up to 10 new images are processed per hour by default</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -395,6 +577,8 @@ interface ImageDetection {
   image_id: string
   location_id: string
   upload_timestamp: string
+  processing_status?: string  // uploading, detecting, completed, failed
+  processed?: boolean
   detections: Array<{
     species: string
     confidence: number
@@ -421,7 +605,7 @@ const location = ref<Location | null>(null)
 const statistics = ref<any[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
-const activeTab = ref<'overview' | 'upload'>('overview')
+const activeTab = ref<'overview' | 'upload' | 'integration'>('overview')
 const isDragging = ref(false)
 const uploadingFiles = ref<UploadFile[]>([])
 const processingFiles = ref<UploadFile[]>([])
@@ -431,6 +615,18 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const mapRef = ref<any>(null)
 const pollingIntervals = ref<Map<string, number>>(new Map())
 const imageUrls = ref<Map<string, string>>(new Map())
+
+// Integration state
+const existingIntegration = ref<any>(null)
+const integrationLoading = ref(false)
+const integrationError = ref<string | null>(null)
+const integrationSuccess = ref<string | null>(null)
+const integrationForm = ref({
+  name: '',
+  baseUrl: '',
+  username: '',
+  password: ''
+})
 
 // Edit modal state
 const showEditModal = ref(false)
@@ -559,7 +755,7 @@ const fetchCameraData = async () => {
       const token = await getToken()
       if (token) {
         await Promise.all(
-          foundLocation.images.map(async (img) => {
+          foundLocation.images.map(async (img: ImageDetection) => {
             try {
               const response = await fetchWithAuth(`/images/${img.image_id}/base64`)
               if (response.ok) {
@@ -978,8 +1174,197 @@ const handleUploadError = (uploadFile: UploadFile, message: string) => {
   failedFiles.value.push(uploadFile)
 }
 
+// Integration functions
+const fetchExistingIntegration = async () => {
+  if (!cameraId.value) {
+    return
+  }
+
+  try {
+    const response = await fetchWithAuth('/image-pull-sources')
+    if (response.ok) {
+      const data = await response.json()
+      // Find integration for this location
+      const integration = data.find((source: any) => source.location_id === cameraId.value)
+      if (integration) {
+        existingIntegration.value = integration
+      }
+    }
+  } catch (err) {
+    console.error('Failed to fetch existing integration:', err)
+  }
+}
+
+const createIntegration = async () => {
+  if (!cameraId.value) {
+    return
+  }
+
+  integrationLoading.value = true
+  integrationError.value = null
+  integrationSuccess.value = null
+
+  try {
+    const payload: any = {
+      name: integrationForm.value.name,
+      location_id: cameraId.value,
+      base_url: integrationForm.value.baseUrl,
+      auth_type: 'basic',
+      is_active: true
+    }
+
+    if (integrationForm.value.username && integrationForm.value.password) {
+      payload.auth_username = integrationForm.value.username
+      payload.auth_password = integrationForm.value.password
+    } else {
+      payload.auth_type = 'none'
+    }
+
+    const response = await fetchWithAuth('/image-pull-sources', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.detail || `Failed to create integration: ${response.status}`)
+    }
+
+    const data = await response.json()
+    existingIntegration.value = data
+    integrationSuccess.value = 'Integration created successfully! Images will be pulled hourly.'
+
+    // Reset form
+    integrationForm.value = {
+      name: '',
+      baseUrl: '',
+      username: '',
+      password: ''
+    }
+
+  } catch (err) {
+    integrationError.value = err instanceof Error ? err.message : 'Failed to create integration'
+    console.error('Error creating integration:', err)
+  } finally {
+    integrationLoading.value = false
+  }
+}
+
+const toggleIntegration = async () => {
+  if (!existingIntegration.value) {
+    return
+  }
+
+  integrationLoading.value = true
+  integrationError.value = null
+
+  try {
+    const newStatus = !existingIntegration.value.is_active
+    const response = await fetchWithAuth(
+      `/image-pull-sources/${existingIntegration.value.id}/toggle?is_active=${newStatus}`,
+      {
+        method: 'PATCH'
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to toggle integration: ${response.status}`)
+    }
+
+    const data = await response.json()
+    existingIntegration.value = data
+    integrationSuccess.value = `Integration ${newStatus ? 'activated' : 'deactivated'} successfully`
+    setTimeout(() => {
+      integrationSuccess.value = null
+    }, 3000)
+
+  } catch (err) {
+    integrationError.value = err instanceof Error ? err.message : 'Failed to toggle integration'
+    console.error('Error toggling integration:', err)
+  } finally {
+    integrationLoading.value = false
+  }
+}
+
+const testIntegration = async () => {
+  if (!existingIntegration.value) {
+    return
+  }
+
+  integrationLoading.value = true
+  integrationError.value = null
+  integrationSuccess.value = null
+
+  try {
+    const response = await fetchWithAuth(
+      `/image-pull-sources/${existingIntegration.value.id}/process?max_files=2`,
+      {
+        method: 'POST'
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to test integration: ${response.status}`)
+    }
+
+    const data = await response.json()
+    integrationSuccess.value = `Test successful! Processed ${data.processed_count} file(s). Check the Overview tab to see the results.`
+
+    // Refresh camera data to show new images
+    setTimeout(() => {
+      fetchCameraData()
+    }, 2000)
+
+  } catch (err) {
+    integrationError.value = err instanceof Error ? err.message : 'Failed to test integration'
+    console.error('Error testing integration:', err)
+  } finally {
+    integrationLoading.value = false
+  }
+}
+
+const deleteIntegration = async () => {
+  if (!existingIntegration.value) {
+    return
+  }
+
+  if (!confirm('Are you sure you want to delete this integration? This cannot be undone.')) {
+    return
+  }
+
+  integrationLoading.value = true
+  integrationError.value = null
+
+  try {
+    // Note: Delete endpoint not implemented in backend yet, so we'll deactivate instead
+    const response = await fetchWithAuth(
+      `/image-pull-sources/${existingIntegration.value.id}/toggle?is_active=false`,
+      {
+        method: 'PATCH'
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete integration: ${response.status}`)
+    }
+
+    existingIntegration.value = null
+    integrationSuccess.value = 'Integration deleted successfully'
+
+  } catch (err) {
+    integrationError.value = err instanceof Error ? err.message : 'Failed to delete integration'
+    console.error('Error deleting integration:', err)
+  } finally {
+    integrationLoading.value = false
+  }
+}
+
 onMounted(() => {
   fetchCameraData()
+  fetchExistingIntegration()
 })
 
 onUnmounted(() => {

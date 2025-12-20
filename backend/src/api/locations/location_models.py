@@ -34,6 +34,9 @@ class Location(Base):
     images = relationship(
         "Image", back_populates="location", cascade="all, delete-orphan"
     )
+    image_pull_sources = relationship(
+        "ImagePullSource", back_populates="location", cascade="all, delete-orphan"
+    )
 
 
 class Spotting(Base):

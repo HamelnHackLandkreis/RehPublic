@@ -564,25 +564,12 @@ const fetchAvailableSpecies = async () => {
 
       availableSpecies.value = Array.from(speciesSet).sort()
 
-      // Apply default species if they exist in available species (only once)
-      if (!defaultsApplied.value) {
-        const defaultSpecies = ['roe deer', 'boar']
-        const existingDefaults: string[] = []
-        defaultSpecies.forEach(defaultSpeciesName => {
-          const found = availableSpecies.value.find(available =>
-            available.toLowerCase() === defaultSpeciesName.toLowerCase()
-          )
-          if (found) {
-            existingDefaults.push(found) // Use the actual case from the API
-          }
-        })
-
-        if (existingDefaults.length > 0) {
-          selectedSpecies.value = existingDefaults
-          defaultsApplied.value = true
-          // Apply filters after setting defaults
-          applyFilters()
-        }
+      // Apply default: select all species (only once)
+      if (!defaultsApplied.value && availableSpecies.value.length > 0) {
+        selectedSpecies.value = [...availableSpecies.value]
+        defaultsApplied.value = true
+        // Apply filters after setting defaults
+        applyFilters()
       }
     }
   } catch (err) {

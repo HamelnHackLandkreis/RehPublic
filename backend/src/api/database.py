@@ -10,6 +10,7 @@ from src.api.models import Base
 
 # Import all models to ensure they're registered with Base.metadata
 from src.api.images.image_models import Image  # noqa: F401
+from src.api.image_pull_sources.image_pull_source_models import ImagePullSource  # noqa: F401
 from src.api.locations.location_models import Location, Spotting  # noqa: F401
 from src.api.user_detections.user_detection_models import UserDetection  # noqa: F401
 from src.api.users.user_models import User  # noqa: F401
