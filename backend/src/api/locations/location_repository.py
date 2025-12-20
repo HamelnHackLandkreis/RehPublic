@@ -48,6 +48,8 @@ class LocationRepository:
         longitude: float,
         latitude: float,
         description: str | None = None,
+        owner_id: str | None = None,
+        is_public: bool = True,
     ) -> Location:
         """Create new location.
 
@@ -57,12 +59,19 @@ class LocationRepository:
             longitude: Longitude coordinate
             latitude: Latitude coordinate
             description: Optional description
+            owner_id: Owner user ID
+            is_public: Whether location is public or private
 
         Returns:
             Created Location object
         """
         location = Location(
-            name=name, longitude=longitude, latitude=latitude, description=description
+            name=name,
+            longitude=longitude,
+            latitude=latitude,
+            description=description,
+            owner_id=owner_id,
+            is_public=is_public,
         )
         db.add(location)
         db.commit()
@@ -77,6 +86,7 @@ class LocationRepository:
         longitude: float | None = None,
         latitude: float | None = None,
         description: str | None = None,
+        is_public: bool | None = None,
     ) -> Location | None:
         """Update an existing location.
 
@@ -87,6 +97,7 @@ class LocationRepository:
             longitude: Optional new longitude
             latitude: Optional new latitude
             description: Optional new description
+            is_public: Optional new privacy setting
 
         Returns:
             Updated Location object or None if not found
@@ -103,6 +114,8 @@ class LocationRepository:
             location.latitude = latitude
         if description is not None:
             location.description = description
+        if is_public is not None:
+            location.is_public = is_public
 
         db.commit()
         db.refresh(location)

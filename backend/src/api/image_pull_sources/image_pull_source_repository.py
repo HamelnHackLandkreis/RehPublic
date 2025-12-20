@@ -121,3 +121,19 @@ class ImagePullSourceRepository:
 
         source.is_active = is_active
         db.commit()
+
+    def get_by_user_id(self, db: Session, user_id: UUID) -> list[ImagePullSource]:
+        """Get all image pull sources owned by a specific user.
+
+        Args:
+            db: Database session
+            user_id: UUID of the user
+
+        Returns:
+            List of ImagePullSource objects owned by the user
+        """
+        return (
+            db.query(ImagePullSource)
+            .filter(ImagePullSource.user_id == str(user_id))
+            .all()
+        )

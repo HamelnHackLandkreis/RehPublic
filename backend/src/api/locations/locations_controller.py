@@ -139,16 +139,23 @@ def get_locations(
     tags=["locations"],
 )
 def create_location(
-    location_data: LocationCreate, db: Session = Depends(get_db)
+    request: Request,
+    location_data: LocationCreate,
+    db: Session = Depends(get_db),
 ) -> LocationResponse:
     """Create a new camera location.
 
     Args:
+        request: Request object with user authentication
         location_data: Location data including name, coordinates, and description
 
     Returns:
         Created location with generated ID
     """
+    requesting_user_id = None
+    if hasattr(request.state, "user"):
+        requesting_user_id = auth0_sub_to_uuid(request.state.user.sub)
+
     try:
         location = location_repository.create(
             db=db,
@@ -156,7 +163,14 @@ def create_location(
             longitude=location_data.longitude,
             latitude=location_data.latitude,
             description=location_data.description,
+            owner_id=str(requesting_user_id) if requesting_user_id else None,
+            is_public=location_data.is_public,
         )
+
+        is_owner = requesting_user_id is not None and location.owner_id == str(
+            requesting_user_id
+        )
+
         return LocationResponse(
             id=UUID(str(location.id)),
             name=str(location.name),
@@ -167,6 +181,9 @@ def create_location(
             total_spottings=0,
             images=[],
             total_images_with_animals=0,
+            owner_id=location.owner_id,
+            is_public=location.is_public,
+            is_owner=is_owner,
         )
     except Exception as e:
         logger.error(f"Failed to create location: {e}")
@@ -210,7 +227,7 @@ def get_location(
         - total_spottings: Total number of animal detections at this location
 
     Raises:
-        HTTPException: 404 if location not found
+        HTTPException: 404 if location not found or access denied
     """
     result = location_repository.get_by_id_with_statistics(db, location_id)
     if not result:
@@ -224,7 +241,18 @@ def get_location(
     # Extract user ID from request state for privacy filtering
     requesting_user_id = None
     if hasattr(request.state, "user"):
-        requesting_user_id = request.state.user.sub
+        requesting_user_id = auth0_sub_to_uuid(request.state.user.sub)
+
+    # Check if location is accessible (public or owned by user)
+    is_owner = requesting_user_id is not None and location.owner_id == str(
+        requesting_user_id
+    )
+
+    if not location.is_public and not is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location with id {location_id} not found",
+        )
 
     # Get up to 3 most recent images with spottings eagerly loaded and privacy filtering
     images = image_service.repository.get_by_location_id(
@@ -280,6 +308,9 @@ def get_location(
         total_spottings=total_spottings,
         images=image_responses,
         total_images_with_animals=images_with_animals,
+        owner_id=location.owner_id,
+        is_public=location.is_public,
+        is_owner=is_owner,
     )
 
 
@@ -290,6 +321,7 @@ def get_location(
     tags=["locations"],
 )
 def update_location(
+    request: Request,
     location_id: UUID,
     location_data: LocationUpdate,
     db: Session = Depends(get_db),
@@ -297,6 +329,7 @@ def update_location(
     """Update an existing camera location.
 
     Args:
+        request: Request object with user authentication
         location_id: UUID of the location to update
         location_data: Location data to update (all fields optional)
 
@@ -304,8 +337,31 @@ def update_location(
         Updated location with statistics
 
     Raises:
-        HTTPException: 404 if location not found, 409 if name conflict
+        HTTPException: 403 if not owner, 404 if location not found, 409 if name conflict
     """
+    requesting_user_id = None
+    if hasattr(request.state, "user"):
+        requesting_user_id = auth0_sub_to_uuid(request.state.user.sub)
+
+    # Check if location exists and user is owner
+    existing_location = location_repository.get_by_id(db=db, location_id=location_id)
+    if not existing_location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location with id {location_id} not found",
+        )
+
+    # Check ownership
+    is_owner = requesting_user_id is not None and existing_location.owner_id == str(
+        requesting_user_id
+    )
+
+    if not is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to update this location",
+        )
+
     try:
         location = location_repository.update(
             db=db,
@@ -314,6 +370,7 @@ def update_location(
             longitude=location_data.longitude,
             latitude=location_data.latitude,
             description=location_data.description,
+            is_public=location_data.is_public,
         )
 
         if not location:
@@ -340,6 +397,9 @@ def update_location(
             total_spottings=total_spottings,
             images=[],
             total_images_with_animals=0,
+            owner_id=location.owner_id,
+            is_public=location.is_public,
+            is_owner=is_owner,
         )
     except HTTPException:
         raise
@@ -400,22 +460,49 @@ def get_location_image_count(
     tags=["locations"],
 )
 def delete_location(
+    request: Request,
     location_id: UUID,
     db: Session = Depends(get_db),
 ) -> dict:
     """Delete an existing camera location and all its images.
 
     Args:
+        request: Request object with user authentication
         location_id: UUID of the location to delete
 
     Returns:
         Object with deleted_images count
 
     Raises:
-        HTTPException: 404 if location not found
+        HTTPException: 403 if not owner, 404 if location not found
     """
+    requesting_user_id = None
+    if hasattr(request.state, "user"):
+        requesting_user_id = auth0_sub_to_uuid(request.state.user.sub)
+
+    # Check if location exists and user is owner
+    existing_location = location_repository.get_by_id(db=db, location_id=location_id)
+    if not existing_location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location with id {location_id} not found",
+        )
+
+    # Check ownership
+    is_owner = requesting_user_id is not None and existing_location.owner_id == str(
+        requesting_user_id
+    )
+
+    if not is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to delete this location",
+        )
+
     try:
-        deleted, image_count = location_repository.delete(db=db, location_id=location_id)
+        deleted, image_count = location_repository.delete(
+            db=db, location_id=location_id
+        )
 
         if not deleted:
             raise HTTPException(

@@ -263,6 +263,17 @@ class SpottingService:
             distance_range=distance_range,
         )
 
+        # Filter locations by privacy - only include public locations or locations owned by user
+        filtered_locations = []
+        for location in all_locations_in_range:
+            is_owner = requesting_user_id is not None and location.owner_id == str(
+                requesting_user_id
+            )
+            if location.is_public or is_owner:
+                filtered_locations.append(location)
+
+        all_locations_in_range = filtered_locations
+
         # Get images with spottings (with privacy filtering)
         images = self.image_service.get_images_in_range(
             db=db,
@@ -338,6 +349,11 @@ class SpottingService:
                 time_end=time_end,
             )
 
+            # Check ownership for is_owner field
+            is_owner = requesting_user_id is not None and location.owner_id == str(
+                requesting_user_id
+            )
+
             locations_response.append(
                 LocationWithImagesResponse(
                     id=UUID(location.id),  # type: ignore[arg-type]
@@ -350,6 +366,9 @@ class SpottingService:
                     total_unique_species=unique_species_count,
                     total_spottings=total_spottings_count,
                     total_images_with_animals=images_with_animals_count,
+                    owner_id=location.owner_id,  # type: ignore[arg-type]
+                    is_public=location.is_public,  # type: ignore[arg-type]
+                    is_owner=is_owner,
                 )
             )
 

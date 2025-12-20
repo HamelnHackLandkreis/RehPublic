@@ -53,7 +53,17 @@
             </div>
           </div>
           <div class="flex-1 min-w-0 overflow-hidden">
-            <h3 class="text-base sm:text-lg font-semibold text-gray-900 mb-1 truncate">{{ camera.name }}</h3>
+            <div class="flex items-center gap-2 mb-1">
+              <h3 class="text-base sm:text-lg font-semibold text-gray-900 truncate">{{ camera.name }}</h3>
+              <span v-if="camera.is_owner"
+                class="flex-shrink-0 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                Yours
+              </span>
+              <span v-else-if="!camera.is_public"
+                class="flex-shrink-0 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                Private
+              </span>
+            </div>
             <p v-if="camera.description" class="text-xs sm:text-sm text-gray-500 mb-2 leading-snug line-clamp-2">{{
               camera.description }}</p>
             <div class="flex items-center gap-3 text-xs text-gray-400">
@@ -77,12 +87,10 @@
           <div class="flex-shrink-0 text-gray-400 transition-all group-hover:text-secondary group-hover:translate-x-1">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2">
-              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              <line x1="10" y1="11" x2="10" y2="17"></line>
-              <line x1="14" y1="11" x2="14" y2="17"></line>
+              <path d="m9 18 6-6-6-6" />
             </svg>
-          </button>
-        </div>
+          </div>
+        </button>
       </div>
     </div>
 
@@ -154,6 +162,20 @@
                 placeholder="9.375444"
                 class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-colors" />
             </div>
+          </div>
+
+          <!-- Privacy Toggle -->
+          <div class="border-t border-gray-200 pt-6">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" v-model="newCamera.is_public"
+                class="mt-1 w-5 h-5 text-secondary border-gray-300 rounded focus:ring-secondary" />
+              <div class="flex-1">
+                <div class="font-medium text-gray-900 mb-1">Make this camera public</div>
+                <p class="text-sm text-gray-600">
+                  Public cameras are visible to all users. Private cameras are only visible to you.
+                </p>
+              </div>
+            </label>
           </div>
 
           <!-- Error Message -->
@@ -249,6 +271,9 @@ interface CameraLocation {
   latitude: number
   description: string
   total_images_with_animals: number
+  owner_id?: string | null
+  is_public: boolean
+  is_owner: boolean
   images?: Array<{
     image_id: string
     location_id: string
@@ -290,7 +315,8 @@ const newCamera = ref({
   name: '',
   description: '',
   latitude: null as number | null,
-  longitude: null as number | null
+  longitude: null as number | null,
+  is_public: true
 })
 
 const canCreate = computed(() => {
@@ -308,7 +334,8 @@ const openCreateModal = async () => {
     name: '',
     description: '',
     latitude: null,
-    longitude: null
+    longitude: null,
+    is_public: true
   }
 
   // Wait for modal to render, then initialize map
@@ -396,7 +423,8 @@ const createCamera = async () => {
         name: newCamera.value.name.trim(),
         description: newCamera.value.description.trim() || null,
         latitude: newCamera.value.latitude,
-        longitude: newCamera.value.longitude
+        longitude: newCamera.value.longitude,
+        is_public: newCamera.value.is_public
       })
     })
 

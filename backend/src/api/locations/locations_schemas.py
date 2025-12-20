@@ -19,6 +19,7 @@ class LocationCreate(BaseModel):
     longitude: float
     latitude: float
     description: str | None = None
+    is_public: bool = True
 
 
 class LocationUpdate(BaseModel):
@@ -28,6 +29,7 @@ class LocationUpdate(BaseModel):
     longitude: float | None = None
     latitude: float | None = None
     description: str | None = None
+    is_public: bool | None = None
 
 
 class LocationResponse(BaseModel):
@@ -42,6 +44,9 @@ class LocationResponse(BaseModel):
     total_spottings: int
     images: List[SpottingImageResponse]
     total_images_with_animals: int
+    owner_id: str | None = None
+    is_public: bool = True
+    is_owner: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -77,6 +82,9 @@ class LocationWithImagesResponse(BaseModel):
     total_unique_species: int
     total_spottings: int
     total_images_with_animals: int
+    owner_id: str | None = None
+    is_public: bool = True
+    is_owner: bool = False
 
 
 class SpottingsResponse(BaseModel):

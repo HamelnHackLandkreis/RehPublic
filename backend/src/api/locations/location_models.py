@@ -29,6 +29,10 @@ class Location(Base):
     latitude = Column(Float, nullable=False)
     description = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    owner_id = Column(
+        String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    is_public = Column(Boolean, default=True, nullable=False, index=True)
 
     # Relationships
     images = relationship(
@@ -37,6 +41,7 @@ class Location(Base):
     image_pull_sources = relationship(
         "ImagePullSource", back_populates="location", cascade="all, delete-orphan"
     )
+    owner = relationship("User", foreign_keys=[owner_id])
 
 
 class Spotting(Base):

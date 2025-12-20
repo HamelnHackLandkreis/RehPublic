@@ -144,9 +144,14 @@ class ImageRepository:
                 # Only show images belonging to the requesting user
                 query = query.filter(Image.user_id == requesting_user_id_str)
             else:
-                # Show public images OR images belonging to the requesting user
+                # Show images where:
+                # 1. Image has no user (legacy images) OR
+                # 2. User has privacy_public = true OR
+                # 3. Image belongs to the requesting user
                 query = query.outerjoin(User, Image.user_id == User.id).filter(
-                    User.privacy_public | (Image.user_id == requesting_user_id_str)
+                    (Image.user_id == None)  # noqa: E711
+                    | (User.privacy_public == True)  # noqa: E712
+                    | (Image.user_id == requesting_user_id_str)
                 )
 
         if time_start is not None:
@@ -214,7 +219,9 @@ class ImageRepository:
         # Apply privacy filtering
         requesting_user_id_str = str(requesting_user_id)
         query = query.outerjoin(User, Image.user_id == User.id).filter(
-            User.privacy_public | (Image.user_id == requesting_user_id_str)
+            (Image.user_id == None)  # noqa: E711
+            | (User.privacy_public == True)  # noqa: E712
+            | (Image.user_id == requesting_user_id_str)
         )
 
         if location_ids:

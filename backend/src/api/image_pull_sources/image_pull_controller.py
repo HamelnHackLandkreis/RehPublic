@@ -45,7 +45,7 @@ def create_pull_source(
         Created image pull source
 
     Raises:
-        HTTPException: 401 if not authenticated
+        HTTPException: 401 if not authenticated, 403 if not location owner
     """
     if not hasattr(request.state, "user"):
         raise HTTPException(
@@ -55,6 +55,27 @@ def create_pull_source(
 
     auth0_sub = request.state.user.sub
     user_id = auth0_sub_to_uuid(auth0_sub)
+
+    # Check if location exists and user is owner
+    from src.api.locations.location_repository import LocationRepository
+
+    location_repository = LocationRepository()
+    location = location_repository.get_by_id(db=db, location_id=source_data.location_id)
+
+    if not location:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Location with id {source_data.location_id} not found",
+        )
+
+    # Check ownership
+    is_owner = location.owner_id == str(user_id)
+
+    if not is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to create an image pull source for this location",
+        )
 
     repository = ImagePullSourceRepository()
     source = repository.create(
@@ -83,14 +104,14 @@ def list_pull_sources(
     request: Request,
     db: Session = Depends(get_db),
 ) -> list[ImagePullSourceResponse]:
-    """List all active image pull sources.
+    """List image pull sources owned by the authenticated user.
 
     Args:
         request: FastAPI request object
         db: Database session
 
     Returns:
-        List of image pull sources
+        List of image pull sources owned by the user
 
     Raises:
         HTTPException: 401 if not authenticated
@@ -101,8 +122,11 @@ def list_pull_sources(
             detail="Authentication required",
         )
 
+    auth0_sub = request.state.user.sub
+    user_id = auth0_sub_to_uuid(auth0_sub)
+
     repository = ImagePullSourceRepository()
-    sources = repository.get_all_active(db)
+    sources = repository.get_by_user_id(db=db, user_id=user_id)
 
     return [ImagePullSourceResponse.model_validate(s) for s in sources]
 

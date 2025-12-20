@@ -26,6 +26,30 @@
         <p v-if="location.description" class="text-base text-gray-600 mb-4 leading-relaxed">{{
           location.description }}
         </p>
+
+        <!-- Privacy Status & Toggle -->
+        <div v-if="location" class="mb-4">
+          <div v-if="location.is_owner" class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <label class="flex items-center gap-3 cursor-pointer flex-1">
+              <input type="checkbox" v-model="location.is_public" @change="togglePrivacy"
+                class="w-5 h-5 text-secondary border-gray-300 rounded focus:ring-secondary" />
+              <div>
+                <div class="font-semibold text-gray-900">
+                  {{ location.is_public ? '🌍 Public Camera' : '🔒 Private Camera' }}
+                </div>
+                <p class="text-sm text-gray-600">
+                  {{ location.is_public
+                    ? 'This camera is visible to all users'
+                    : 'Only you can see this camera' }}
+                </p>
+              </div>
+            </label>
+          </div>
+          <div v-else-if="!location.is_public" class="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg border border-gray-200">
+            <span class="text-gray-700 font-medium">🔒 This is a private camera</span>
+          </div>
+        </div>
+
         <div class="flex flex-wrap items-center gap-3">
           <button @click="goToCameraList"
             class="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-gray-200 rounded-lg text-sm font-medium text-gray-600 transition-all hover:border-secondary hover:text-secondary hover:bg-secondary/5">
@@ -44,7 +68,7 @@
             </svg>
             Reveal on Map
           </button>
-          <button @click="openEditModal"
+          <button v-if="location && location.is_owner" @click="openEditModal"
             class="inline-flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-amber-300 rounded-lg text-sm font-medium text-amber-700 transition-all hover:border-amber-400 hover:bg-amber-50">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
               stroke="currentColor" stroke-width="2">
@@ -52,6 +76,16 @@
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
             Edit Location
+          </button>
+          <button v-if="location && location.is_owner" @click="openDeleteModal"
+            class="inline-flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-red-300 rounded-lg text-sm font-medium text-red-700 transition-all hover:border-red-400 hover:bg-red-50">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            Delete Camera
           </button>
         </div>
       </div>
@@ -549,6 +583,61 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Camera Modal -->
+    <div v-if="showDeleteModal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <!-- Backdrop -->
+      <div class="absolute inset-0 bg-black/50" @click="closeDeleteModal"></div>
+
+      <!-- Modal Content -->
+      <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div class="p-6">
+          <div class="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-100 rounded-full">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" stroke-width="2" class="text-red-600">
+              <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+          </div>
+          <h2 class="text-xl font-bold text-gray-900 text-center mb-2">Delete Camera</h2>
+          <p class="text-gray-600 text-center mb-2">
+            Are you sure you want to delete <strong class="text-gray-900">{{ location?.name }}</strong>?
+          </p>
+          <p class="text-red-600 text-sm text-center mb-4 font-medium">
+            ⚠️ This will also delete all associated images and detections.
+          </p>
+          <p class="text-gray-500 text-sm text-center mb-6">
+            This action cannot be undone.
+          </p>
+
+          <!-- Confirmation Input -->
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Type <strong class="text-red-600">{{ location?.name }}</strong> to confirm:
+            </label>
+            <input v-model="deleteConfirmation" type="text" :placeholder="location?.name"
+              class="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-red-500 transition-colors"
+              @keyup.enter="deleteLocation" />
+          </div>
+
+          <!-- Error Message -->
+          <p v-if="deleteError" class="text-red-500 text-sm mb-4 text-center">{{ deleteError }}</p>
+
+          <div class="flex gap-3">
+            <button @click="closeDeleteModal"
+              class="flex-1 px-5 py-2.5 border-2 border-gray-200 rounded-lg font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+              Cancel
+            </button>
+            <button @click="deleteLocation" :disabled="!canDelete || deleting"
+              class="flex-1 px-5 py-2.5 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+              <LoadingSpinner v-if="deleting" size="sm" />
+              {{ deleting ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -602,6 +691,9 @@ interface Location {
   total_unique_species?: number
   total_spottings?: number
   total_images_with_animals?: number
+  owner_id?: string | null
+  is_public: boolean
+  is_owner: boolean
 }
 
 const location = ref<Location | null>(null)
@@ -950,6 +1042,81 @@ const saveLocationEdit = async () => {
     console.error('Error updating location:', err)
   } finally {
     saving.value = false
+  }
+}
+
+// Privacy toggle function
+const togglePrivacy = async () => {
+  if (!location.value || !location.value.is_owner) return
+
+  try {
+    const response = await fetchWithAuth(`/locations/${location.value.id}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        is_public: location.value.is_public
+      })
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      // Revert on error
+      location.value.is_public = !location.value.is_public
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+    }
+  } catch (err) {
+    console.error('Error toggling privacy:', err)
+    error.value = err instanceof Error ? err.message : 'Failed to update privacy setting'
+  }
+}
+
+// Delete modal state
+const showDeleteModal = ref(false)
+const deleteConfirmation = ref('')
+const deleting = ref(false)
+const deleteError = ref<string | null>(null)
+
+const openDeleteModal = () => {
+  showDeleteModal.value = true
+  deleteConfirmation.value = ''
+  deleteError.value = null
+}
+
+const closeDeleteModal = () => {
+  showDeleteModal.value = false
+  deleteConfirmation.value = ''
+  deleteError.value = null
+}
+
+const canDelete = computed(() => {
+  return location.value && deleteConfirmation.value === location.value.name
+})
+
+const deleteLocation = async () => {
+  if (!canDelete.value || !location.value) return
+
+  deleting.value = true
+  deleteError.value = null
+
+  try {
+    const response = await fetchWithAuth(`/locations/${location.value.id}`, {
+      method: 'DELETE'
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.detail || `HTTP error! status: ${response.status}`)
+    }
+
+    // Navigate back to camera list
+    router.push('/camera')
+  } catch (err) {
+    deleteError.value = err instanceof Error ? err.message : 'Failed to delete camera'
+    console.error('Error deleting camera:', err)
+  } finally {
+    deleting.value = false
   }
 }
 
