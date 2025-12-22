@@ -118,6 +118,7 @@ interface StatisticsResponse {
 }
 
 const apiUrl = useApiUrl()
+const { fetchWithAuth } = useAuthenticatedApi()
 
 const periods = [
   { value: 'day', label: 'Today' },
@@ -196,7 +197,6 @@ const fetchStatistics = async () => {
   error.value = null
 
   try {
-    const { fetchWithAuth } = useAuthenticatedApi()
     const response = await fetchWithAuth(`/statistics?period=${period.value}&granularity=${granularity.value}`)
 
     if (!response.ok) {
