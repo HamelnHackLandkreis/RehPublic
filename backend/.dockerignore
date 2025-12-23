@@ -1,0 +1,72 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Docker
+Dockerfile*
+.dockerignore
+docker-compose*.yml
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+.eggs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+.DS_Store
+
+# Local data and test files
+bilder/
+test_bilder/
+sample_data/
+wildlife_camera.db
+test_wildlife_camera*.db
+enhanced_bilder_results.json
+test_european_results.json
+
+# Documentation and test scripts
+CURL_EXAMPLES.md
+IMPLEMENTATION_SUMMARY.md
+FRONTEND_IMPLEMENTATION.md
+test_*.py
+test_*.sh
+*.md
+!README.md
+
+# Test and coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+tests/
+
+# Virtual environment
+.venv
+venv
+env
+ENV/
+
+# Migrations (if not needed in runtime)
+migrations/
+
+# Local development files
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3

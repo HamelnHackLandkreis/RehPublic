@@ -1,0 +1,45 @@
+default_language_version:
+  python: python3.13
+
+fail_fast: true
+
+# We can't use local hooks since some developers use dev containers and commit outside an environment which has the
+# required dependencies installed.
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-json # checks JSON files for parseable syntax.
+      - id: check-yaml # checks yaml files for parseable syntax.
+        exclude: ^helm/.*\.yaml$ # Helm charts are not valid YAML, so we exclude them from this check.
+      - id: end-of-file-fixer # ensures that a file is either empty, or ends with one newline.
+      - id: trailing-whitespace # trims trailing whitespace
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    # Ruff version.
+    rev: "v0.13.3" # keep in sync with the version in `integration-and-deploy.yml` and `pyproject.toml`
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: "v1.17.1" # Please keep these aligned with the versions in `pyproject.toml`
+    hooks:
+      - id: mypy
+        args:
+          - "--ignore-missing-imports"
+        additional_dependencies: # Please keep these aligned with the versions in `dev-requirements.txt` and GitHub actions (`integration-and-deploy.yml`)
+          - "types-PyYAML~=6.0.12"
+          - "types-python-dateutil~=2.8.19"
+          - "pydantic~=2.9.2" # Needed so that mypy can understand Pydantic defaults
+          - "types-redis~=4.6.0"
+          - "types-requests~=2.32.0"
+          - "types-beautifulsoup4~=4.12.0"
+        exclude: ^tests/
+
+  - repo: https://github.com/zricethezav/gitleaks
+    rev: v8.16.1
+    hooks:
+      - id: gitleaks

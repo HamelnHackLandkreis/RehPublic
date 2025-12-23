@@ -1,0 +1,121 @@
+services:
+  # # --- Frontend Service (Updated to point to Load Balancer) ---
+  # nuxt-frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #     # Frontend now talks to the 'loadbalancer' service's internal port (80)
+  #     args:
+  #       - NUXT_PUBLIC_API_URL=https://rehpublic-api.3ggert.de
+  #       - NUXT_PUBLIC_AUTH0_DOMAIN=${NUXT_PUBLIC_AUTH0_DOMAIN}
+  #       - NUXT_PUBLIC_AUTH0_CLIENT_ID=${NUXT_PUBLIC_AUTH0_CLIENT_ID}
+  #       - NUXT_PUBLIC_AUTH0_AUDIENCE=${NUXT_PUBLIC_AUTH0_AUDIENCE}
+  #     cache_from:
+  #       - type=gha,scope=frontend
+  #     cache_to:
+  #       - type=gha,scope=frontend,mode=max
+  #   ports:
+  #     - "9001:80"
+  #   restart: always
+  #   container_name: rehpublic-frontend
+
+  # # --- Load Balancer Service (New) ---
+  # loadbalancer:
+  #   image: nginx:stable-alpine
+  #   container_name: rehpublic-loadbalancer
+  #   # Removed 'user: root' as it is less secure and didn't solve the permission issue.
+  #   ports:
+  #     # This exposes port 9002 on the host, which will distribute traffic to the backends
+  #     - "9002:80"
+  #   volumes:
+  #     # FIX: Mount the custom NGINX configuration to the main config file path
+  #     # (/etc/nginx/nginx.conf) to avoid permission conflicts
+  #     # with the default includes path (/etc/nginx/conf.d/default.conf).
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+  #   # Ensure the load balancer starts only after the backends are running
+  #   depends_on:
+  #     - backend
+  #   restart: always
+
+  # --- Backend Services (4 Replicas) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  # --- Database Service (Unchanged) ---
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: hamelnhack2025
+      POSTGRES_DB: rehpublic
+      POSTGRES_USER: rehpublic
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    shm_size: 128mb
+
+  # --- Redis Service (New) ---
+  redis:
+    image: redis:7-alpine
+    container_name: rehpublic-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  # --- Celery Worker Service (New) ---
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rehpublic-celery-worker
+    command: celery -A src.celery_app worker --loglevel=info --concurrency=1
+    restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
+      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+      - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
+    depends_on:
+      - redis
+      - db
+    volumes:
+      - ./backend/models:/app/models
+
+  # --- Celery Flower Service (Monitoring) ---
+  celery-flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rehpublic-celery-flower
+    command: celery -A src.celery_app flower --port=5555
+    restart: always
+    ports:
+      - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery-worker
+
+volumes:
+  postgres_data:
+  redis_data:

@@ -1,0 +1,1 @@
+"""Location controller integration tests."""

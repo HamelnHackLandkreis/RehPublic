@@ -1,0 +1,26 @@
+name: Trigger Server Deployment
+
+# Definiert, wann der Workflow ausgeführt werden soll
+on:
+  push:
+    # Der Workflow wird NUR ausgeführt, wenn ein Push auf diesen Branch erfolgt
+    branches:
+      - main
+      - master # falls Ihr Haupt-Branch noch master heißt
+
+# Die auszuführenden Aufgaben
+jobs:
+  trigger_deployment:
+    # Führt den Job auf einem Standard-Runner aus
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Sende CURL-Request an den Server-Webhook
+        # Der Kernschritt: Ein einfacher Shell-Befehl
+        run: |
+          echo "Sende Deployment-Signal an den Server..."
+          curl -X POST http://135.181.78.114:9000/hooks/push
+          echo "Signal gesendet. Deployment läuft jetzt auf dem Server."
+        
+        # Wichtig: Wird nur ausgeführt, wenn der Push erfolgreich ist
+        if: success()
