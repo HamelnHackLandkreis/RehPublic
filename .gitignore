@@ -234,6 +234,9 @@ backend/models/*.pth
 backend/models/*.onnx
 backend/models/*.h5
 backend/models/*.pb
+
 backend/wildlife_camera.db
 backend/wildlife_camera.db-shm
 backend/wildlife_camera.db-wal
+.idea
+.kiro
