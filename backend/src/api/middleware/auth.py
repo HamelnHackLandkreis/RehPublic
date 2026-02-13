@@ -120,6 +120,14 @@ def create_authentication_middleware(app: FastAPI) -> None:
         if request.url.path in AUTH_IGNORE_PATHS or request.method == "OPTIONS":
             return await call_next(request)
 
+        # Skip authentication for image serving endpoints (GET/HEAD /images/{id}/base64)
+        if (
+            request.method in ["GET", "HEAD"]
+            and request.url.path.startswith("/images/")
+            and request.url.path.endswith("/base64")
+        ):
+            return await call_next(request)
+
         try:
             authorization = request.headers.get("Authorization")
             if not authorization:

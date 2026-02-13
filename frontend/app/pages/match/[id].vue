@@ -253,7 +253,8 @@ interface Detection {
 interface ImageData {
   image_id: string
   location_id: string
-  raw: string // base64 encoded image
+  raw: string | null // base64 encoded image (Deprecated)
+  url: string // URL to fetch image
   upload_timestamp: string
   detections: Detection[]
 }
@@ -306,6 +307,10 @@ const showZoomTooltip = ref(false)
 
 // Computed property for main image source
 const mainImageSrc = computed(() => {
+  if (imageData.value?.url) {
+    const url = imageData.value.url.startsWith('/') ? imageData.value.url : `/${imageData.value.url}`
+    return `${apiUrl}${url}`
+  }
   if (imageData.value?.raw) {
     return `data:image/jpeg;base64,${imageData.value.raw}`
   }

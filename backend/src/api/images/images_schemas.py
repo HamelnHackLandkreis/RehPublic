@@ -35,6 +35,7 @@ class SpottingImageResponse(BaseModel):
     detections: List[DetectionResponse]
     processing_status: str  # uploading, detecting, completed, failed
     processed: bool
+    url: str  # URL to fetch image
 
 
 class ImageDetailResponse(BaseModel):
@@ -42,7 +43,8 @@ class ImageDetailResponse(BaseModel):
 
     image_id: UUID
     location_id: UUID
-    raw: str  # base64 encoded image
+    raw: str | None = None  # base64 encoded image (Deprecated)
+    url: str  # URL to fetch image
     upload_timestamp: datetime
     detections: List[DetectionResponse]
     processing_status: str  # uploading, detecting, completed, failed

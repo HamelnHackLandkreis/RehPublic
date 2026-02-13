@@ -180,18 +180,19 @@ class ImageService:
             )
             detections.append(detection)
 
-        # Retrieve image content for base64 response (compatibility)
-        try:
-            image_bytes, _ = self.get_image_bytes(db, image_id)  # type: ignore
-            raw_data = base64.b64encode(image_bytes).decode("utf-8")
-        except Exception as e:
-            logger.error(f"Failed to retrieve image content for {image_id}: {e}")
-            raw_data = ""
+        # Retrieve image content for base64 response (compatibility - Deprecated)
+        # Note: We are setting raw to None/Empty to encourage URL usage.
+        # The frontend should be updated to use the 'url' field.
+        # But we still populate 'url' field.
+
+        # NOTE: We are NOT fetching the image bytes anymore if not necessary for processing.
+        raw_data = None
 
         return ImageDetailResponse(
             image_id=UUID(str(image.id)),  # type: ignore[arg-type]
             location_id=UUID(str(image.location_id)),  # type: ignore[arg-type]
             raw=raw_data,
+            url=f"/images/{image.id}/base64",  # Relative URL that frontend can resolve against API_URL
             upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
             detections=detections,
             processing_status=str(image.processing_status) or "completed",  # type: ignore[arg-type]

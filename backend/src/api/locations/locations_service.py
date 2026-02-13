@@ -313,6 +313,7 @@ class SpottingService:
                     detections=detections,
                     processing_status=image.processing_status or "completed",  # type: ignore[arg-type]
                     processed=image.processed or False,  # type: ignore[arg-type]
+                    url=f"/images/{image.id}/base64",
                 )
             )
 

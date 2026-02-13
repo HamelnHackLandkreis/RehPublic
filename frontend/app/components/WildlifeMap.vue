@@ -60,6 +60,7 @@ interface ImageDetection {
   image_id: string
   location_id: string
   upload_timestamp: string
+  url?: string
   detections: any[]
 }
 
@@ -505,7 +506,13 @@ const fetchImageUrls = async (locationsToFetch: Location[]) => {
   locationsToFetch.forEach(location => {
     if (location.images) {
       location.images.forEach(img => {
-        imageIds.add(img.image_id)
+        if (img.url) {
+           // If we have a direct URL, use it (prepend API URL if relative)
+           const fullUrl = img.url.startsWith('/') ? `${apiUrl}${img.url}` : `${apiUrl}/${img.url}`
+           imageUrls.value.set(img.image_id, fullUrl)
+        } else {
+           imageIds.add(img.image_id)
+        }
       })
     }
   })
