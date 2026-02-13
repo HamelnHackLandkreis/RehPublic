@@ -21,6 +21,7 @@ from src.api.models import auth0_sub_to_uuid
 
 from src.api.database import get_db
 from src.api.images.image_service import ImageService
+from src.api.users.user_service import UserService
 from src.api.images.images_schemas import ImageDetailResponse, ImageUploadResponse
 
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ async def upload_image(
     ),
     db: Session = Depends(get_db),
     image_service: ImageService = Depends(ImageService.factory),
+    user_service: UserService = Depends(UserService.factory),
 ) -> ImageUploadResponse:
     """Upload an image to a specific location and process it for animal detection.
 
@@ -79,6 +81,22 @@ async def upload_image(
 
     auth0_sub = request.state.user.sub
     user_id = auth0_sub_to_uuid(auth0_sub)
+
+    # Ensure user exists in database
+    # Get email and name from token, defaulting to placeholders if missing
+    email = request.state.user.email or f"{auth0_sub}@placeholder.com"
+    name = request.state.user.name or "Unknown User"
+
+    try:
+        user_service.get_or_create_user(user_id=user_id, email=email, name=name)
+    except Exception as e:
+        logger.error(f"Failed to sync user {user_id}: {e}")
+        # Proceeding might fail if user doesn't exist, but we log it.
+        # Ideally we should probably fail here if we can't create the user.
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to synchronize user profile",
+        )
 
     try:
         file_bytes = await file.read()

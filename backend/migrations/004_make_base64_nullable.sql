@@ -1,0 +1,1 @@
+ALTER TABLE images ALTER COLUMN base64_data DROP NOT NULL;

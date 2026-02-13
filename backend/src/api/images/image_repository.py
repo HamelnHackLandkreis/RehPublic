@@ -21,24 +21,26 @@ class ImageRepository:
     def create(
         db: Session,
         location_id: UUID,
-        base64_data: str,
+        base64_data: str | None,
         user_id: UUID,
         upload_timestamp: datetime | None = None,
         processed: bool = False,
         processing_status: str = "uploading",
         celery_task_id: str | None = None,
+        s3_key: str | None = None,
     ) -> Image:
         """Create new image record.
 
         Args:
             db: Database session
             location_id: UUID of the location
-            base64_data: Base64 encoded image data
+            base64_data: Base64 encoded image data (Optional if s3_key provided)
             user_id: UUID of the user uploading the image
             upload_timestamp: Timestamp to use for upload (defaults to current time) or None
             processed: Whether the image has been processed
             processing_status: Processing status (uploading, detecting, completed, failed)
             celery_task_id: Celery task ID for async processing or None
+            s3_key: S3 object key if stored in S3
 
         Returns:
             Created Image object
@@ -50,6 +52,7 @@ class ImageRepository:
             "processed": processed,
             "processing_status": processing_status,
             "celery_task_id": celery_task_id,
+            "s3_key": s3_key,
         }
         if upload_timestamp is not None:
             image_kwargs["upload_timestamp"] = upload_timestamp

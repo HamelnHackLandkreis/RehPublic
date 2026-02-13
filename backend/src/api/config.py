@@ -31,3 +31,10 @@ AUTH0_CLIENT_SECRET = os.getenv(
     "AUTH0_CLIENT_SECRET",
     "T3U598QWgH683ycf79QyUE2f13nz3C_d3bLKc9NNojlRCb1ka3Rbfg89wEVtoo-s",
 )
+
+# S3 Configuration
+S3_ENDPOINT_URL = os.getenv("S3_ENDPOINT_URL", "http://localhost:8333")
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "any")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "any")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME", "wildlife-images")
+S3_REGION_NAME = os.getenv("S3_REGION_NAME", "us-east-1")
