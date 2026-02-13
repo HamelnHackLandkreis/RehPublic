@@ -150,7 +150,7 @@
                   <div @click="() => router.push(`/match/${image.image_id}`)"
                     class="group block relative rounded-lg overflow-hidden border-2 border-transparent transition-all hover:border-secondary hover:-translate-y-0.5 hover:shadow-lg cursor-pointer">
                     <div class="relative w-full aspect-[4/3] overflow-hidden bg-gray-100">
-                      <img :src="imageUrls.get(image.image_id) || `${apiUrl}/images/${image.image_id}/base64`"
+                      <img :src="image.url ? `${apiUrl}${image.url}` : (imageUrls.get(image.image_id) || `${apiUrl}/images/${image.image_id}/base64`)"
                         :alt="`Image from ${new Date(image.upload_timestamp).toLocaleString()}`"
                         class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                         @error="handleImageError" />
@@ -680,6 +680,7 @@ interface ImageDetection {
   image_id: string
   location_id: string
   upload_timestamp: string
+  url?: string
   processing_status?: string  // uploading, detecting, completed, failed
   processed?: boolean
   detections: Array<{
@@ -865,26 +866,26 @@ const fetchCameraData = async () => {
 
     location.value = foundLocation
 
-    // Pre-fetch image URLs with authentication
-    if (foundLocation.images && foundLocation.images.length > 0) {
-      const token = await getToken()
-      if (token) {
-        await Promise.all(
-          foundLocation.images.map(async (img: ImageDetection) => {
-            try {
-              const response = await fetchWithAuth(`/images/${img.image_id}/base64`)
-              if (response.ok) {
-                const blob = await response.blob()
-                const url = URL.createObjectURL(blob)
-                imageUrls.value.set(img.image_id, url)
-              }
-            } catch (err) {
-              console.warn(`Failed to fetch image ${img.image_id}:`, err)
-            }
-          })
-        )
-      }
-    }
+    // Pre-fetch image URLs with authentication - DISABLED in favor of direct URL usage
+    // if (foundLocation.images && foundLocation.images.length > 0) {
+    //   const token = await getToken()
+    //   if (token) {
+    //     await Promise.all(
+    //       foundLocation.images.map(async (img: ImageDetection) => {
+    //         try {
+    //           const response = await fetchWithAuth(`/images/${img.image_id}/base64`)
+    //           if (response.ok) {
+    //             const blob = await response.blob()
+    //             const url = URL.createObjectURL(blob)
+    //             imageUrls.value.set(img.image_id, url)
+    //           }
+    //         } catch (err) {
+    //           console.warn(`Failed to fetch image ${img.image_id}:`, err)
+    //         }
+    //       })
+    //     )
+    //   }
+    // }
 
     // Fetch statistics for this location to get complete species breakdown
     try {

@@ -19,41 +19,22 @@ services:
   #   restart: always
   #   container_name: rehpublic-frontend
 
-  # # --- Load Balancer Service (New) ---
-  # loadbalancer:
-  #   image: nginx:stable-alpine
-  #   container_name: rehpublic-loadbalancer
-  #   # Removed 'user: root' as it is less secure and didn't solve the permission issue.
-  #   ports:
-  #     # This exposes port 9002 on the host, which will distribute traffic to the backends
-  #     - "9002:80"
-  #   volumes:
-  #     # FIX: Mount the custom NGINX configuration to the main config file path
-  #     # (/etc/nginx/nginx.conf) to avoid permission conflicts
-  #     # with the default includes path (/etc/nginx/conf.d/default.conf).
-  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-  #   # Ensure the load balancer starts only after the backends are running
-  #   depends_on:
-  #     - backend
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
   #   restart: always
-
-  # --- Backend Services (4 Replicas) ---
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    restart: always
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
-      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
-      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
-    ports:
-      - "8000:8000"
-    depends_on:
-      - db
-      - redis
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
+  #     - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+  #     - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+  #     - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - db
+  #     - redis
 
   # --- Database Service (Unchanged) ---
   db:
@@ -81,41 +62,95 @@ services:
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
   # --- Celery Worker Service (New) ---
-  celery-worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: rehpublic-celery-worker
-    command: celery -A src.celery_app worker --loglevel=info --concurrency=1
-    restart: always
-    environment:
-      - REDIS_URL=redis://redis:6379/0
-      - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
-      - AUTH0_DOMAIN=${AUTH0_DOMAIN}
-      - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
-      - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
-    depends_on:
-      - redis
-      - db
-    volumes:
-      - ./backend/models:/app/models
+  # celery-worker:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: rehpublic-celery-worker
+  #   command: celery -A src.celery_app worker --loglevel=info --concurrency=1
+  #   restart: always
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379/0
+  #     - DATABASE_URL=postgresql://rehpublic:hamelnhack2025@db:5432/rehpublic
+  #     - AUTH0_DOMAIN=${AUTH0_DOMAIN}
+  #     - AUTH0_AUDIENCE=${AUTH0_AUDIENCE}
+  #     - AUTH0_PUBLIC_KEY=${AUTH0_PUBLIC_KEY}
+  #   depends_on:
+  #     - redis
+  #     - db
+  #   volumes:
+  #     - ./backend/models:/app/models
 
   # --- Celery Flower Service (Monitoring) ---
-  celery-flower:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: rehpublic-celery-flower
-    command: celery -A src.celery_app flower --port=5555
-    restart: always
+  # celery-flower:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: rehpublic-celery-flower
+  #   command: celery -A src.celery_app flower --port=5555
+  #   restart: always
+  #   ports:
+  #     - "5555:5555"
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379/0
+  #   depends_on:
+  #     - redis
+  #     - celery-worker
+
+  # Master-Server verwaltet die Volume-Server und das Dateisystem-Layout
+  seaweed-master:
+    image: chrislusf/seaweedfs:latest
     ports:
-      - "5555:5555"
-    environment:
-      - REDIS_URL=redis://redis:6379/0
+      - "9333:9333"
+      - "19333:19333"
+    command: "master -ip=seaweed-master"
+    networks:
+      - wildkamera-net
+
+  # Der Volume-Server speichert die tatsächlichen Bilder/Videos
+  seaweed-volume:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "8080:8080"
+      - "18080:18080"
+    command: "volume -mserver=seaweed-master:9333 -port=8080"
     depends_on:
-      - redis
-      - celery-worker
+      - seaweed-master
+    networks:
+      - wildkamera-net
+    volumes:
+      - seaweed_data:/data
+
+  # Der Filer bietet eine Dateisystem-Abstraktion und ist die Basis für S3
+  seaweed-filer:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "8888:8888"
+      - "18888:18888"
+    command: "filer -master=seaweed-master:9333"
+    depends_on:
+      - seaweed-master
+      - seaweed-volume
+    networks:
+      - wildkamera-net
+
+  # Das S3-Interface ermöglicht euch die Nutzung von Standard S3-Clients (Boto3, etc.)
+  seaweed-s3:
+    image: chrislusf/seaweedfs:latest
+    ports:
+      - "8333:8333"
+    # Wir starten den S3-Service und verbinden ihn mit dem Filer
+    command: 's3 -filer="seaweed-filer:8888" -ip.bind=0.0.0.0'
+    depends_on:
+      - seaweed-filer
+    networks:
+      - wildkamera-net
+
+networks:
+  wildkamera-net:
+    driver: bridge
 
 volumes:
   postgres_data:
   redis_data:
+  seaweed_data:

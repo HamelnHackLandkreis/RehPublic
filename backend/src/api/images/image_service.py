@@ -15,6 +15,7 @@ from src.adapters.image_processor_adapter import ProcessorClient
 from src.api.images.image_models import Image
 from src.api.images.image_repository import ImageRepository
 from src.api.locations.location_repository import LocationRepository
+from src.api.images.s3_service import S3Service
 
 if TYPE_CHECKING:
     from src.api.locations.location_repository import SpottingRepository
@@ -39,6 +40,7 @@ class ImageService:
         spotting_repository: object | None = None,
         spotting_service: object | None = None,
         processor_client: ProcessorClient | None = None,
+        s3_service: S3Service | None = None,
     ) -> None:
         """Initialize image service.
 
@@ -48,6 +50,7 @@ class ImageService:
             spotting_repository: Optional spotting repository (will create default if not provided)
             spotting_service: Optional spotting service (will create default if not provided)
             processor_client: Optional processor client (will create default if not provided)
+            s3_service: Optional S3 service (will create default if not provided)
         """
         self.repository = repository or ImageRepository()
         self.location_repository = location_repository or LocationRepository()
@@ -56,6 +59,7 @@ class ImageService:
         self.processor_client = processor_client or ProcessorClient(
             model_region="europe"
         )
+        self.s3_service = s3_service or S3Service()
 
     @property
     def spotting_repository(self) -> SpottingRepository:
@@ -96,7 +100,7 @@ class ImageService:
         upload_timestamp: datetime | None = None,
         celery_task_id: str | None = None,
     ) -> Image:
-        """Save uploaded image as base64.
+        """Save uploaded image to S3 and create DB record.
 
         Args:
             db: Database session
@@ -109,17 +113,31 @@ class ImageService:
         Returns:
             Created Image object
         """
-        base64_data = base64.b64encode(file_bytes).decode("utf-8")
+        # Generate object key
+        timestamp_str = (upload_timestamp or datetime.utcnow()).strftime(
+            "%Y%m%d_%H%M%S"
+        )
+
+        # Add a unique identifier to prevent collisions for batch uploads
+        import uuid
+
+        unique_id = str(uuid.uuid4())[:8]
+
+        s3_key = f"location_{location_id}/{timestamp_str}_{user_id}_{unique_id}.jpg"
+
+        # Upload to S3
+        self.s3_service.upload_file(file_bytes, s3_key, content_type="image/jpeg")
 
         return self.repository.create(
             db=db,
             location_id=location_id,
-            base64_data=base64_data,
+            base64_data=None,  # No longer storing base64
             user_id=user_id,
             upload_timestamp=upload_timestamp,
             processed=False,
             processing_status="uploading",
             celery_task_id=celery_task_id,
+            s3_key=s3_key,
         )
 
     def get_image_by_id(self, db: Session, image_id: UUID) -> Image | None:
@@ -168,14 +186,23 @@ class ImageService:
             )
             detections.append(detection)
 
+        # Retrieve image content for base64 response (compatibility - Deprecated)
+        # Note: We are setting raw to None/Empty to encourage URL usage.
+        # The frontend should be updated to use the 'url' field.
+        # But we still populate 'url' field.
+
+        # NOTE: We are NOT fetching the image bytes anymore if not necessary for processing.
+        raw_data = None
+
         return ImageDetailResponse(
-            image_id=UUID(image.id),  # type: ignore[arg-type]
-            location_id=UUID(image.location_id),  # type: ignore[arg-type]
-            raw=image.base64_data,  # type: ignore[arg-type]
+            image_id=UUID(str(image.id)),  # type: ignore[arg-type]
+            location_id=UUID(str(image.location_id)),  # type: ignore[arg-type]
+            raw=raw_data,
+            url=f"/images/{image.id}/base64",  # Relative URL that frontend can resolve against API_URL
             upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
             detections=detections,
-            processing_status=image.processing_status or "completed",  # type: ignore[arg-type]
-            processed=image.processed,  # type: ignore[arg-type]
+            processing_status=str(image.processing_status) or "completed",  # type: ignore[arg-type]
+            processed=bool(image.processed),  # type: ignore[arg-type]
         )
 
     def get_image_bytes(self, db: Session, image_id: UUID) -> Tuple[bytes, str] | None:
@@ -193,10 +220,19 @@ class ImageService:
             return None
 
         try:
-            image_bytes = base64.b64decode(image.base64_data)
+            # Type casting for static analysis, though SQLAlchemy models return python types at runtime
+            s3_key = str(image.s3_key) if image.s3_key else None
+            base64_data = str(image.base64_data) if image.base64_data else None
+
+            if s3_key:
+                image_bytes = self.s3_service.get_file(s3_key)
+            elif base64_data:
+                image_bytes = base64.b64decode(base64_data)
+            else:
+                raise ValueError("No image data found (neither S3 key nor base64)")
         except Exception as e:
-            logger.error(f"Failed to decode base64 image {image_id}: {e}")
-            raise ValueError(f"Failed to decode image data: {e}")
+            logger.error(f"Failed to retrieve image {image_id}: {e}")
+            raise ValueError(f"Failed to retrieve image data: {e}")
 
         content_type = self._detect_content_type(image_bytes)
 
@@ -237,7 +273,15 @@ class ImageService:
         Returns:
             List of detection dictionaries
         """
-        image_bytes = base64.b64decode(image.base64_data)
+        s3_key = str(image.s3_key) if image.s3_key else None
+        base64_data = str(image.base64_data) if image.base64_data else None
+
+        if s3_key:
+            image_bytes = self.s3_service.get_file(s3_key)
+        elif base64_data:
+            image_bytes = base64.b64decode(base64_data)
+        else:
+            raise ValueError("No image data available for processing")
 
         detections = self.processor_client.process_image_data(image_bytes=image_bytes)
 
@@ -272,42 +316,10 @@ class ImageService:
         if not location:
             raise ValueError(f"Location with id {location_id} not found")
 
-        if async_processing:
-            # Create image first without task_id
-            image = self.save_image(
-                db=db,
-                location_id=location_id,
-                file_bytes=file_bytes,
-                user_id=user_id,
-                upload_timestamp=upload_timestamp,
-            )
-
-            logger.info(
-                f"Queuing async processing for image {image.id} at location {location.name}"
-            )
-            # Use adapter to dispatch async task
-            task_id = self.processor_client.process_image_async(
-                image_id=UUID(image.id),  # type: ignore[arg-type]
-                image_base64=image.base64_data,  # type: ignore[arg-type]
-                model_region="europe",
-                timestamp=upload_timestamp,
-            )
-
-            # Update image with task_id and set status to detecting
-            image.celery_task_id = task_id
-            image.processing_status = "detecting"
-            db.commit()
-            db.refresh(image)
-
-            return ImageUploadResponse(
-                image_id=UUID(image.id),  # type: ignore[arg-type]
-                location_id=UUID(image.location_id),  # type: ignore[arg-type]
-                upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
-                detections_count=0,
-                detected_species=[],
-                task_id=task_id,
-                processing_status="detecting",
-            )
+        # Encode bytes to base64 string for passing to async task (Celery serializer friendly)
+        # Note: Ideally we'd pass the S3 key to the worker, but keeping legacy adapter signature for now
+        # Actually, passing base64 is heavy. We should optimize this later to pass S3 key.
+        # For now, we are saving to S3 first, so we have the key.
 
         image = self.save_image(
             db=db,
@@ -315,7 +327,41 @@ class ImageService:
             file_bytes=file_bytes,
             user_id=user_id,
             upload_timestamp=upload_timestamp,
+            celery_task_id=None,  # Will be set below if async
         )
+
+        if async_processing:
+            logger.info(
+                f"Queuing async processing for image {image.id} at location {location.name}"
+            )
+
+            # TODO: Update ProcessorClient to accept s3_key to avoid passing large payload
+            # For now, we must read back from S3 or re-use file_bytes to pass base64 to the legacy adapter
+            image_base64 = base64.b64encode(file_bytes).decode("utf-8")
+
+            # Use adapter to dispatch async task
+            task_id = self.processor_client.process_image_async(
+                image_id=UUID(str(image.id)),  # type: ignore[arg-type]
+                image_base64=image_base64,  # Still passing base64 to worker for now
+                model_region="europe",
+                timestamp=upload_timestamp,
+            )
+
+            # Update image with task_id and set status to detecting
+            image.celery_task_id = task_id  # type: ignore
+            image.processing_status = "detecting"  # type: ignore
+            db.commit()
+            db.refresh(image)
+
+            return ImageUploadResponse(
+                image_id=UUID(str(image.id)),  # type: ignore[arg-type]
+                location_id=UUID(str(image.location_id)),  # type: ignore[arg-type]
+                upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
+                detections_count=0,
+                detected_species=[],
+                task_id=task_id,
+                processing_status="detecting",
+            )
 
         logger.info(
             f"Processing image {image.id} synchronously for location {location.name}"
@@ -324,12 +370,12 @@ class ImageService:
         if detections:
             self.spotting_service.save_detections(
                 db,
-                UUID(image.id),  # type: ignore[arg-type]
+                UUID(str(image.id)),  # type: ignore[arg-type]
                 detections,
                 detection_timestamp=upload_timestamp,
             )
 
-        self.mark_as_processed(db, UUID(image.id))  # type: ignore[arg-type]
+        self.mark_as_processed(db, UUID(str(image.id)))  # type: ignore[arg-type]
 
         logger.info(
             f"Successfully processed image {image.id}: "
@@ -337,8 +383,8 @@ class ImageService:
         )
 
         return ImageUploadResponse(
-            image_id=UUID(image.id),  # type: ignore[arg-type]
-            location_id=UUID(image.location_id),  # type: ignore[arg-type]
+            image_id=UUID(str(image.id)),  # type: ignore[arg-type]
+            location_id=UUID(str(image.location_id)),  # type: ignore[arg-type]
             upload_timestamp=image.upload_timestamp,  # type: ignore[arg-type]
             detections_count=len(detections),
             detected_species=[detection["species"] for detection in detections],

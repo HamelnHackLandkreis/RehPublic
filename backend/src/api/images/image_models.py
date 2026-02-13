@@ -19,7 +19,8 @@ class Image(Base):
         String, ForeignKey("locations.id", ondelete="CASCADE"), nullable=False
     )
     user_id = Column(String, ForeignKey("users.id"), nullable=True, index=True)
-    base64_data = Column(Text, nullable=False)
+    base64_data = Column(Text, nullable=True)  # Made nullable for S3 migration
+    s3_key = Column(String, nullable=True, index=True)
     upload_timestamp = Column(DateTime, default=datetime.utcnow)
     processed = Column(Boolean, default=False)
     processing_status = Column(
