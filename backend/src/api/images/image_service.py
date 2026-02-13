@@ -117,7 +117,13 @@ class ImageService:
         timestamp_str = (upload_timestamp or datetime.utcnow()).strftime(
             "%Y%m%d_%H%M%S"
         )
-        s3_key = f"location_{location_id}/{timestamp_str}_{user_id}.jpg"
+
+        # Add a unique identifier to prevent collisions for batch uploads
+        import uuid
+
+        unique_id = str(uuid.uuid4())[:8]
+
+        s3_key = f"location_{location_id}/{timestamp_str}_{user_id}_{unique_id}.jpg"
 
         # Upload to S3
         self.s3_service.upload_file(file_bytes, s3_key, content_type="image/jpeg")
