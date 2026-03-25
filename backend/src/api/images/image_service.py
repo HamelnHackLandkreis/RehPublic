@@ -232,7 +232,9 @@ class ImageService:
                 raise ValueError("No image data found (neither S3 key nor base64)")
         except Exception as e:
             logger.error(f"Failed to retrieve image {image_id}: {e}")
-            raise ValueError(f"Failed to retrieve image data: {e}")
+            # If the image data is missing in S3, we should probably return None
+            # so the controller can return a 404, rather than crashing with 500.
+            return None
 
         content_type = self._detect_content_type(image_bytes)
 

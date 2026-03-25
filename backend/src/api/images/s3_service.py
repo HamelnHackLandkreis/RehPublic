@@ -36,8 +36,13 @@ class S3Service:
             # Check if bucket exists
             self.s3_client.head_bucket(Bucket=self.bucket_name)
         except ClientError as e:
-            error_code = int(e.response["Error"]["Code"])
-            if error_code == 404:
+            # Error Code can be an int (404) or a string ("404" or "NoSuchBucket")
+            error_code = e.response.get("Error", {}).get("Code")
+
+            # Convert to string for consistent comparison
+            error_code_str = str(error_code)
+
+            if error_code_str == "404" or error_code_str == "NoSuchBucket":
                 try:
                     self.s3_client.create_bucket(Bucket=self.bucket_name)
                     logger.info(f"Created bucket: {self.bucket_name}")
