@@ -44,7 +44,16 @@ class S3Service:
 
             if error_code_str == "404" or error_code_str == "NoSuchBucket":
                 try:
-                    self.s3_client.create_bucket(Bucket=self.bucket_name)
+                    # Some S3-compatible servers (and AWS) require a LocationConstraint
+                    # when creating a bucket outside of us-east-1. For us-east-1 the
+                    # CreateBucketConfiguration must be omitted.
+                    if S3_REGION_NAME and S3_REGION_NAME != "us-east-1":
+                        self.s3_client.create_bucket(
+                            Bucket=self.bucket_name,
+                            CreateBucketConfiguration={"LocationConstraint": S3_REGION_NAME},
+                        )
+                    else:
+                        self.s3_client.create_bucket(Bucket=self.bucket_name)
                     logger.info(f"Created bucket: {self.bucket_name}")
                 except Exception as create_e:
                     logger.error(
